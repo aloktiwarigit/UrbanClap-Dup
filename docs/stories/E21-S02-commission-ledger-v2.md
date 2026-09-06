@@ -20,8 +20,29 @@ configurable warn/block thresholds without breaking any E21-S01 stored doc.
    returns all features `false` on a fresh system.
 7. Every technicians writer preserves `commissionHold` under concurrent hold patches.
 8. Semgrep rules enforce absolute recomputation and `runLedgerBatch`-only writes.
+9. The OpenAPI contract (`api/openapi.json`, admin-web's generated client) documents the final
+   endpoint set below and `openapi:lint` passes; `setup-cosmos.ts` and
+   `backfill-commission-holds.ts` are safe to run against a production environment carrying live
+   E21-S01 data (see `docs/runbook.md` → "Commission ledger v2 (E21-S02)" → Rollout order); the
+   cross-container-allocator rejection and the single-partition-batch design are recorded in
+   `docs/adr/0031-single-partition-commission-ledger.md`.
+
+## Final endpoint set (Task 13)
+
+| Method | Path | Notes |
+|---|---|---|
+| `POST` | `/v1/admin/finance/commission-remittances` | New (Task 10). Idempotent multi-booking remittance + credit. |
+| `GET` | `/v1/admin/finance/commission-receivables` | Changed. Hold-based dashboard (was DUE-count dashboard), `continuationToken` pagination. |
+| `POST` | `/v1/admin/finance/commission-receivables/recompute` | New (Task 10). Enqueues a full hold-repair sweep. |
+| `GET` | `/v1/admin/finance/commission-receivables/{technicianId}` | Changed. Full ledger detail (receivables + remittances + credits), was DUE-entries-only. |
+| `POST` | `/v1/admin/finance/commission-receivables/settle` | Changed. WAIVE-only; `action: "REMIT"` returns `410`. |
+| `POST` / `DELETE` | `/v1/admin/finance/commission-hold/{technicianId}/override` | New (Task 10). Manual hold override. |
+| `GET` / `PUT` | `/v1/admin/catalogue/commission-config` | Changed. Effective config now includes warn/block thresholds + enforcement flags. |
+| `GET` | `/v1/technicians/me/commission-due` | Changed (v2). Net totals, ledger, week summary; v1 field names preserved for old APKs. |
+| `GET` | `/v1/config/technician` | New. Technician-app feature flags + thresholds + incentive dark-launch config. |
 
 ## Links
 
 - Plan: `plans/E21-S02-commission-ledger-v2.md`
 - Spec: `C:/Users/alokt/.claude/plans/validated-frolicking-mochi.md`
+- ADR: `docs/adr/0031-single-partition-commission-ledger.md`

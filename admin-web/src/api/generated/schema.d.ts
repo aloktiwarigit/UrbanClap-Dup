@@ -413,11 +413,31 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get global commission rate (basis points) */
+        /** Get the effective global commission config (rate + thresholds + flags) */
         get: operations["getAdminCommissionConfig"];
-        /** Update global commission rate (super-admin only) */
+        /** Update the global commission rate and/or hold thresholds/flags (super-admin only) */
         put: operations["putAdminCommissionConfig"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/finance/commission-remittances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record a technician cash/UPI remittance and allocate it against outstanding receivables
+         * @description Idempotent on `idempotencyKey` (client-generated UUID, scoped per technician). A replayed call with the same key and the same amount/method/ref returns the original receipt (`replayed: true`) without re-applying credit. Overpayment beyond the oldest-due allocation creates a CREDIT doc consumed by future dues. The hold recompute is best-effort: failure never fails the remittance — the technician is queued for the async hold-repair sweep and `holdRecomputePending` is set instead.
+         */
+        post: operations["recordCommissionRemittance"];
         delete?: never;
         options?: never;
         head?: never;
@@ -431,10 +451,30 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** All-technician commission outstanding dashboard */
+        /**
+         * Hold-based admin dashboard — technicians currently carrying a commission hold
+         * @description One page of technicians with a non-CLEAR state or non-zero outstanding balance. `unreconciledTechnicianCount` is computed across the full roster (not just this page), so it never depends on which page an admin happens to be viewing.
+         */
         get: operations["adminCommissionReceivablesDashboard"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/finance/commission-receivables/recompute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Enqueue a full hold-repair sweep across every technician (super-admin only) */
+        post: operations["adminCommissionReceivablesRecompute"];
         delete?: never;
         options?: never;
         head?: never;
@@ -448,7 +488,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** DUE commission entries for a specific technician */
+        /** Full ledger detail (receivables + remittances + credits) for one technician */
         get: operations["adminCommissionReceivablesPerTech"];
         put?: never;
         post?: never;
@@ -467,9 +507,30 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Mark commission as remitted (received) or waived */
+        /**
+         * Waive a technician's commission for a booking (REMIT retired — use commission-remittances)
+         * @description WAIVE-only. `action: "REMIT"` now returns 410 — record remittances via the dedicated `POST /v1/admin/finance/commission-remittances` endpoint instead, which allocates one payment across multiple outstanding bookings rather than settling one at a time.
+         */
         post: operations["markCommissionReceived"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/finance/commission-hold/{technicianId}/override": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Force a technician's commission hold to CLEAR until a given time (super-admin only) */
+        post: operations["setCommissionHoldOverride"];
+        /** Clear a technician's commission hold override (super-admin only) */
+        delete: operations["clearCommissionHoldOverride"];
         options?: never;
         head?: never;
         patch?: never;
@@ -482,8 +543,28 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Technician's outstanding commission owed to the platform */
+        /**
+         * Technician's net outstanding commission, ledger, and week summary (v2)
+         * @description Field names of the v1 response are preserved (`totalOutstandingPaise`, `dueCount`, `entries[].bookingId/bookingAmount/commissionDue/createdAt`) so old APKs keep parsing what they already read — but `totalOutstandingPaise` is now NET of partial remittances/credits.
+         */
         get: operations["techCommissionDue"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/config/technician": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Technician-app remote config: feature flags, hold thresholds, incentive program */
+        get: operations["getTechnicianConfig"];
         put?: never;
         post?: never;
         delete?: never;
@@ -972,22 +1053,83 @@ export interface components {
             /** @enum {string} */
             status: "TRANSFERRED";
         };
-        CommissionConfigDoc: {
-            /** @enum {string} */
-            id: "commission-config";
+        EffectiveCommissionConfig: {
             defaultCommissionBps: number;
-            updatedBy: string;
-            /** Format: date-time */
-            updatedAt: string;
-        };
-        UpdateCommissionConfigBody: {
-            defaultCommissionBps: number;
-        };
-        CommissionConfigResponse: {
-            defaultCommissionBps: number;
+            warnThresholdPaise: number;
+            blockThresholdPaise: number;
+            holdEnforcementEnabled: boolean;
+            enforceKycInDispatch: boolean;
             updatedBy: string;
             updatedAt: string;
             isDefault?: boolean;
+        };
+        UpdateCommissionConfigBody: {
+            defaultCommissionBps?: number;
+            warnThresholdPaise?: number;
+            blockThresholdPaise?: number;
+            holdEnforcementEnabled?: boolean;
+            enforceKycInDispatch?: boolean;
+        };
+        RecordRemittanceBody: {
+            technicianId: string;
+            amountPaise: number;
+            /** @enum {string} */
+            method: "UPI" | "CASH_DEPOSIT";
+            ref: string;
+            note?: string;
+            idempotencyKey: string;
+        };
+        RemittanceDoc: {
+            id: string;
+            /** @enum {string} */
+            docType: "REMITTANCE";
+            technicianId: string;
+            partitionKey: string;
+            amountPaise: number;
+            /** @enum {string} */
+            method: "UPI" | "CASH_DEPOSIT";
+            ref: string;
+            note?: string;
+            allocations: {
+                bookingId: string;
+                paise: number;
+            }[];
+            creditCreatedPaise: number;
+            recordedByAdminId: string;
+            idempotencyKey: string;
+            createdAt: string;
+        };
+        CreditDoc: {
+            id: string;
+            /** @enum {string} */
+            docType: "CREDIT";
+            technicianId: string;
+            partitionKey: string;
+            /** @enum {string} */
+            source: "OVERPAYMENT" | "INCENTIVE";
+            refId: string;
+            originalPaise: number;
+            remainingPaise: number;
+            consumedBy: {
+                bookingId: string;
+                paise: number;
+                appliedAt: string;
+            }[];
+            createdAt: string;
+            updatedAt?: string;
+        };
+        CommissionHold: {
+            outstandingPaise: number;
+            dueCount: number;
+            oldestDueAt?: string;
+            /** @enum {string} */
+            state: "CLEAR" | "WARN" | "BLOCKED";
+            evaluatedAt: string;
+            override?: {
+                until: string;
+                byAdminId: string;
+                reason: string;
+            };
         };
         CommissionReceivableEntry: {
             id: string;
@@ -1013,23 +1155,21 @@ export interface components {
             waivedReason?: string;
             createdAt: string;
             updatedAt?: string;
-        };
-        TechnicianOutstandingSummary: {
-            technicianId: string;
-            technicianName: string;
-            dueCount: number;
-            totalCommissionDue: number;
-            oldestDueAt?: string;
-        };
-        CommissionReceivablesDashboard: {
-            technicians: {
-                technicianId: string;
-                technicianName: string;
-                dueCount: number;
-                totalCommissionDue: number;
-                oldestDueAt?: string;
+            /** @enum {string} */
+            docType?: "RECEIVABLE";
+            allocations?: {
+                id: string;
+                /** @enum {string} */
+                source: "REMITTANCE" | "INCENTIVE" | "WAIVER";
+                refId: string;
+                paise: number;
+                appliedAt: string;
+                byId: string;
             }[];
-            totalOutstanding: number;
+            serviceName?: string;
+            slotDate?: string;
+            /** @enum {string} */
+            collectionMethod?: "CASH" | "UPI_QR";
         };
         MarkCommissionReceivedBody: {
             /** @enum {string} */
@@ -1047,15 +1187,81 @@ export interface components {
             technicianId: string;
             waivedReason: string;
         };
-        TechnicianCommissionDue: {
+        TechnicianCommissionDueV2: {
             totalOutstandingPaise: number;
             dueCount: number;
+            hold: {
+                /** @enum {string} */
+                state: "CLEAR" | "WARN" | "BLOCKED";
+                warnPaise: number;
+                blockPaise: number;
+                enforcementEnabled: boolean;
+                override?: {
+                    until: string;
+                    reason: string;
+                };
+            };
             entries: {
                 bookingId: string;
+                serviceName?: string;
+                slotDate?: string;
                 bookingAmount: number;
+                cashCollectedAmount?: number;
                 commissionDue: number;
+                remittedAmount: number;
+                outstandingPaise: number;
+                /** @enum {string} */
+                collectionMethod?: "CASH" | "UPI_QR";
+                /** @enum {string} */
+                remittanceStatus: "DUE" | "REMITTED" | "WAIVED";
                 createdAt: string;
             }[];
+            remittances: {
+                id: string;
+                amountPaise: number;
+                /** @enum {string} */
+                method: "UPI" | "CASH_DEPOSIT" | "ADJUSTMENT";
+                ref: string;
+                createdAt: string;
+            }[];
+            credits: {
+                id: string;
+                /** @enum {string} */
+                source: "OVERPAYMENT" | "INCENTIVE";
+                remainingPaise: number;
+                createdAt: string;
+            }[];
+            weekSummary: {
+                weekStart: string;
+                jobs: number;
+                cashCollectedPaise: number;
+                commissionPaise: number;
+                netPaise: number;
+            };
+        };
+        TechnicianConfigResponse: {
+            features: {
+                wallet: boolean;
+                duesBanner: boolean;
+                upiQr: boolean;
+                incentives: boolean;
+                addOnRequests: boolean;
+            };
+            thresholds: {
+                warnPaise: number;
+                blockPaise: number;
+            };
+            holdEnforcementEnabled: boolean;
+            incentive: {
+                enabled: boolean;
+                milestones: {
+                    jobs: number;
+                    bonusPaise: number;
+                }[];
+                capFractionBps: number;
+            };
+            minSupportedVersionCode: number;
+            serverTime: string;
         };
         WaitlistRequest: {
             /** @example +916000000001 */
@@ -1079,6 +1285,189 @@ export interface components {
         WaitlistError: {
             /** @enum {string} */
             code: "VALIDATION_ERROR" | "UNKNOWN_SERVICE" | "CLOCK_SKEW" | "RATE_LIMITED" | "INVALID_JSON" | "INTERNAL_ERROR";
+        };
+        CommissionAllocationEntry: {
+            bookingId: string;
+            paise: number;
+        };
+        RecordRemittanceResponse: {
+            remittance: {
+                id: string;
+                /** @enum {string} */
+                docType: "REMITTANCE";
+                technicianId: string;
+                partitionKey: string;
+                amountPaise: number;
+                /** @enum {string} */
+                method: "UPI" | "CASH_DEPOSIT";
+                ref: string;
+                note?: string;
+                allocations: {
+                    bookingId: string;
+                    paise: number;
+                }[];
+                creditCreatedPaise: number;
+                recordedByAdminId: string;
+                idempotencyKey: string;
+                createdAt: string;
+            };
+            allocations: components["schemas"]["CommissionAllocationEntry"][];
+            creditCreatedPaise: number;
+            hold: {
+                outstandingPaise: number;
+                dueCount: number;
+                oldestDueAt?: string;
+                /** @enum {string} */
+                state: "CLEAR" | "WARN" | "BLOCKED";
+                evaluatedAt: string;
+                override?: {
+                    until: string;
+                    byAdminId: string;
+                    reason: string;
+                };
+            } | null;
+            holdRecomputePending: boolean;
+            replayed: boolean;
+        };
+        CommissionHoldOverride: {
+            until: string;
+            byAdminId: string;
+            reason: string;
+        };
+        CommissionDashboardTechnicianEntry: {
+            technicianId: string;
+            technicianName: string;
+            outstandingPaise: number;
+            dueCount: number;
+            oldestDueAt?: string;
+            /** @enum {string} */
+            state: "CLEAR" | "WARN" | "BLOCKED";
+            evaluatedAt: string;
+            override?: components["schemas"]["CommissionHoldOverride"];
+        };
+        CommissionReceivablesDashboardV2: {
+            technicians: components["schemas"]["CommissionDashboardTechnicianEntry"][];
+            totalOutstanding: number;
+            unreconciledTechnicianCount: number;
+            continuationToken?: string;
+        };
+        CommissionLedgerDetail: {
+            technicianId: string;
+            hold: {
+                outstandingPaise: number;
+                dueCount: number;
+                oldestDueAt?: string;
+                /** @enum {string} */
+                state: "CLEAR" | "WARN" | "BLOCKED";
+                evaluatedAt: string;
+                override?: {
+                    until: string;
+                    byAdminId: string;
+                    reason: string;
+                };
+            } | null;
+            receivables: {
+                id: string;
+                bookingId: string;
+                technicianId: string;
+                partitionKey: string;
+                serviceId: string;
+                categoryId: string;
+                bookingAmount: number;
+                cashCollectedAmount?: number;
+                commissionBps: number;
+                commissionDue: number;
+                /** @enum {string} */
+                commissionResolvedFrom: "SERVICE" | "CATEGORY" | "GLOBAL";
+                /** @enum {string} */
+                remittanceStatus: "DUE" | "REMITTED" | "WAIVED";
+                remittedAmount?: number;
+                remittedAt?: string;
+                remittanceRef?: string;
+                /** @enum {string} */
+                remittanceMethod?: "UPI" | "CASH_DEPOSIT" | "ADJUSTMENT";
+                markedByAdminId?: string;
+                waivedReason?: string;
+                createdAt: string;
+                updatedAt?: string;
+                /** @enum {string} */
+                docType?: "RECEIVABLE";
+                allocations?: {
+                    id: string;
+                    /** @enum {string} */
+                    source: "REMITTANCE" | "INCENTIVE" | "WAIVER";
+                    refId: string;
+                    paise: number;
+                    appliedAt: string;
+                    byId: string;
+                }[];
+                serviceName?: string;
+                slotDate?: string;
+                /** @enum {string} */
+                collectionMethod?: "CASH" | "UPI_QR";
+                outstandingPaise: number;
+            }[];
+            remittances: {
+                id: string;
+                /** @enum {string} */
+                docType: "REMITTANCE";
+                technicianId: string;
+                partitionKey: string;
+                amountPaise: number;
+                /** @enum {string} */
+                method: "UPI" | "CASH_DEPOSIT";
+                ref: string;
+                note?: string;
+                allocations: {
+                    bookingId: string;
+                    paise: number;
+                }[];
+                creditCreatedPaise: number;
+                recordedByAdminId: string;
+                idempotencyKey: string;
+                createdAt: string;
+            }[];
+            credits: {
+                id: string;
+                /** @enum {string} */
+                docType: "CREDIT";
+                technicianId: string;
+                partitionKey: string;
+                /** @enum {string} */
+                source: "OVERPAYMENT" | "INCENTIVE";
+                refId: string;
+                originalPaise: number;
+                remainingPaise: number;
+                consumedBy: {
+                    bookingId: string;
+                    paise: number;
+                    appliedAt: string;
+                }[];
+                createdAt: string;
+                updatedAt?: string;
+            }[];
+            cashCollectedPaise: number;
+            creditAppliedPaise: number;
+        };
+        CommissionHoldResponse: {
+            hold: {
+                outstandingPaise: number;
+                dueCount: number;
+                oldestDueAt?: string;
+                /** @enum {string} */
+                state: "CLEAR" | "WARN" | "BLOCKED";
+                evaluatedAt: string;
+                override?: {
+                    until: string;
+                    byAdminId: string;
+                    reason: string;
+                };
+            } | null;
+        };
+        SetCommissionHoldOverrideBody: {
+            /** Format: date-time */
+            until: string;
+            reason: string;
         };
         AdminLoginRequest: {
             idToken: string;
@@ -2277,13 +2666,22 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Current global commission bps */
+            /** @description Effective commission config, defaults applied for any unset field */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CommissionConfigResponse"];
+                    "application/json": {
+                        defaultCommissionBps: number;
+                        warnThresholdPaise: number;
+                        blockThresholdPaise: number;
+                        holdEnforcementEnabled: boolean;
+                        enforceKycInDispatch: boolean;
+                        updatedBy: string;
+                        updatedAt: string;
+                        isDefault?: boolean;
+                    };
                 };
             };
             /** @description Unauthenticated */
@@ -2312,21 +2710,34 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": {
-                    defaultCommissionBps: number;
+                    defaultCommissionBps?: number;
+                    warnThresholdPaise?: number;
+                    blockThresholdPaise?: number;
+                    holdEnforcementEnabled?: boolean;
+                    enforceKycInDispatch?: boolean;
                 };
             };
         };
         responses: {
-            /** @description Updated commission config */
+            /** @description Updated effective commission config */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CommissionConfigResponse"];
+                    "application/json": {
+                        defaultCommissionBps: number;
+                        warnThresholdPaise: number;
+                        blockThresholdPaise: number;
+                        holdEnforcementEnabled: boolean;
+                        enforceKycInDispatch: boolean;
+                        updatedBy: string;
+                        updatedAt: string;
+                        isDefault?: boolean;
+                    };
                 };
             };
-            /** @description Validation error (bps out of 1500–3500 range) */
+            /** @description Validation error (bps out of 1500–3500 range, or warnThresholdPaise >= blockThresholdPaise) */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2349,7 +2760,117 @@ export interface operations {
             };
         };
     };
+    recordCommissionRemittance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    technicianId: string;
+                    amountPaise: number;
+                    /** @enum {string} */
+                    method: "UPI" | "CASH_DEPOSIT";
+                    ref: string;
+                    note?: string;
+                    idempotencyKey: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Remittance recorded (or replayed) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordRemittanceResponse"];
+                };
+            };
+            /** @description Validation error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description TECHNICIAN_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description IDEMPOTENCY_MISMATCH (same key, different amount/method/ref) or LEDGER_BUSY (ETag contention exhausted retries) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Upstream Cosmos error */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     adminCommissionReceivablesDashboard: {
+        parameters: {
+            query?: {
+                continuationToken?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Per-tech hold summary + total outstanding */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommissionReceivablesDashboardV2"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    adminCommissionReceivablesRecompute: {
         parameters: {
             query?: never;
             header?: never;
@@ -2358,21 +2879,15 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Per-tech DUE summary + total outstanding */
-            200: {
+            /** @description Sweep queued */
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": {
-                        technicians: {
-                            technicianId: string;
-                            technicianName: string;
-                            dueCount: number;
-                            totalCommissionDue: number;
-                            oldestDueAt?: string;
-                        }[];
-                        totalOutstanding: number;
+                        /** @enum {boolean} */
+                        queued: true;
                     };
                 };
             };
@@ -2403,40 +2918,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Outstanding entries */
+            /** @description Ledger detail */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        technicianId: string;
-                        entries: {
-                            id: string;
-                            bookingId: string;
-                            technicianId: string;
-                            partitionKey: string;
-                            serviceId: string;
-                            categoryId: string;
-                            bookingAmount: number;
-                            cashCollectedAmount?: number;
-                            commissionBps: number;
-                            commissionDue: number;
-                            /** @enum {string} */
-                            commissionResolvedFrom: "SERVICE" | "CATEGORY" | "GLOBAL";
-                            /** @enum {string} */
-                            remittanceStatus: "DUE" | "REMITTED" | "WAIVED";
-                            remittedAmount?: number;
-                            remittedAt?: string;
-                            remittanceRef?: string;
-                            /** @enum {string} */
-                            remittanceMethod?: "UPI" | "CASH_DEPOSIT" | "ADJUSTMENT";
-                            markedByAdminId?: string;
-                            waivedReason?: string;
-                            createdAt: string;
-                            updatedAt?: string;
-                        }[];
-                    };
+                    "application/json": components["schemas"]["CommissionLedgerDetail"];
                 };
             };
             /** @description Unauthenticated */
@@ -2513,6 +3001,21 @@ export interface operations {
                         waivedReason?: string;
                         createdAt: string;
                         updatedAt?: string;
+                        /** @enum {string} */
+                        docType?: "RECEIVABLE";
+                        allocations?: {
+                            id: string;
+                            /** @enum {string} */
+                            source: "REMITTANCE" | "INCENTIVE" | "WAIVER";
+                            refId: string;
+                            paise: number;
+                            appliedAt: string;
+                            byId: string;
+                        }[];
+                        serviceName?: string;
+                        slotDate?: string;
+                        /** @enum {string} */
+                        collectionMethod?: "CASH" | "UPI_QR";
                     };
                 };
             };
@@ -2537,8 +3040,138 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Receivable not found */
+            /** @description RECEIVABLE_NOT_FOUND */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description LEDGER_BUSY */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description action: "REMIT" is retired — use POST /v1/admin/finance/commission-remittances */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        code: "USE_COMMISSION_REMITTANCES";
+                    };
+                };
+            };
+        };
+    };
+    setCommissionHoldOverride: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                technicianId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SetCommissionHoldOverrideBody"];
+            };
+        };
+        responses: {
+            /** @description Hold recomputed with the override applied */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommissionHoldResponse"];
+                };
+            };
+            /** @description Validation error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description TECHNICIAN_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description LEDGER_BUSY (conditional-patch retries exhausted) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    clearCommissionHoldOverride: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                technicianId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Hold recomputed with the override cleared */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommissionHoldResponse"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description TECHNICIAN_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description LEDGER_BUSY (conditional-patch retries exhausted) */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2555,7 +3188,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Outstanding commission summary */
+            /** @description Net outstanding commission summary + ledger + week summary */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2564,12 +3197,104 @@ export interface operations {
                     "application/json": {
                         totalOutstandingPaise: number;
                         dueCount: number;
+                        hold: {
+                            /** @enum {string} */
+                            state: "CLEAR" | "WARN" | "BLOCKED";
+                            warnPaise: number;
+                            blockPaise: number;
+                            enforcementEnabled: boolean;
+                            override?: {
+                                until: string;
+                                reason: string;
+                            };
+                        };
                         entries: {
                             bookingId: string;
+                            serviceName?: string;
+                            slotDate?: string;
                             bookingAmount: number;
+                            cashCollectedAmount?: number;
                             commissionDue: number;
+                            remittedAmount: number;
+                            outstandingPaise: number;
+                            /** @enum {string} */
+                            collectionMethod?: "CASH" | "UPI_QR";
+                            /** @enum {string} */
+                            remittanceStatus: "DUE" | "REMITTED" | "WAIVED";
                             createdAt: string;
                         }[];
+                        remittances: {
+                            id: string;
+                            amountPaise: number;
+                            /** @enum {string} */
+                            method: "UPI" | "CASH_DEPOSIT" | "ADJUSTMENT";
+                            ref: string;
+                            createdAt: string;
+                        }[];
+                        credits: {
+                            id: string;
+                            /** @enum {string} */
+                            source: "OVERPAYMENT" | "INCENTIVE";
+                            remainingPaise: number;
+                            createdAt: string;
+                        }[];
+                        weekSummary: {
+                            weekStart: string;
+                            jobs: number;
+                            cashCollectedPaise: number;
+                            commissionPaise: number;
+                            netPaise: number;
+                        };
+                    };
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getTechnicianConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Technician client config (60s in-process cache) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        features: {
+                            wallet: boolean;
+                            duesBanner: boolean;
+                            upiQr: boolean;
+                            incentives: boolean;
+                            addOnRequests: boolean;
+                        };
+                        thresholds: {
+                            warnPaise: number;
+                            blockPaise: number;
+                        };
+                        holdEnforcementEnabled: boolean;
+                        incentive: {
+                            enabled: boolean;
+                            milestones: {
+                                jobs: number;
+                                bonusPaise: number;
+                            }[];
+                            capFractionBps: number;
+                        };
+                        minSupportedVersionCode: number;
+                        serverTime: string;
                     };
                 };
             };

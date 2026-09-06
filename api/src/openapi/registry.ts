@@ -38,16 +38,21 @@ import {
 } from '../schemas/ssc-levy.js';
 import { TechnicianCandidateListResponseSchema } from '../schemas/order.js';
 import {
-  CommissionConfigDocSchema,
   UpdateCommissionConfigBodySchema,
+  EffectiveCommissionConfigSchema,
 } from '../schemas/commission-config.js';
 import {
   CommissionReceivableEntrySchema,
-  TechnicianOutstandingSummarySchema,
-  CommissionReceivablesDashboardSchema,
   MarkCommissionReceivedBodySchema,
-  TechnicianCommissionDueSchema,
+  TechnicianCommissionDueV2Schema,
 } from '../schemas/commission-receivable.js';
+import {
+  RemittanceDocSchema,
+  CreditDocSchema,
+  RecordRemittanceBodySchema,
+} from '../schemas/commission-ledger.js';
+import { CommissionHoldSchema, HoldStateSchema } from '../schemas/technician.js';
+import { TechnicianConfigResponseSchema } from '../schemas/technician-client-config.js';
 
 extendZodWithOpenApi(z);
 
@@ -511,30 +516,91 @@ registry.registerPath({
   },
 });
 
-// ── E21-S01: Cash-pilot commission config + receivables ───────────────────────
+// ── E21-S02: Commission ledger v2 (docType ledger, absolute recomputation) ─────
+//
+// Replaces the E21-S01 DUE-count dashboard + single-booking settle with a
+// hold-based dashboard, a multi-booking remittance endpoint, ledger detail per
+// technician, and a manual hold override. `commission-receivables/settle` is
+// kept but narrowed to WAIVE-only (REMIT now returns 410 — see markCommissionReceived).
 
-const CommissionConfigResponse = z.object({
-  defaultCommissionBps: z.number().int(),
-  updatedBy: z.string(),
-  updatedAt: z.string(),
-  isDefault: z.boolean().optional(),
-}).openapi('CommissionConfigResponse');
+const AllocationEntrySchema = z.object({
+  bookingId: z.string(),
+  paise: z.number().int().positive(),
+}).openapi('CommissionAllocationEntry');
 
-registry.register('CommissionConfigDoc', CommissionConfigDocSchema.openapi('CommissionConfigDoc'));
+const CommissionHoldOverrideSchema = z.object({
+  until: z.string(),
+  byAdminId: z.string(),
+  reason: z.string(),
+}).openapi('CommissionHoldOverride');
+
+/** Response envelope for `POST /v1/admin/finance/commission-remittances`. */
+const RecordRemittanceResponseSchema = z.object({
+  remittance: RemittanceDocSchema,
+  allocations: z.array(AllocationEntrySchema),
+  creditCreatedPaise: z.number().int().nonnegative(),
+  hold: CommissionHoldSchema.nullable(),
+  holdRecomputePending: z.boolean(),
+  replayed: z.boolean(),
+}).openapi('RecordRemittanceResponse');
+
+/** One row of the hold-based admin dashboard — a technician currently carrying a non-CLEAR
+ *  state or a non-zero outstanding balance. */
+const CommissionDashboardTechnicianEntrySchema = z.object({
+  technicianId: z.string(),
+  technicianName: z.string(),
+  outstandingPaise: z.number().int().nonnegative(),
+  dueCount: z.number().int().nonnegative(),
+  oldestDueAt: z.string().optional(),
+  state: HoldStateSchema,
+  evaluatedAt: z.string(),
+  override: CommissionHoldOverrideSchema.optional(),
+}).openapi('CommissionDashboardTechnicianEntry');
+
+const CommissionReceivablesDashboardV2Schema = z.object({
+  technicians: z.array(CommissionDashboardTechnicianEntrySchema),
+  totalOutstanding: z.number().int().nonnegative(),
+  unreconciledTechnicianCount: z.number().int().nonnegative(),
+  continuationToken: z.string().optional(),
+}).openapi('CommissionReceivablesDashboardV2');
+
+/** Full ledger detail for one technician — `GET .../commission-receivables/{technicianId}`. */
+const CommissionLedgerDetailSchema = z.object({
+  technicianId: z.string(),
+  hold: CommissionHoldSchema.nullable(),
+  receivables: z.array(CommissionReceivableEntrySchema.extend({ outstandingPaise: z.number().int().nonnegative() })),
+  remittances: z.array(RemittanceDocSchema),
+  credits: z.array(CreditDocSchema),
+  cashCollectedPaise: z.number().int().nonnegative(),
+  creditAppliedPaise: z.number().int().nonnegative(),
+}).openapi('CommissionLedgerDetail');
+
+const SetCommissionHoldOverrideBodySchema = z.object({
+  until: z.string().datetime(),
+  reason: z.string().min(1).max(200),
+}).openapi('SetCommissionHoldOverrideBody');
+
+const CommissionHoldResponseSchema = z.object({
+  hold: CommissionHoldSchema.nullable(),
+}).openapi('CommissionHoldResponse');
+
+registry.register('EffectiveCommissionConfig', EffectiveCommissionConfigSchema.openapi('EffectiveCommissionConfig'));
 registry.register('UpdateCommissionConfigBody', UpdateCommissionConfigBodySchema.openapi('UpdateCommissionConfigBody'));
-registry.register('CommissionConfigResponse', CommissionConfigResponse);
+registry.register('RecordRemittanceBody', RecordRemittanceBodySchema.openapi('RecordRemittanceBody'));
+registry.register('RemittanceDoc', RemittanceDocSchema.openapi('RemittanceDoc'));
+registry.register('CreditDoc', CreditDocSchema.openapi('CreditDoc'));
+registry.register('CommissionHold', CommissionHoldSchema.openapi('CommissionHold'));
 registry.register('CommissionReceivableEntry', CommissionReceivableEntrySchema.openapi('CommissionReceivableEntry'));
-registry.register('TechnicianOutstandingSummary', TechnicianOutstandingSummarySchema.openapi('TechnicianOutstandingSummary'));
-registry.register('CommissionReceivablesDashboard', CommissionReceivablesDashboardSchema.openapi('CommissionReceivablesDashboard'));
 registry.register('MarkCommissionReceivedBody', MarkCommissionReceivedBodySchema.openapi('MarkCommissionReceivedBody'));
-registry.register('TechnicianCommissionDue', TechnicianCommissionDueSchema.openapi('TechnicianCommissionDue'));
+registry.register('TechnicianCommissionDueV2', TechnicianCommissionDueV2Schema.openapi('TechnicianCommissionDueV2'));
+registry.register('TechnicianConfigResponse', TechnicianConfigResponseSchema.openapi('TechnicianConfigResponse'));
 
 registry.registerPath({
   method: 'get', path: '/v1/admin/catalogue/commission-config', operationId: 'getAdminCommissionConfig',
-  tags: ['admin-catalogue'], summary: 'Get global commission rate (basis points)',
+  tags: ['admin-catalogue'], summary: 'Get the effective global commission config (rate + thresholds + flags)',
   security: [{ cookieAuth: [] }],
   responses: {
-    200: { description: 'Current global commission bps', content: { 'application/json': { schema: CommissionConfigResponse } } },
+    200: { description: 'Effective commission config, defaults applied for any unset field', content: { 'application/json': { schema: EffectiveCommissionConfigSchema } } },
     401: { description: 'Unauthenticated' },
     403: { description: 'Forbidden' },
   },
@@ -542,23 +608,62 @@ registry.registerPath({
 
 registry.registerPath({
   method: 'put', path: '/v1/admin/catalogue/commission-config', operationId: 'putAdminCommissionConfig',
-  tags: ['admin-catalogue'], summary: 'Update global commission rate (super-admin only)',
+  tags: ['admin-catalogue'], summary: 'Update the global commission rate and/or hold thresholds/flags (super-admin only)',
   security: [{ cookieAuth: [] }],
   request: { body: { content: { 'application/json': { schema: UpdateCommissionConfigBodySchema } } } },
   responses: {
-    200: { description: 'Updated commission config', content: { 'application/json': { schema: CommissionConfigResponse } } },
-    400: { description: 'Validation error (bps out of 1500–3500 range)' },
+    200: { description: 'Updated effective commission config', content: { 'application/json': { schema: EffectiveCommissionConfigSchema } } },
+    400: { description: 'Validation error (bps out of 1500–3500 range, or warnThresholdPaise >= blockThresholdPaise)' },
     401: { description: 'Unauthenticated' },
     403: { description: 'Forbidden (requires super-admin)' },
   },
 });
 
 registry.registerPath({
+  method: 'post', path: '/v1/admin/finance/commission-remittances', operationId: 'recordCommissionRemittance',
+  tags: ['admin-finance'], summary: 'Record a technician cash/UPI remittance and allocate it against outstanding receivables',
+  description:
+    'Idempotent on `idempotencyKey` (client-generated UUID, scoped per technician). A replayed ' +
+    'call with the same key and the same amount/method/ref returns the original receipt ' +
+    '(`replayed: true`) without re-applying credit. Overpayment beyond the oldest-due allocation ' +
+    'creates a CREDIT doc consumed by future dues. The hold recompute is best-effort: failure ' +
+    'never fails the remittance — the technician is queued for the async hold-repair sweep and ' +
+    '`holdRecomputePending` is set instead.',
+  security: [{ cookieAuth: [] }],
+  request: { body: { content: { 'application/json': { schema: RecordRemittanceBodySchema } } } },
+  responses: {
+    200: { description: 'Remittance recorded (or replayed)', content: { 'application/json': { schema: RecordRemittanceResponseSchema } } },
+    400: { description: 'Validation error' },
+    401: { description: 'Unauthenticated' },
+    403: { description: 'Forbidden' },
+    404: { description: 'TECHNICIAN_NOT_FOUND' },
+    409: { description: 'IDEMPOTENCY_MISMATCH (same key, different amount/method/ref) or LEDGER_BUSY (ETag contention exhausted retries)' },
+    502: { description: 'Upstream Cosmos error' },
+  },
+});
+
+registry.registerPath({
   method: 'get', path: '/v1/admin/finance/commission-receivables', operationId: 'adminCommissionReceivablesDashboard',
-  tags: ['admin-finance'], summary: 'All-technician commission outstanding dashboard',
+  tags: ['admin-finance'], summary: 'Hold-based admin dashboard — technicians currently carrying a commission hold',
+  description:
+    'One page of technicians with a non-CLEAR state or non-zero outstanding balance. ' +
+    '`unreconciledTechnicianCount` is computed across the full roster (not just this page), so ' +
+    'it never depends on which page an admin happens to be viewing.',
+  security: [{ cookieAuth: [] }],
+  parameters: [{ name: 'continuationToken', in: 'query', required: false, schema: { type: 'string' } }],
+  responses: {
+    200: { description: 'Per-tech hold summary + total outstanding', content: { 'application/json': { schema: CommissionReceivablesDashboardV2Schema } } },
+    401: { description: 'Unauthenticated' },
+    403: { description: 'Forbidden' },
+  },
+});
+
+registry.registerPath({
+  method: 'post', path: '/v1/admin/finance/commission-receivables/recompute', operationId: 'adminCommissionReceivablesRecompute',
+  tags: ['admin-finance'], summary: 'Enqueue a full hold-repair sweep across every technician (super-admin only)',
   security: [{ cookieAuth: [] }],
   responses: {
-    200: { description: 'Per-tech DUE summary + total outstanding', content: { 'application/json': { schema: CommissionReceivablesDashboardSchema } } },
+    202: { description: 'Sweep queued', content: { 'application/json': { schema: z.object({ queued: z.literal(true) }) } } },
     401: { description: 'Unauthenticated' },
     403: { description: 'Forbidden' },
   },
@@ -566,11 +671,11 @@ registry.registerPath({
 
 registry.registerPath({
   method: 'get', path: '/v1/admin/finance/commission-receivables/{technicianId}', operationId: 'adminCommissionReceivablesPerTech',
-  tags: ['admin-finance'], summary: 'DUE commission entries for a specific technician',
+  tags: ['admin-finance'], summary: 'Full ledger detail (receivables + remittances + credits) for one technician',
   security: [{ cookieAuth: [] }],
   parameters: [{ name: 'technicianId', in: 'path', required: true, schema: { type: 'string' } }],
   responses: {
-    200: { description: 'Outstanding entries', content: { 'application/json': { schema: z.object({ technicianId: z.string(), entries: z.array(CommissionReceivableEntrySchema) }) } } },
+    200: { description: 'Ledger detail', content: { 'application/json': { schema: CommissionLedgerDetailSchema } } },
     401: { description: 'Unauthenticated' },
     403: { description: 'Forbidden' },
   },
@@ -578,7 +683,11 @@ registry.registerPath({
 
 registry.registerPath({
   method: 'post', path: '/v1/admin/finance/commission-receivables/settle', operationId: 'markCommissionReceived',
-  tags: ['admin-finance'], summary: 'Mark commission as remitted (received) or waived',
+  tags: ['admin-finance'], summary: 'Waive a technician\'s commission for a booking (REMIT retired — use commission-remittances)',
+  description:
+    'WAIVE-only. `action: "REMIT"` now returns 410 — record remittances via the dedicated ' +
+    '`POST /v1/admin/finance/commission-remittances` endpoint instead, which allocates one ' +
+    'payment across multiple outstanding bookings rather than settling one at a time.',
   security: [{ cookieAuth: [] }],
   request: { body: { content: { 'application/json': { schema: MarkCommissionReceivedBodySchema } } } },
   responses: {
@@ -586,16 +695,62 @@ registry.registerPath({
     400: { description: 'Validation error' },
     401: { description: 'Unauthenticated' },
     403: { description: 'Forbidden' },
-    404: { description: 'Receivable not found' },
+    404: { description: 'RECEIVABLE_NOT_FOUND' },
+    409: { description: 'LEDGER_BUSY' },
+    410: { description: 'action: "REMIT" is retired — use POST /v1/admin/finance/commission-remittances', content: { 'application/json': { schema: z.object({ code: z.literal('USE_COMMISSION_REMITTANCES') }) } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post', path: '/v1/admin/finance/commission-hold/{technicianId}/override', operationId: 'setCommissionHoldOverride',
+  tags: ['admin-finance'], summary: 'Force a technician\'s commission hold to CLEAR until a given time (super-admin only)',
+  security: [{ cookieAuth: [] }],
+  parameters: [{ name: 'technicianId', in: 'path', required: true, schema: { type: 'string' } }],
+  request: { body: { content: { 'application/json': { schema: SetCommissionHoldOverrideBodySchema } } } },
+  responses: {
+    200: { description: 'Hold recomputed with the override applied', content: { 'application/json': { schema: CommissionHoldResponseSchema } } },
+    400: { description: 'Validation error' },
+    401: { description: 'Unauthenticated' },
+    403: { description: 'Forbidden' },
+    404: { description: 'TECHNICIAN_NOT_FOUND' },
+    409: { description: 'LEDGER_BUSY (conditional-patch retries exhausted)' },
+  },
+});
+
+registry.registerPath({
+  method: 'delete', path: '/v1/admin/finance/commission-hold/{technicianId}/override', operationId: 'clearCommissionHoldOverride',
+  tags: ['admin-finance'], summary: 'Clear a technician\'s commission hold override (super-admin only)',
+  security: [{ cookieAuth: [] }],
+  parameters: [{ name: 'technicianId', in: 'path', required: true, schema: { type: 'string' } }],
+  responses: {
+    200: { description: 'Hold recomputed with the override cleared', content: { 'application/json': { schema: CommissionHoldResponseSchema } } },
+    401: { description: 'Unauthenticated' },
+    403: { description: 'Forbidden' },
+    404: { description: 'TECHNICIAN_NOT_FOUND' },
+    409: { description: 'LEDGER_BUSY (conditional-patch retries exhausted)' },
   },
 });
 
 registry.registerPath({
   method: 'get', path: '/v1/technicians/me/commission-due', operationId: 'techCommissionDue',
-  tags: ['technicians'], summary: 'Technician\'s outstanding commission owed to the platform',
+  tags: ['technicians'], summary: 'Technician\'s net outstanding commission, ledger, and week summary (v2)',
+  description:
+    'Field names of the v1 response are preserved (`totalOutstandingPaise`, `dueCount`, ' +
+    '`entries[].bookingId/bookingAmount/commissionDue/createdAt`) so old APKs keep parsing what ' +
+    'they already read — but `totalOutstandingPaise` is now NET of partial remittances/credits.',
   security: [{ bearerAuth: [] }],
   responses: {
-    200: { description: 'Outstanding commission summary', content: { 'application/json': { schema: TechnicianCommissionDueSchema } } },
+    200: { description: 'Net outstanding commission summary + ledger + week summary', content: { 'application/json': { schema: TechnicianCommissionDueV2Schema } } },
+    401: { description: 'Unauthenticated' },
+  },
+});
+
+registry.registerPath({
+  method: 'get', path: '/v1/config/technician', operationId: 'getTechnicianConfig',
+  tags: ['config'], summary: 'Technician-app remote config: feature flags, hold thresholds, incentive program',
+  security: [{ bearerAuth: [] }],
+  responses: {
+    200: { description: 'Technician client config (60s in-process cache)', content: { 'application/json': { schema: TechnicianConfigResponseSchema } } },
     401: { description: 'Unauthenticated' },
   },
 });

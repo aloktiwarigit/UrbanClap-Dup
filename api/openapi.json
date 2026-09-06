@@ -1523,56 +1523,27 @@
           "status"
         ]
       },
-      "CommissionConfigDoc": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "enum": [
-              "commission-config"
-            ]
-          },
-          "defaultCommissionBps": {
-            "type": "integer",
-            "minimum": 1500,
-            "maximum": 3500
-          },
-          "updatedBy": {
-            "type": "string",
-            "minLength": 1
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "id",
-          "defaultCommissionBps",
-          "updatedBy",
-          "updatedAt"
-        ],
-        "additionalProperties": false
-      },
-      "UpdateCommissionConfigBody": {
+      "EffectiveCommissionConfig": {
         "type": "object",
         "properties": {
           "defaultCommissionBps": {
             "type": "integer",
             "minimum": 1500,
             "maximum": 3500
-          }
-        },
-        "required": [
-          "defaultCommissionBps"
-        ],
-        "additionalProperties": false
-      },
-      "CommissionConfigResponse": {
-        "type": "object",
-        "properties": {
-          "defaultCommissionBps": {
-            "type": "integer"
+          },
+          "warnThresholdPaise": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "blockThresholdPaise": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "holdEnforcementEnabled": {
+            "type": "boolean"
+          },
+          "enforceKycInDispatch": {
+            "type": "boolean"
           },
           "updatedBy": {
             "type": "string"
@@ -1586,8 +1557,303 @@
         },
         "required": [
           "defaultCommissionBps",
+          "warnThresholdPaise",
+          "blockThresholdPaise",
+          "holdEnforcementEnabled",
+          "enforceKycInDispatch",
           "updatedBy",
           "updatedAt"
+        ]
+      },
+      "UpdateCommissionConfigBody": {
+        "type": "object",
+        "properties": {
+          "defaultCommissionBps": {
+            "type": "integer",
+            "minimum": 1500,
+            "maximum": 3500
+          },
+          "warnThresholdPaise": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "blockThresholdPaise": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "holdEnforcementEnabled": {
+            "type": "boolean"
+          },
+          "enforceKycInDispatch": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "RecordRemittanceBody": {
+        "type": "object",
+        "properties": {
+          "technicianId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "amountPaise": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "UPI",
+              "CASH_DEPOSIT"
+            ]
+          },
+          "ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9._-]{8,128}$"
+          }
+        },
+        "required": [
+          "technicianId",
+          "amountPaise",
+          "method",
+          "ref",
+          "idempotencyKey"
+        ],
+        "additionalProperties": false
+      },
+      "RemittanceDoc": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "docType": {
+            "type": "string",
+            "enum": [
+              "REMITTANCE"
+            ]
+          },
+          "technicianId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "partitionKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "amountPaise": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "UPI",
+              "CASH_DEPOSIT"
+            ]
+          },
+          "ref": {
+            "type": "string",
+            "minLength": 1
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "allocations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "bookingId": {
+                  "type": "string"
+                },
+                "paise": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                }
+              },
+              "required": [
+                "bookingId",
+                "paise"
+              ]
+            }
+          },
+          "creditCreatedPaise": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "recordedByAdminId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "docType",
+          "technicianId",
+          "partitionKey",
+          "amountPaise",
+          "method",
+          "ref",
+          "allocations",
+          "creditCreatedPaise",
+          "recordedByAdminId",
+          "idempotencyKey",
+          "createdAt"
+        ]
+      },
+      "CreditDoc": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "docType": {
+            "type": "string",
+            "enum": [
+              "CREDIT"
+            ]
+          },
+          "technicianId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "partitionKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "OVERPAYMENT",
+              "INCENTIVE"
+            ]
+          },
+          "refId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "originalPaise": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "remainingPaise": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "consumedBy": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "bookingId": {
+                  "type": "string"
+                },
+                "paise": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "appliedAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "bookingId",
+                "paise",
+                "appliedAt"
+              ]
+            }
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "docType",
+          "technicianId",
+          "partitionKey",
+          "source",
+          "refId",
+          "originalPaise",
+          "remainingPaise",
+          "consumedBy",
+          "createdAt"
+        ]
+      },
+      "CommissionHold": {
+        "type": "object",
+        "properties": {
+          "outstandingPaise": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "dueCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "oldestDueAt": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "CLEAR",
+              "WARN",
+              "BLOCKED"
+            ]
+          },
+          "evaluatedAt": {
+            "type": "string"
+          },
+          "override": {
+            "type": "object",
+            "properties": {
+              "until": {
+                "type": "string"
+              },
+              "byAdminId": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "until",
+              "byAdminId",
+              "reason"
+            ]
+          }
+        },
+        "required": [
+          "outstandingPaise",
+          "dueCount",
+          "state",
+          "evaluatedAt"
         ]
       },
       "CommissionReceivableEntry": {
@@ -1673,6 +1939,68 @@
           },
           "updatedAt": {
             "type": "string"
+          },
+          "docType": {
+            "type": "string",
+            "enum": [
+              "RECEIVABLE"
+            ]
+          },
+          "allocations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "source": {
+                  "type": "string",
+                  "enum": [
+                    "REMITTANCE",
+                    "INCENTIVE",
+                    "WAIVER"
+                  ]
+                },
+                "refId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "paise": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "appliedAt": {
+                  "type": "string"
+                },
+                "byId": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "id",
+                "source",
+                "refId",
+                "paise",
+                "appliedAt",
+                "byId"
+              ]
+            }
+          },
+          "serviceName": {
+            "type": "string"
+          },
+          "slotDate": {
+            "type": "string"
+          },
+          "collectionMethod": {
+            "type": "string",
+            "enum": [
+              "CASH",
+              "UPI_QR"
+            ]
           }
         },
         "required": [
@@ -1688,78 +2016,6 @@
           "commissionResolvedFrom",
           "remittanceStatus",
           "createdAt"
-        ]
-      },
-      "TechnicianOutstandingSummary": {
-        "type": "object",
-        "properties": {
-          "technicianId": {
-            "type": "string"
-          },
-          "technicianName": {
-            "type": "string"
-          },
-          "dueCount": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "totalCommissionDue": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "oldestDueAt": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "technicianId",
-          "technicianName",
-          "dueCount",
-          "totalCommissionDue"
-        ]
-      },
-      "CommissionReceivablesDashboard": {
-        "type": "object",
-        "properties": {
-          "technicians": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "technicianId": {
-                  "type": "string"
-                },
-                "technicianName": {
-                  "type": "string"
-                },
-                "dueCount": {
-                  "type": "integer",
-                  "minimum": 0
-                },
-                "totalCommissionDue": {
-                  "type": "integer",
-                  "minimum": 0
-                },
-                "oldestDueAt": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "technicianId",
-                "technicianName",
-                "dueCount",
-                "totalCommissionDue"
-              ]
-            }
-          },
-          "totalOutstanding": {
-            "type": "integer",
-            "minimum": 0
-          }
-        },
-        "required": [
-          "technicians",
-          "totalOutstanding"
         ]
       },
       "MarkCommissionReceivedBody": {
@@ -1838,7 +2094,7 @@
           }
         ]
       },
-      "TechnicianCommissionDue": {
+      "TechnicianCommissionDueV2": {
         "type": "object",
         "properties": {
           "totalOutstandingPaise": {
@@ -1849,6 +2105,51 @@
             "type": "integer",
             "minimum": 0
           },
+          "hold": {
+            "type": "object",
+            "properties": {
+              "state": {
+                "type": "string",
+                "enum": [
+                  "CLEAR",
+                  "WARN",
+                  "BLOCKED"
+                ]
+              },
+              "warnPaise": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "blockPaise": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "enforcementEnabled": {
+                "type": "boolean"
+              },
+              "override": {
+                "type": "object",
+                "properties": {
+                  "until": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "until",
+                  "reason"
+                ]
+              }
+            },
+            "required": [
+              "state",
+              "warnPaise",
+              "blockPaise",
+              "enforcementEnabled"
+            ]
+          },
           "entries": {
             "type": "array",
             "items": {
@@ -1857,13 +2158,46 @@
                 "bookingId": {
                   "type": "string"
                 },
+                "serviceName": {
+                  "type": "string"
+                },
+                "slotDate": {
+                  "type": "string"
+                },
                 "bookingAmount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "cashCollectedAmount": {
                   "type": "integer",
                   "minimum": 0
                 },
                 "commissionDue": {
                   "type": "integer",
                   "minimum": 0
+                },
+                "remittedAmount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "outstandingPaise": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "collectionMethod": {
+                  "type": "string",
+                  "enum": [
+                    "CASH",
+                    "UPI_QR"
+                  ]
+                },
+                "remittanceStatus": {
+                  "type": "string",
+                  "enum": [
+                    "DUE",
+                    "REMITTED",
+                    "WAIVED"
+                  ]
                 },
                 "createdAt": {
                   "type": "string"
@@ -1873,15 +2207,218 @@
                 "bookingId",
                 "bookingAmount",
                 "commissionDue",
+                "remittedAmount",
+                "outstandingPaise",
+                "remittanceStatus",
                 "createdAt"
               ]
             }
+          },
+          "remittances": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "amountPaise": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "method": {
+                  "type": "string",
+                  "enum": [
+                    "UPI",
+                    "CASH_DEPOSIT",
+                    "ADJUSTMENT"
+                  ]
+                },
+                "ref": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "amountPaise",
+                "method",
+                "ref",
+                "createdAt"
+              ]
+            }
+          },
+          "credits": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string",
+                  "enum": [
+                    "OVERPAYMENT",
+                    "INCENTIVE"
+                  ]
+                },
+                "remainingPaise": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "createdAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "source",
+                "remainingPaise",
+                "createdAt"
+              ]
+            }
+          },
+          "weekSummary": {
+            "type": "object",
+            "properties": {
+              "weekStart": {
+                "type": "string"
+              },
+              "jobs": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "cashCollectedPaise": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "commissionPaise": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "netPaise": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "weekStart",
+              "jobs",
+              "cashCollectedPaise",
+              "commissionPaise",
+              "netPaise"
+            ]
           }
         },
         "required": [
           "totalOutstandingPaise",
           "dueCount",
-          "entries"
+          "hold",
+          "entries",
+          "remittances",
+          "credits",
+          "weekSummary"
+        ]
+      },
+      "TechnicianConfigResponse": {
+        "type": "object",
+        "properties": {
+          "features": {
+            "type": "object",
+            "properties": {
+              "wallet": {
+                "type": "boolean"
+              },
+              "duesBanner": {
+                "type": "boolean"
+              },
+              "upiQr": {
+                "type": "boolean"
+              },
+              "incentives": {
+                "type": "boolean"
+              },
+              "addOnRequests": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "wallet",
+              "duesBanner",
+              "upiQr",
+              "incentives",
+              "addOnRequests"
+            ]
+          },
+          "thresholds": {
+            "type": "object",
+            "properties": {
+              "warnPaise": {
+                "type": "integer"
+              },
+              "blockPaise": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "warnPaise",
+              "blockPaise"
+            ]
+          },
+          "holdEnforcementEnabled": {
+            "type": "boolean"
+          },
+          "incentive": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "milestones": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "jobs": {
+                      "type": "integer"
+                    },
+                    "bonusPaise": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "jobs",
+                    "bonusPaise"
+                  ]
+                }
+              },
+              "capFractionBps": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "enabled",
+              "milestones",
+              "capFractionBps"
+            ]
+          },
+          "minSupportedVersionCode": {
+            "type": "integer"
+          },
+          "serverTime": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "features",
+          "thresholds",
+          "holdEnforcementEnabled",
+          "incentive",
+          "minSupportedVersionCode",
+          "serverTime"
         ]
       },
       "WaitlistRequest": {
@@ -1955,6 +2492,796 @@
         },
         "required": [
           "code"
+        ]
+      },
+      "CommissionAllocationEntry": {
+        "type": "object",
+        "properties": {
+          "bookingId": {
+            "type": "string"
+          },
+          "paise": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          }
+        },
+        "required": [
+          "bookingId",
+          "paise"
+        ]
+      },
+      "RecordRemittanceResponse": {
+        "type": "object",
+        "properties": {
+          "remittance": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "docType": {
+                "type": "string",
+                "enum": [
+                  "REMITTANCE"
+                ]
+              },
+              "technicianId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "partitionKey": {
+                "type": "string",
+                "minLength": 1
+              },
+              "amountPaise": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "method": {
+                "type": "string",
+                "enum": [
+                  "UPI",
+                  "CASH_DEPOSIT"
+                ]
+              },
+              "ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "note": {
+                "type": "string",
+                "maxLength": 500
+              },
+              "allocations": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "bookingId": {
+                      "type": "string"
+                    },
+                    "paise": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    }
+                  },
+                  "required": [
+                    "bookingId",
+                    "paise"
+                  ]
+                }
+              },
+              "creditCreatedPaise": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "recordedByAdminId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "idempotencyKey": {
+                "type": "string",
+                "minLength": 1
+              },
+              "createdAt": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "docType",
+              "technicianId",
+              "partitionKey",
+              "amountPaise",
+              "method",
+              "ref",
+              "allocations",
+              "creditCreatedPaise",
+              "recordedByAdminId",
+              "idempotencyKey",
+              "createdAt"
+            ]
+          },
+          "allocations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CommissionAllocationEntry"
+            }
+          },
+          "creditCreatedPaise": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "hold": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "outstandingPaise": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "dueCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "oldestDueAt": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string",
+                "enum": [
+                  "CLEAR",
+                  "WARN",
+                  "BLOCKED"
+                ]
+              },
+              "evaluatedAt": {
+                "type": "string"
+              },
+              "override": {
+                "type": "object",
+                "properties": {
+                  "until": {
+                    "type": "string"
+                  },
+                  "byAdminId": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "until",
+                  "byAdminId",
+                  "reason"
+                ]
+              }
+            },
+            "required": [
+              "outstandingPaise",
+              "dueCount",
+              "state",
+              "evaluatedAt"
+            ]
+          },
+          "holdRecomputePending": {
+            "type": "boolean"
+          },
+          "replayed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "remittance",
+          "allocations",
+          "creditCreatedPaise",
+          "hold",
+          "holdRecomputePending",
+          "replayed"
+        ]
+      },
+      "CommissionHoldOverride": {
+        "type": "object",
+        "properties": {
+          "until": {
+            "type": "string"
+          },
+          "byAdminId": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "until",
+          "byAdminId",
+          "reason"
+        ]
+      },
+      "CommissionDashboardTechnicianEntry": {
+        "type": "object",
+        "properties": {
+          "technicianId": {
+            "type": "string"
+          },
+          "technicianName": {
+            "type": "string"
+          },
+          "outstandingPaise": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "dueCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "oldestDueAt": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "CLEAR",
+              "WARN",
+              "BLOCKED"
+            ]
+          },
+          "evaluatedAt": {
+            "type": "string"
+          },
+          "override": {
+            "$ref": "#/components/schemas/CommissionHoldOverride"
+          }
+        },
+        "required": [
+          "technicianId",
+          "technicianName",
+          "outstandingPaise",
+          "dueCount",
+          "state",
+          "evaluatedAt"
+        ]
+      },
+      "CommissionReceivablesDashboardV2": {
+        "type": "object",
+        "properties": {
+          "technicians": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CommissionDashboardTechnicianEntry"
+            }
+          },
+          "totalOutstanding": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "unreconciledTechnicianCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "continuationToken": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "technicians",
+          "totalOutstanding",
+          "unreconciledTechnicianCount"
+        ]
+      },
+      "CommissionLedgerDetail": {
+        "type": "object",
+        "properties": {
+          "technicianId": {
+            "type": "string"
+          },
+          "hold": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "outstandingPaise": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "dueCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "oldestDueAt": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string",
+                "enum": [
+                  "CLEAR",
+                  "WARN",
+                  "BLOCKED"
+                ]
+              },
+              "evaluatedAt": {
+                "type": "string"
+              },
+              "override": {
+                "type": "object",
+                "properties": {
+                  "until": {
+                    "type": "string"
+                  },
+                  "byAdminId": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "until",
+                  "byAdminId",
+                  "reason"
+                ]
+              }
+            },
+            "required": [
+              "outstandingPaise",
+              "dueCount",
+              "state",
+              "evaluatedAt"
+            ]
+          },
+          "receivables": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "bookingId": {
+                  "type": "string"
+                },
+                "technicianId": {
+                  "type": "string"
+                },
+                "partitionKey": {
+                  "type": "string"
+                },
+                "serviceId": {
+                  "type": "string"
+                },
+                "categoryId": {
+                  "type": "string"
+                },
+                "bookingAmount": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "cashCollectedAmount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "commissionBps": {
+                  "type": "integer",
+                  "minimum": 1500,
+                  "maximum": 3500
+                },
+                "commissionDue": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "commissionResolvedFrom": {
+                  "type": "string",
+                  "enum": [
+                    "SERVICE",
+                    "CATEGORY",
+                    "GLOBAL"
+                  ]
+                },
+                "remittanceStatus": {
+                  "type": "string",
+                  "enum": [
+                    "DUE",
+                    "REMITTED",
+                    "WAIVED"
+                  ]
+                },
+                "remittedAmount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "remittedAt": {
+                  "type": "string"
+                },
+                "remittanceRef": {
+                  "type": "string"
+                },
+                "remittanceMethod": {
+                  "type": "string",
+                  "enum": [
+                    "UPI",
+                    "CASH_DEPOSIT",
+                    "ADJUSTMENT"
+                  ]
+                },
+                "markedByAdminId": {
+                  "type": "string"
+                },
+                "waivedReason": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string"
+                },
+                "docType": {
+                  "type": "string",
+                  "enum": [
+                    "RECEIVABLE"
+                  ]
+                },
+                "allocations": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "source": {
+                        "type": "string",
+                        "enum": [
+                          "REMITTANCE",
+                          "INCENTIVE",
+                          "WAIVER"
+                        ]
+                      },
+                      "refId": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "paise": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      },
+                      "appliedAt": {
+                        "type": "string"
+                      },
+                      "byId": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "source",
+                      "refId",
+                      "paise",
+                      "appliedAt",
+                      "byId"
+                    ]
+                  }
+                },
+                "serviceName": {
+                  "type": "string"
+                },
+                "slotDate": {
+                  "type": "string"
+                },
+                "collectionMethod": {
+                  "type": "string",
+                  "enum": [
+                    "CASH",
+                    "UPI_QR"
+                  ]
+                },
+                "outstandingPaise": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "id",
+                "bookingId",
+                "technicianId",
+                "partitionKey",
+                "serviceId",
+                "categoryId",
+                "bookingAmount",
+                "commissionBps",
+                "commissionDue",
+                "commissionResolvedFrom",
+                "remittanceStatus",
+                "createdAt",
+                "outstandingPaise"
+              ]
+            }
+          },
+          "remittances": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "docType": {
+                  "type": "string",
+                  "enum": [
+                    "REMITTANCE"
+                  ]
+                },
+                "technicianId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "partitionKey": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "amountPaise": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "method": {
+                  "type": "string",
+                  "enum": [
+                    "UPI",
+                    "CASH_DEPOSIT"
+                  ]
+                },
+                "ref": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "note": {
+                  "type": "string",
+                  "maxLength": 500
+                },
+                "allocations": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "bookingId": {
+                        "type": "string"
+                      },
+                      "paise": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      }
+                    },
+                    "required": [
+                      "bookingId",
+                      "paise"
+                    ]
+                  }
+                },
+                "creditCreatedPaise": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "recordedByAdminId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "idempotencyKey": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "createdAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "docType",
+                "technicianId",
+                "partitionKey",
+                "amountPaise",
+                "method",
+                "ref",
+                "allocations",
+                "creditCreatedPaise",
+                "recordedByAdminId",
+                "idempotencyKey",
+                "createdAt"
+              ]
+            }
+          },
+          "credits": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "docType": {
+                  "type": "string",
+                  "enum": [
+                    "CREDIT"
+                  ]
+                },
+                "technicianId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "partitionKey": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "source": {
+                  "type": "string",
+                  "enum": [
+                    "OVERPAYMENT",
+                    "INCENTIVE"
+                  ]
+                },
+                "refId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "originalPaise": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "remainingPaise": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "consumedBy": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "bookingId": {
+                        "type": "string"
+                      },
+                      "paise": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      },
+                      "appliedAt": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "bookingId",
+                      "paise",
+                      "appliedAt"
+                    ]
+                  }
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "docType",
+                "technicianId",
+                "partitionKey",
+                "source",
+                "refId",
+                "originalPaise",
+                "remainingPaise",
+                "consumedBy",
+                "createdAt"
+              ]
+            }
+          },
+          "cashCollectedPaise": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "creditAppliedPaise": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "technicianId",
+          "hold",
+          "receivables",
+          "remittances",
+          "credits",
+          "cashCollectedPaise",
+          "creditAppliedPaise"
+        ]
+      },
+      "CommissionHoldResponse": {
+        "type": "object",
+        "properties": {
+          "hold": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "outstandingPaise": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "dueCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "oldestDueAt": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string",
+                "enum": [
+                  "CLEAR",
+                  "WARN",
+                  "BLOCKED"
+                ]
+              },
+              "evaluatedAt": {
+                "type": "string"
+              },
+              "override": {
+                "type": "object",
+                "properties": {
+                  "until": {
+                    "type": "string"
+                  },
+                  "byAdminId": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "until",
+                  "byAdminId",
+                  "reason"
+                ]
+              }
+            },
+            "required": [
+              "outstandingPaise",
+              "dueCount",
+              "state",
+              "evaluatedAt"
+            ]
+          }
+        },
+        "required": [
+          "hold"
+        ]
+      },
+      "SetCommissionHoldOverrideBody": {
+        "type": "object",
+        "properties": {
+          "until": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "until",
+          "reason"
         ]
       },
       "AdminLoginRequest": {
@@ -3677,7 +5004,7 @@
         "tags": [
           "admin-catalogue"
         ],
-        "summary": "Get global commission rate (basis points)",
+        "summary": "Get the effective global commission config (rate + thresholds + flags)",
         "security": [
           {
             "cookieAuth": []
@@ -3685,11 +5012,50 @@
         ],
         "responses": {
           "200": {
-            "description": "Current global commission bps",
+            "description": "Effective commission config, defaults applied for any unset field",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CommissionConfigResponse"
+                  "type": "object",
+                  "properties": {
+                    "defaultCommissionBps": {
+                      "type": "integer",
+                      "minimum": 1500,
+                      "maximum": 3500
+                    },
+                    "warnThresholdPaise": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "blockThresholdPaise": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    },
+                    "holdEnforcementEnabled": {
+                      "type": "boolean"
+                    },
+                    "enforceKycInDispatch": {
+                      "type": "boolean"
+                    },
+                    "updatedBy": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    },
+                    "isDefault": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "defaultCommissionBps",
+                    "warnThresholdPaise",
+                    "blockThresholdPaise",
+                    "holdEnforcementEnabled",
+                    "enforceKycInDispatch",
+                    "updatedBy",
+                    "updatedAt"
+                  ]
                 }
               }
             }
@@ -3707,7 +5073,7 @@
         "tags": [
           "admin-catalogue"
         ],
-        "summary": "Update global commission rate (super-admin only)",
+        "summary": "Update the global commission rate and/or hold thresholds/flags (super-admin only)",
         "security": [
           {
             "cookieAuth": []
@@ -3723,11 +5089,22 @@
                     "type": "integer",
                     "minimum": 1500,
                     "maximum": 3500
+                  },
+                  "warnThresholdPaise": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "blockThresholdPaise": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "holdEnforcementEnabled": {
+                    "type": "boolean"
+                  },
+                  "enforceKycInDispatch": {
+                    "type": "boolean"
                   }
                 },
-                "required": [
-                  "defaultCommissionBps"
-                ],
                 "additionalProperties": false
               }
             }
@@ -3735,17 +5112,56 @@
         },
         "responses": {
           "200": {
-            "description": "Updated commission config",
+            "description": "Updated effective commission config",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CommissionConfigResponse"
+                  "type": "object",
+                  "properties": {
+                    "defaultCommissionBps": {
+                      "type": "integer",
+                      "minimum": 1500,
+                      "maximum": 3500
+                    },
+                    "warnThresholdPaise": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "blockThresholdPaise": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    },
+                    "holdEnforcementEnabled": {
+                      "type": "boolean"
+                    },
+                    "enforceKycInDispatch": {
+                      "type": "boolean"
+                    },
+                    "updatedBy": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    },
+                    "isDefault": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "defaultCommissionBps",
+                    "warnThresholdPaise",
+                    "blockThresholdPaise",
+                    "holdEnforcementEnabled",
+                    "enforceKycInDispatch",
+                    "updatedBy",
+                    "updatedAt"
+                  ]
                 }
               }
             }
           },
           "400": {
-            "description": "Validation error (bps out of 1500–3500 range)"
+            "description": "Validation error (bps out of 1500–3500 range, or warnThresholdPaise >= blockThresholdPaise)"
           },
           "401": {
             "description": "Unauthenticated"
@@ -3756,65 +5172,170 @@
         }
       }
     },
+    "/v1/admin/finance/commission-remittances": {
+      "post": {
+        "operationId": "recordCommissionRemittance",
+        "tags": [
+          "admin-finance"
+        ],
+        "summary": "Record a technician cash/UPI remittance and allocate it against outstanding receivables",
+        "description": "Idempotent on `idempotencyKey` (client-generated UUID, scoped per technician). A replayed call with the same key and the same amount/method/ref returns the original receipt (`replayed: true`) without re-applying credit. Overpayment beyond the oldest-due allocation creates a CREDIT doc consumed by future dues. The hold recompute is best-effort: failure never fails the remittance — the technician is queued for the async hold-repair sweep and `holdRecomputePending` is set instead.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "technicianId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "amountPaise": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "UPI",
+                      "CASH_DEPOSIT"
+                    ]
+                  },
+                  "ref": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  "idempotencyKey": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9._-]{8,128}$"
+                  }
+                },
+                "required": [
+                  "technicianId",
+                  "amountPaise",
+                  "method",
+                  "ref",
+                  "idempotencyKey"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Remittance recorded (or replayed)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordRemittanceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "TECHNICIAN_NOT_FOUND"
+          },
+          "409": {
+            "description": "IDEMPOTENCY_MISMATCH (same key, different amount/method/ref) or LEDGER_BUSY (ETag contention exhausted retries)"
+          },
+          "502": {
+            "description": "Upstream Cosmos error"
+          }
+        }
+      }
+    },
     "/v1/admin/finance/commission-receivables": {
       "get": {
         "operationId": "adminCommissionReceivablesDashboard",
         "tags": [
           "admin-finance"
         ],
-        "summary": "All-technician commission outstanding dashboard",
+        "summary": "Hold-based admin dashboard — technicians currently carrying a commission hold",
+        "description": "One page of technicians with a non-CLEAR state or non-zero outstanding balance. `unreconciledTechnicianCount` is computed across the full roster (not just this page), so it never depends on which page an admin happens to be viewing.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "continuationToken",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Per-tech hold summary + total outstanding",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommissionReceivablesDashboardV2"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/v1/admin/finance/commission-receivables/recompute": {
+      "post": {
+        "operationId": "adminCommissionReceivablesRecompute",
+        "tags": [
+          "admin-finance"
+        ],
+        "summary": "Enqueue a full hold-repair sweep across every technician (super-admin only)",
         "security": [
           {
             "cookieAuth": []
           }
         ],
         "responses": {
-          "200": {
-            "description": "Per-tech DUE summary + total outstanding",
+          "202": {
+            "description": "Sweep queued",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "technicians": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "technicianId": {
-                            "type": "string"
-                          },
-                          "technicianName": {
-                            "type": "string"
-                          },
-                          "dueCount": {
-                            "type": "integer",
-                            "minimum": 0
-                          },
-                          "totalCommissionDue": {
-                            "type": "integer",
-                            "minimum": 0
-                          },
-                          "oldestDueAt": {
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "technicianId",
-                          "technicianName",
-                          "dueCount",
-                          "totalCommissionDue"
-                        ]
-                      }
-                    },
-                    "totalOutstanding": {
-                      "type": "integer",
-                      "minimum": 0
+                    "queued": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
                     }
                   },
                   "required": [
-                    "technicians",
-                    "totalOutstanding"
+                    "queued"
                   ]
                 }
               }
@@ -3835,7 +5356,7 @@
         "tags": [
           "admin-finance"
         ],
-        "summary": "DUE commission entries for a specific technician",
+        "summary": "Full ledger detail (receivables + remittances + credits) for one technician",
         "security": [
           {
             "cookieAuth": []
@@ -3853,123 +5374,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Outstanding entries",
+            "description": "Ledger detail",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "technicianId": {
-                      "type": "string"
-                    },
-                    "entries": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string"
-                          },
-                          "bookingId": {
-                            "type": "string"
-                          },
-                          "technicianId": {
-                            "type": "string"
-                          },
-                          "partitionKey": {
-                            "type": "string"
-                          },
-                          "serviceId": {
-                            "type": "string"
-                          },
-                          "categoryId": {
-                            "type": "string"
-                          },
-                          "bookingAmount": {
-                            "type": "integer",
-                            "exclusiveMinimum": 0
-                          },
-                          "cashCollectedAmount": {
-                            "type": "integer",
-                            "minimum": 0
-                          },
-                          "commissionBps": {
-                            "type": "integer",
-                            "minimum": 1500,
-                            "maximum": 3500
-                          },
-                          "commissionDue": {
-                            "type": "integer",
-                            "minimum": 0
-                          },
-                          "commissionResolvedFrom": {
-                            "type": "string",
-                            "enum": [
-                              "SERVICE",
-                              "CATEGORY",
-                              "GLOBAL"
-                            ]
-                          },
-                          "remittanceStatus": {
-                            "type": "string",
-                            "enum": [
-                              "DUE",
-                              "REMITTED",
-                              "WAIVED"
-                            ]
-                          },
-                          "remittedAmount": {
-                            "type": "integer",
-                            "minimum": 0
-                          },
-                          "remittedAt": {
-                            "type": "string"
-                          },
-                          "remittanceRef": {
-                            "type": "string"
-                          },
-                          "remittanceMethod": {
-                            "type": "string",
-                            "enum": [
-                              "UPI",
-                              "CASH_DEPOSIT",
-                              "ADJUSTMENT"
-                            ]
-                          },
-                          "markedByAdminId": {
-                            "type": "string"
-                          },
-                          "waivedReason": {
-                            "type": "string"
-                          },
-                          "createdAt": {
-                            "type": "string"
-                          },
-                          "updatedAt": {
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "bookingId",
-                          "technicianId",
-                          "partitionKey",
-                          "serviceId",
-                          "categoryId",
-                          "bookingAmount",
-                          "commissionBps",
-                          "commissionDue",
-                          "commissionResolvedFrom",
-                          "remittanceStatus",
-                          "createdAt"
-                        ]
-                      }
-                    }
-                  },
-                  "required": [
-                    "technicianId",
-                    "entries"
-                  ]
+                  "$ref": "#/components/schemas/CommissionLedgerDetail"
                 }
               }
             }
@@ -3989,7 +5398,8 @@
         "tags": [
           "admin-finance"
         ],
-        "summary": "Mark commission as remitted (received) or waived",
+        "summary": "Waive a technician's commission for a booking (REMIT retired — use commission-remittances)",
+        "description": "WAIVE-only. `action: \"REMIT\"` now returns 410 — record remittances via the dedicated `POST /v1/admin/finance/commission-remittances` endpoint instead, which allocates one payment across multiple outstanding bookings rather than settling one at a time.",
         "security": [
           {
             "cookieAuth": []
@@ -4165,6 +5575,68 @@
                     },
                     "updatedAt": {
                       "type": "string"
+                    },
+                    "docType": {
+                      "type": "string",
+                      "enum": [
+                        "RECEIVABLE"
+                      ]
+                    },
+                    "allocations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "source": {
+                            "type": "string",
+                            "enum": [
+                              "REMITTANCE",
+                              "INCENTIVE",
+                              "WAIVER"
+                            ]
+                          },
+                          "refId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "paise": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "appliedAt": {
+                            "type": "string"
+                          },
+                          "byId": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "source",
+                          "refId",
+                          "paise",
+                          "appliedAt",
+                          "byId"
+                        ]
+                      }
+                    },
+                    "serviceName": {
+                      "type": "string"
+                    },
+                    "slotDate": {
+                      "type": "string"
+                    },
+                    "collectionMethod": {
+                      "type": "string",
+                      "enum": [
+                        "CASH",
+                        "UPI_QR"
+                      ]
                     }
                   },
                   "required": [
@@ -4195,7 +5667,137 @@
             "description": "Forbidden"
           },
           "404": {
-            "description": "Receivable not found"
+            "description": "RECEIVABLE_NOT_FOUND"
+          },
+          "409": {
+            "description": "LEDGER_BUSY"
+          },
+          "410": {
+            "description": "action: \"REMIT\" is retired — use POST /v1/admin/finance/commission-remittances",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "USE_COMMISSION_REMITTANCES"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/finance/commission-hold/{technicianId}/override": {
+      "post": {
+        "operationId": "setCommissionHoldOverride",
+        "tags": [
+          "admin-finance"
+        ],
+        "summary": "Force a technician's commission hold to CLEAR until a given time (super-admin only)",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "technicianId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetCommissionHoldOverrideBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Hold recomputed with the override applied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommissionHoldResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "TECHNICIAN_NOT_FOUND"
+          },
+          "409": {
+            "description": "LEDGER_BUSY (conditional-patch retries exhausted)"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "clearCommissionHoldOverride",
+        "tags": [
+          "admin-finance"
+        ],
+        "summary": "Clear a technician's commission hold override (super-admin only)",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "technicianId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Hold recomputed with the override cleared",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommissionHoldResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "TECHNICIAN_NOT_FOUND"
+          },
+          "409": {
+            "description": "LEDGER_BUSY (conditional-patch retries exhausted)"
           }
         }
       }
@@ -4206,7 +5808,8 @@
         "tags": [
           "technicians"
         ],
-        "summary": "Technician's outstanding commission owed to the platform",
+        "summary": "Technician's net outstanding commission, ledger, and week summary (v2)",
+        "description": "Field names of the v1 response are preserved (`totalOutstandingPaise`, `dueCount`, `entries[].bookingId/bookingAmount/commissionDue/createdAt`) so old APKs keep parsing what they already read — but `totalOutstandingPaise` is now NET of partial remittances/credits.",
         "security": [
           {
             "bearerAuth": []
@@ -4214,7 +5817,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Outstanding commission summary",
+            "description": "Net outstanding commission summary + ledger + week summary",
             "content": {
               "application/json": {
                 "schema": {
@@ -4228,6 +5831,51 @@
                       "type": "integer",
                       "minimum": 0
                     },
+                    "hold": {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "CLEAR",
+                            "WARN",
+                            "BLOCKED"
+                          ]
+                        },
+                        "warnPaise": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "blockPaise": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "enforcementEnabled": {
+                          "type": "boolean"
+                        },
+                        "override": {
+                          "type": "object",
+                          "properties": {
+                            "until": {
+                              "type": "string"
+                            },
+                            "reason": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "until",
+                            "reason"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "state",
+                        "warnPaise",
+                        "blockPaise",
+                        "enforcementEnabled"
+                      ]
+                    },
                     "entries": {
                       "type": "array",
                       "items": {
@@ -4236,13 +5884,46 @@
                           "bookingId": {
                             "type": "string"
                           },
+                          "serviceName": {
+                            "type": "string"
+                          },
+                          "slotDate": {
+                            "type": "string"
+                          },
                           "bookingAmount": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "cashCollectedAmount": {
                             "type": "integer",
                             "minimum": 0
                           },
                           "commissionDue": {
                             "type": "integer",
                             "minimum": 0
+                          },
+                          "remittedAmount": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "outstandingPaise": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "collectionMethod": {
+                            "type": "string",
+                            "enum": [
+                              "CASH",
+                              "UPI_QR"
+                            ]
+                          },
+                          "remittanceStatus": {
+                            "type": "string",
+                            "enum": [
+                              "DUE",
+                              "REMITTED",
+                              "WAIVED"
+                            ]
                           },
                           "createdAt": {
                             "type": "string"
@@ -4252,15 +5933,244 @@
                           "bookingId",
                           "bookingAmount",
                           "commissionDue",
+                          "remittedAmount",
+                          "outstandingPaise",
+                          "remittanceStatus",
                           "createdAt"
                         ]
                       }
+                    },
+                    "remittances": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "amountPaise": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "method": {
+                            "type": "string",
+                            "enum": [
+                              "UPI",
+                              "CASH_DEPOSIT",
+                              "ADJUSTMENT"
+                            ]
+                          },
+                          "ref": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "amountPaise",
+                          "method",
+                          "ref",
+                          "createdAt"
+                        ]
+                      }
+                    },
+                    "credits": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "source": {
+                            "type": "string",
+                            "enum": [
+                              "OVERPAYMENT",
+                              "INCENTIVE"
+                            ]
+                          },
+                          "remainingPaise": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "source",
+                          "remainingPaise",
+                          "createdAt"
+                        ]
+                      }
+                    },
+                    "weekSummary": {
+                      "type": "object",
+                      "properties": {
+                        "weekStart": {
+                          "type": "string"
+                        },
+                        "jobs": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "cashCollectedPaise": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "commissionPaise": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "netPaise": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "weekStart",
+                        "jobs",
+                        "cashCollectedPaise",
+                        "commissionPaise",
+                        "netPaise"
+                      ]
                     }
                   },
                   "required": [
                     "totalOutstandingPaise",
                     "dueCount",
-                    "entries"
+                    "hold",
+                    "entries",
+                    "remittances",
+                    "credits",
+                    "weekSummary"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          }
+        }
+      }
+    },
+    "/v1/config/technician": {
+      "get": {
+        "operationId": "getTechnicianConfig",
+        "tags": [
+          "config"
+        ],
+        "summary": "Technician-app remote config: feature flags, hold thresholds, incentive program",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Technician client config (60s in-process cache)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "features": {
+                      "type": "object",
+                      "properties": {
+                        "wallet": {
+                          "type": "boolean"
+                        },
+                        "duesBanner": {
+                          "type": "boolean"
+                        },
+                        "upiQr": {
+                          "type": "boolean"
+                        },
+                        "incentives": {
+                          "type": "boolean"
+                        },
+                        "addOnRequests": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "wallet",
+                        "duesBanner",
+                        "upiQr",
+                        "incentives",
+                        "addOnRequests"
+                      ]
+                    },
+                    "thresholds": {
+                      "type": "object",
+                      "properties": {
+                        "warnPaise": {
+                          "type": "integer"
+                        },
+                        "blockPaise": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "warnPaise",
+                        "blockPaise"
+                      ]
+                    },
+                    "holdEnforcementEnabled": {
+                      "type": "boolean"
+                    },
+                    "incentive": {
+                      "type": "object",
+                      "properties": {
+                        "enabled": {
+                          "type": "boolean"
+                        },
+                        "milestones": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "jobs": {
+                                "type": "integer"
+                              },
+                              "bonusPaise": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "jobs",
+                              "bonusPaise"
+                            ]
+                          }
+                        },
+                        "capFractionBps": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "enabled",
+                        "milestones",
+                        "capFractionBps"
+                      ]
+                    },
+                    "minSupportedVersionCode": {
+                      "type": "integer"
+                    },
+                    "serverTime": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "features",
+                    "thresholds",
+                    "holdEnforcementEnabled",
+                    "incentive",
+                    "minSupportedVersionCode",
+                    "serverTime"
                   ]
                 }
               }
