@@ -5,7 +5,6 @@ import * as Sentry from '@sentry/node';
 import { randomUUID } from 'node:crypto';
 import { BookingDocSchema } from '../schemas/booking.js';
 import { catalogueRepo } from '../cosmos/catalogue-repository.js';
-import { commissionReceivableRepo } from '../cosmos/commission-receivable-repository.js';
 import { walletLedgerRepo } from '../cosmos/wallet-ledger-repository.js';
 import { arePayoutsEnabled } from '../shared/payouts-enabled.js';
 import { getTechnicianForSettlement, incrementCompletedJobCount } from '../cosmos/technician-repository.js';
@@ -14,6 +13,7 @@ import { calculateCommission } from '../services/commission.service.js';
 import { getGlobalCommissionBps, resolveCommissionBps } from '../services/commission-config.service.js';
 import { RazorpayRouteService } from '../services/razorpayRoute.service.js';
 import { sendTechEarningsUpdate } from '../services/fcm.service.js';
+import { recordCommissionDue, finalizeLedgerForTechnician } from '../services/commission-settlement.service.js';
 
 const DB_NAME = process.env['COSMOS_DATABASE'] ?? 'homeservices';
 
@@ -55,63 +55,35 @@ export async function settleBooking(bookingRaw: unknown, ctx: InvocationContext)
   // Technician already holds the cash; platform records a commission receivable.
   // No money transfer to technician.
   if (paymentMethod !== 'RAZORPAY') {
-    const existing = await commissionReceivableRepo.getByBookingId(bookingId, technicianId);
-    if (existing) {
-      ctx.log(`settleBooking: commission receivable already exists for ${bookingId} — skipping`);
-      return;
+    const r = await recordCommissionDue(booking);
+    if ('skipped' in r) return;
+
+    if (r.created) {
+      try {
+        await systemAuditEntry('COMMISSION_DUE_RECORDED', bookingId, {
+          technicianId,
+          bookingAmount,
+          commissionBps: r.commissionBps,
+          commissionDue: r.commissionDue,
+          commissionResolvedFrom: r.commissionResolvedFrom,
+        });
+      } catch (auditErr: unknown) {
+        Sentry.captureException(auditErr);
+      }
+
+      try {
+        await Promise.all([
+          incrementCompletedJobCount(technicianId),
+          sendTechEarningsUpdate(technicianId, { bookingId, commissionDue: r.commissionDue }),
+        ]);
+      } catch (err: unknown) {
+        Sentry.captureException(err);
+      }
+    } else {
+      ctx.log(`settleBooking: receivable already recorded for ${bookingId} — finalizing only`);
     }
 
-    const [globalBps, service, category] = await Promise.all([
-      getGlobalCommissionBps(),
-      catalogueRepo.getServiceByIdCrossPartition(booking.serviceId),
-      catalogueRepo.getCategoryById(booking.categoryId),
-    ]);
-
-    const { bps, from: commissionResolvedFrom } = resolveCommissionBps({
-      ...(service?.commissionBps !== undefined ? { serviceBps: service.commissionBps } : {}),
-      ...(category?.commissionBps !== undefined ? { categoryBps: category.commissionBps } : {}),
-      globalBps,
-    });
-    const commissionDue = Math.round((bookingAmount * bps) / 10000);
-
-    const created = await commissionReceivableRepo.createDueEntry({
-      bookingId,
-      technicianId,
-      serviceId: booking.serviceId,
-      categoryId: booking.categoryId,
-      bookingAmount,
-      commissionBps: bps,
-      commissionDue,
-      commissionResolvedFrom,
-      ...(booking.cashCollectedAmount !== undefined
-        ? { cashCollectedAmount: booking.cashCollectedAmount }
-        : {}),
-    });
-    if (!created) {
-      ctx.log(`settleBooking: concurrent invocation already created commission receivable for ${bookingId} — skipping`);
-      return;
-    }
-
-    try {
-      await systemAuditEntry('COMMISSION_DUE_RECORDED', bookingId, {
-        technicianId,
-        bookingAmount,
-        commissionBps: bps,
-        commissionDue,
-        commissionResolvedFrom,
-      });
-    } catch (auditErr: unknown) {
-      Sentry.captureException(auditErr);
-    }
-
-    try {
-      await Promise.all([
-        incrementCompletedJobCount(technicianId),
-        sendTechEarningsUpdate(technicianId, { bookingId, commissionDue }),
-      ]);
-    } catch (err: unknown) {
-      Sentry.captureException(err);
-    }
+    await finalizeLedgerForTechnician(technicianId);
     return;
   }
 

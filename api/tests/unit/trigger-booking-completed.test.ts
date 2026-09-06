@@ -1,22 +1,22 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { InvocationContext } from '@azure/functions';
 
-vi.mock('../../src/cosmos/commission-receivable-repository.js');
 vi.mock('../../src/cosmos/wallet-ledger-repository.js');
 vi.mock('../../src/cosmos/technician-repository.js');
 vi.mock('../../src/cosmos/audit-log-repository.js');
 vi.mock('../../src/cosmos/catalogue-repository.js');
 vi.mock('../../src/services/commission-config.service.js');
+vi.mock('../../src/services/commission-settlement.service.js');
 vi.mock('../../src/services/fcm.service.js');
 vi.mock('../../src/services/razorpayRoute.service.js');
 
 import { settleBooking } from '../../src/functions/trigger-booking-completed.js';
-import { commissionReceivableRepo } from '../../src/cosmos/commission-receivable-repository.js';
 import { walletLedgerRepo } from '../../src/cosmos/wallet-ledger-repository.js';
 import * as techRepo from '../../src/cosmos/technician-repository.js';
 import * as auditRepo from '../../src/cosmos/audit-log-repository.js';
 import { catalogueRepo } from '../../src/cosmos/catalogue-repository.js';
 import * as configSvc from '../../src/services/commission-config.service.js';
+import * as settlementSvc from '../../src/services/commission-settlement.service.js';
 import * as fcmService from '../../src/services/fcm.service.js';
 import { RazorpayRouteService } from '../../src/services/razorpayRoute.service.js';
 
@@ -47,8 +47,13 @@ beforeEach(() => {
   vi.resetAllMocks();
 
   // CASH path defaults
-  vi.mocked(commissionReceivableRepo.getByBookingId).mockResolvedValue(null);
-  vi.mocked(commissionReceivableRepo.createDueEntry).mockResolvedValue(true);
+  vi.mocked(settlementSvc.recordCommissionDue).mockResolvedValue({
+    created: true,
+    commissionDue: 11000,
+    commissionBps: 2200,
+    commissionResolvedFrom: 'GLOBAL',
+  });
+  vi.mocked(settlementSvc.finalizeLedgerForTechnician).mockResolvedValue(undefined);
   vi.mocked(configSvc.getGlobalCommissionBps).mockResolvedValue(2200);
   vi.mocked(configSvc.resolveCommissionBps).mockReturnValue({ bps: 2200, from: 'GLOBAL' });
   vi.mocked(catalogueRepo.getServiceByIdCrossPartition).mockResolvedValue(null);
@@ -79,79 +84,28 @@ beforeEach(() => {
 describe('settleBooking — common guards', () => {
   it('skips non-COMPLETED status', async () => {
     await settleBooking({ ...cashBooking, status: 'IN_PROGRESS' }, mockCtx);
-    expect(commissionReceivableRepo.createDueEntry).not.toHaveBeenCalled();
+    expect(settlementSvc.recordCommissionDue).not.toHaveBeenCalled();
     expect(walletLedgerRepo.createPendingEntry).not.toHaveBeenCalled();
   });
 
   it('skips malformed documents silently', async () => {
     await settleBooking({ invalid: true }, mockCtx);
-    expect(commissionReceivableRepo.createDueEntry).not.toHaveBeenCalled();
+    expect(settlementSvc.recordCommissionDue).not.toHaveBeenCalled();
   });
 
   it('skips COMPLETED booking with no technicianId', async () => {
     await settleBooking({ ...cashBooking, technicianId: undefined }, mockCtx);
-    expect(commissionReceivableRepo.createDueEntry).not.toHaveBeenCalled();
+    expect(settlementSvc.recordCommissionDue).not.toHaveBeenCalled();
+    expect(settlementSvc.finalizeLedgerForTechnician).not.toHaveBeenCalled();
   });
 });
 
 describe('settleBooking — CASH_ON_SERVICE path (pilot)', () => {
-  it('creates a DUE commission receivable with global bps when no service/category override', async () => {
+  it('calls recordCommissionDue with the parsed booking', async () => {
     await settleBooking(cashBooking, mockCtx);
 
-    expect(commissionReceivableRepo.createDueEntry).toHaveBeenCalledWith(
-      expect.objectContaining({
-        bookingId: 'booking-abc',
-        technicianId: 'tech-1',
-        serviceId: 'svc-1',
-        categoryId: 'cat-1',
-        bookingAmount: 50000,
-        commissionBps: 2200,
-        commissionDue: 11000,
-        commissionResolvedFrom: 'GLOBAL',
-      }),
-    );
-  });
-
-  it('resolves service-level bps when service has commissionBps override', async () => {
-    vi.mocked(configSvc.resolveCommissionBps).mockReturnValue({ bps: 2500, from: 'SERVICE' });
-    vi.mocked(catalogueRepo.getServiceByIdCrossPartition).mockResolvedValue(
-      { commissionBps: 2500 } as never,
-    );
-
-    await settleBooking(cashBooking, mockCtx);
-
-    expect(commissionReceivableRepo.createDueEntry).toHaveBeenCalledWith(
-      expect.objectContaining({ commissionBps: 2500, commissionDue: 12500, commissionResolvedFrom: 'SERVICE' }),
-    );
-  });
-
-  it('resolves category-level bps when category has override but service does not', async () => {
-    vi.mocked(configSvc.resolveCommissionBps).mockReturnValue({ bps: 3000, from: 'CATEGORY' });
-    vi.mocked(catalogueRepo.getCategoryById).mockResolvedValue(
-      { commissionBps: 3000 } as never,
-    );
-
-    await settleBooking(cashBooking, mockCtx);
-
-    expect(commissionReceivableRepo.createDueEntry).toHaveBeenCalledWith(
-      expect.objectContaining({ commissionBps: 3000, commissionDue: 15000, commissionResolvedFrom: 'CATEGORY' }),
-    );
-  });
-
-  it('passes cashCollectedAmount to createDueEntry when present on booking', async () => {
-    await settleBooking({ ...cashBooking, cashCollectedAmount: 50000 }, mockCtx);
-
-    expect(commissionReceivableRepo.createDueEntry).toHaveBeenCalledWith(
-      expect.objectContaining({ cashCollectedAmount: 50000 }),
-    );
-  });
-
-  it('uses finalAmount over amount for commissionDue calculation', async () => {
-    // finalAmount=60000 at 2200 bps → commissionDue = round(60000*2200/10000) = 13200
-    await settleBooking({ ...cashBooking, finalAmount: 60000, amount: 50000 }, mockCtx);
-
-    expect(commissionReceivableRepo.createDueEntry).toHaveBeenCalledWith(
-      expect.objectContaining({ bookingAmount: 60000, commissionDue: 13200 }),
+    expect(settlementSvc.recordCommissionDue).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'booking-abc', technicianId: 'tech-1' }),
     );
   });
 
@@ -168,6 +122,13 @@ describe('settleBooking — CASH_ON_SERVICE path (pilot)', () => {
       ([entry]) => entry.action === 'COMMISSION_DUE_RECORDED',
     );
     expect(auditCall).toBeDefined();
+    expect(auditCall?.[0].payload).toMatchObject({
+      technicianId: 'tech-1',
+      bookingAmount: 50000,
+      commissionBps: 2200,
+      commissionDue: 11000,
+      commissionResolvedFrom: 'GLOBAL',
+    });
   });
 
   it('increments completedJobCount and sends FCM earnings update on success', async () => {
@@ -183,34 +144,37 @@ describe('settleBooking — CASH_ON_SERVICE path (pilot)', () => {
     const noMethod = { ...cashBooking, paymentMethod: undefined };
     await settleBooking(noMethod, mockCtx);
 
-    expect(commissionReceivableRepo.createDueEntry).toHaveBeenCalled();
+    expect(settlementSvc.recordCommissionDue).toHaveBeenCalled();
     expect(walletLedgerRepo.createPendingEntry).not.toHaveBeenCalled();
   });
 
-  describe('idempotency', () => {
-    it('skips when commission receivable already exists (double-fire)', async () => {
-      vi.mocked(commissionReceivableRepo.getByBookingId).mockResolvedValue({
-        id: 'booking-abc',
-        bookingId: 'booking-abc',
-        technicianId: 'tech-1',
-        partitionKey: 'tech-1',
-        serviceId: 'svc-1',
-        categoryId: 'cat-1',
-        bookingAmount: 50000,
-        commissionBps: 2200,
+  describe('at-least-once delivery / finalize-on-every-delivery', () => {
+    it('first delivery (created:true): audits, increments job count, sends FCM, and finalizes', async () => {
+      vi.mocked(settlementSvc.recordCommissionDue).mockResolvedValue({
+        created: true,
         commissionDue: 11000,
+        commissionBps: 2200,
         commissionResolvedFrom: 'GLOBAL',
-        remittanceStatus: 'DUE',
-        createdAt: '2026-04-24T10:00:00.000Z',
       });
 
       await settleBooking(cashBooking, mockCtx);
 
-      expect(commissionReceivableRepo.createDueEntry).not.toHaveBeenCalled();
+      const dueCalls = vi.mocked(auditRepo.appendAuditEntry).mock.calls.filter(
+        ([e]) => e.action === 'COMMISSION_DUE_RECORDED',
+      );
+      expect(dueCalls).toHaveLength(1);
+      expect(techRepo.incrementCompletedJobCount).toHaveBeenCalledWith('tech-1');
+      expect(fcmService.sendTechEarningsUpdate).toHaveBeenCalledTimes(1);
+      expect(settlementSvc.finalizeLedgerForTechnician).toHaveBeenCalledWith('tech-1');
     });
 
-    it('does not write audit when createDueEntry returns false (concurrent 409)', async () => {
-      vi.mocked(commissionReceivableRepo.createDueEntry).mockResolvedValue(false);
+    it('duplicate delivery (created:false, no skip): does NOT audit/increment/FCM, but still finalizes', async () => {
+      vi.mocked(settlementSvc.recordCommissionDue).mockResolvedValue({
+        created: false,
+        commissionDue: 11000,
+        commissionBps: 2200,
+        commissionResolvedFrom: 'GLOBAL',
+      });
 
       await settleBooking(cashBooking, mockCtx);
 
@@ -218,6 +182,21 @@ describe('settleBooking — CASH_ON_SERVICE path (pilot)', () => {
         ([e]) => e.action === 'COMMISSION_DUE_RECORDED',
       );
       expect(dueCalls).toHaveLength(0);
+      expect(techRepo.incrementCompletedJobCount).not.toHaveBeenCalled();
+      expect(fcmService.sendTechEarningsUpdate).not.toHaveBeenCalled();
+      expect(settlementSvc.finalizeLedgerForTechnician).toHaveBeenCalledWith('tech-1');
+    });
+
+    it('when recordCommissionDue reports skipped, does nothing further (no audit, no finalize)', async () => {
+      vi.mocked(settlementSvc.recordCommissionDue).mockResolvedValue({
+        created: false,
+        skipped: 'NO_TECHNICIAN',
+      });
+
+      await settleBooking(cashBooking, mockCtx);
+
+      expect(auditRepo.appendAuditEntry).not.toHaveBeenCalled();
+      expect(settlementSvc.finalizeLedgerForTechnician).not.toHaveBeenCalled();
     });
   });
 });
@@ -262,7 +241,7 @@ describe('settleBooking — RAZORPAY path (guarded, dead in cash pilot)', () => 
   it('does NOT create commission receivable — uses wallet ledger instead', async () => {
     await settleBooking(razorpayBooking, mockCtx);
 
-    expect(commissionReceivableRepo.createDueEntry).not.toHaveBeenCalled();
+    expect(settlementSvc.recordCommissionDue).not.toHaveBeenCalled();
     expect(walletLedgerRepo.createPendingEntry).toHaveBeenCalled();
   });
 
