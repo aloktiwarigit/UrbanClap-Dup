@@ -2,7 +2,7 @@ import { getCosmosClient, DB_NAME } from './client.js';
 import { boundingBoxPolygon, haversine } from './geo.js';
 import type { BookingDoc } from '../schemas/booking.js';
 import type { TechnicianKyc, KycStatus } from '../schemas/kyc.js';
-import type { AvailabilityWindow, TechnicianProfile } from '../schemas/technician.js';
+import type { AvailabilityWindow, CommissionHold, PaymentProfile, TechnicianProfile } from '../schemas/technician.js';
 
 const CONTAINER = 'technicians';
 
@@ -470,4 +470,101 @@ export async function patchTechnicianAdminFields(
     updatedAt: new Date().toISOString(),
   };
   await container.items.upsert(updated);
+}
+
+// ── Commission hold helpers (E21-S02) ─────────────────────────────────────────
+
+/**
+ * Point read of the technician's cached commissionHold. `exists` distinguishes an absent
+ * technician doc (recompute must give up — nothing to patch) from an existing doc that simply
+ * has no commissionHold field yet (recompute should still patch one in).
+ */
+export async function readCommissionHold(
+  technicianId: string,
+): Promise<{ hold: CommissionHold | null; exists: boolean }> {
+  const container = getCosmosClient().database(DB_NAME).container(CONTAINER);
+  const { resource } = await container
+    .item(technicianId, technicianId)
+    .read<{ id: string; commissionHold?: CommissionHold }>();
+  return { exists: Boolean(resource), hold: resource?.commissionHold ?? null };
+}
+
+/**
+ * Writes /commissionHold via a conditional Cosmos PATCH so a stale (slower) recompute can never
+ * clobber a fresher one that already landed. `readStartedAt` is the caller's read-start
+ * timestamp (server-generated ISO-8601, so string comparison is chronological): the condition
+ * only allows the write when the stored commissionHold is missing, has no evaluatedAt, or is
+ * older than the recompute that produced this write.
+ */
+export async function patchCommissionHold(
+  technicianId: string,
+  hold: CommissionHold,
+  readStartedAt: string,
+): Promise<'APPLIED' | 'STALE' | 'MISSING'> {
+  const container = getCosmosClient().database(DB_NAME).container(CONTAINER);
+  // readStartedAt is server-generated ISO-8601 (Date.toISOString()), never user input, and is
+  // appended by string concatenation (not template-literal interpolation) — not the pattern
+  // `no-user-controlled-cosmos-query` guards against (that rule targets items.query() filters).
+  const condition =
+    'FROM c WHERE NOT IS_DEFINED(c.commissionHold) OR NOT IS_DEFINED(c.commissionHold.evaluatedAt) OR c.commissionHold.evaluatedAt < "' +
+    readStartedAt +
+    '"';
+  try {
+    await container.item(technicianId, technicianId).patch({
+      operations: [{ op: 'set', path: '/commissionHold', value: hold }],
+      condition,
+    });
+    return 'APPLIED';
+  } catch (err: unknown) {
+    const code = (err as { code?: number }).code;
+    if (code === 412) return 'STALE';
+    if (code === 404) return 'MISSING';
+    throw err;
+  }
+}
+
+/**
+ * Pages through every technician doc that currently carries a commissionHold. Used by the sweep
+ * to catch technicians whose balance has dropped to zero (they've fallen out of the DUE-side
+ * query but still need a recompute down to CLEAR/0). Sorted by outstandingPaise desc within the
+ * page only — no composite index required; ordering across pages is not guaranteed.
+ */
+export async function listTechniciansWithHold(continuationToken?: string): Promise<{
+  items: Array<{ id: string; name?: string; commissionHold: CommissionHold }>;
+  continuationToken?: string;
+}> {
+  const container = getCosmosClient().database(DB_NAME).container(CONTAINER);
+  const iterator = container.items.query<{
+    id: string;
+    displayName?: string;
+    name?: string;
+    commissionHold: CommissionHold;
+  }>(
+    { query: 'SELECT c.id, c.displayName, c.name, c.commissionHold FROM c WHERE IS_DEFINED(c.commissionHold)' },
+    { maxItemCount: 50, ...(continuationToken ? { continuationToken } : {}) },
+  );
+  const page = await iterator.fetchNext();
+  const items = page.resources
+    .map((r) => ({
+      id: r.id,
+      ...(r.displayName ?? r.name ? { name: (r.displayName ?? r.name) as string } : {}),
+      commissionHold: r.commissionHold,
+    }))
+    .sort((a, b) => b.commissionHold.outstandingPaise - a.commissionHold.outstandingPaise);
+  return { items, ...(page.continuationToken ? { continuationToken: page.continuationToken } : {}) };
+}
+
+/** Writes /paymentProfile via PATCH. Throws TECHNICIAN_NOT_FOUND (code) when the doc is absent. */
+export async function patchPaymentProfile(technicianId: string, profile: PaymentProfile): Promise<void> {
+  const container = getCosmosClient().database(DB_NAME).container(CONTAINER);
+  try {
+    await container.item(technicianId, technicianId).patch({
+      operations: [{ op: 'set', path: '/paymentProfile', value: profile }],
+    });
+  } catch (err: unknown) {
+    if ((err as { code?: number }).code === 404) {
+      throw Object.assign(new Error('TECHNICIAN_NOT_FOUND'), { code: 'TECHNICIAN_NOT_FOUND' });
+    }
+    throw err;
+  }
 }

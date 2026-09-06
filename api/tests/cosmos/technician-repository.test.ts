@@ -9,9 +9,14 @@ import { getCosmosClient } from '../../src/cosmos/client.js';
 import {
   getKycByTechnicianId,
   getTechnicianServiceProfile,
+  listTechniciansWithHold,
+  patchCommissionHold,
+  patchPaymentProfile,
   patchTechnicianServiceProfile,
+  readCommissionHold,
   upsertKycStatus,
 } from '../../src/cosmos/technician-repository.js';
+import type { CommissionHold } from '../../src/schemas/technician.js';
 
 describe('upsertKycStatus', () => {
   it('upserts with merged kyc fields', async () => {
@@ -221,5 +226,175 @@ describe('technician service profile helpers', () => {
       isAvailable: true,
       kycStatus: 'APPROVED',
     }));
+  });
+});
+
+describe('readCommissionHold', () => {
+  it('returns exists:true and the commissionHold when the technician doc has one', async () => {
+    const hold: CommissionHold = { outstandingPaise: 300000, dueCount: 1, state: 'WARN', evaluatedAt: '2026-09-01T00:00:00.000Z' };
+    const mockRead = vi.fn().mockResolvedValue({ resource: { id: 't1', commissionHold: hold } });
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({ item: () => ({ read: mockRead }) }) }),
+    });
+
+    expect(await readCommissionHold('t1')).toEqual({ exists: true, hold });
+  });
+
+  it('returns exists:true, hold:null when the doc exists but has no commissionHold field', async () => {
+    const mockRead = vi.fn().mockResolvedValue({ resource: { id: 't1' } });
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({ item: () => ({ read: mockRead }) }) }),
+    });
+
+    expect(await readCommissionHold('t1')).toEqual({ exists: true, hold: null });
+  });
+
+  it('returns exists:false, hold:null when the technician doc is absent', async () => {
+    const mockRead = vi.fn().mockResolvedValue({ resource: undefined });
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({ item: () => ({ read: mockRead }) }) }),
+    });
+
+    expect(await readCommissionHold('ghost')).toEqual({ exists: false, hold: null });
+  });
+});
+
+describe('patchCommissionHold', () => {
+  const hold: CommissionHold = { outstandingPaise: 300000, dueCount: 1, state: 'WARN', evaluatedAt: '2026-09-01T00:00:00.000Z' };
+  const readStartedAt = '2026-09-01T00:00:00.000Z';
+
+  it('patches /commissionHold with a condition string containing readStartedAt and returns APPLIED', async () => {
+    const mockPatch = vi.fn().mockResolvedValue({});
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({ item: () => ({ patch: mockPatch }) }) }),
+    });
+
+    const result = await patchCommissionHold('t1', hold, readStartedAt);
+
+    expect(result).toBe('APPLIED');
+    expect(mockPatch).toHaveBeenCalledTimes(1);
+    const call = mockPatch.mock.calls[0]![0] as { operations: Array<{ op: string; path: string; value: unknown }>; condition: string };
+    expect(call.operations).toEqual([{ op: 'set', path: '/commissionHold', value: hold }]);
+    expect(call.condition).toContain(readStartedAt);
+  });
+
+  it('maps a 412 precondition failure to STALE', async () => {
+    const mockPatch = vi.fn().mockRejectedValue({ code: 412 });
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({ item: () => ({ patch: mockPatch }) }) }),
+    });
+
+    expect(await patchCommissionHold('t1', hold, readStartedAt)).toBe('STALE');
+  });
+
+  it('maps a 404 not-found to MISSING', async () => {
+    const mockPatch = vi.fn().mockRejectedValue({ code: 404 });
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({ item: () => ({ patch: mockPatch }) }) }),
+    });
+
+    expect(await patchCommissionHold('t1', hold, readStartedAt)).toBe('MISSING');
+  });
+
+  it('rethrows any other error code', async () => {
+    const mockPatch = vi.fn().mockRejectedValue({ code: 429 });
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({ item: () => ({ patch: mockPatch }) }) }),
+    });
+
+    await expect(patchCommissionHold('t1', hold, readStartedAt)).rejects.toMatchObject({ code: 429 });
+  });
+});
+
+describe('listTechniciansWithHold', () => {
+  it('queries IS_DEFINED(c.commissionHold), maxItemCount 50, and sorts the page by outstandingPaise desc', async () => {
+    const page = {
+      resources: [
+        { id: 't1', displayName: 'Low', commissionHold: { outstandingPaise: 100, dueCount: 1, state: 'WARN', evaluatedAt: 'x' } },
+        { id: 't2', displayName: 'High', commissionHold: { outstandingPaise: 900000, dueCount: 3, state: 'BLOCKED', evaluatedAt: 'x' } },
+      ],
+      continuationToken: undefined,
+    };
+    const mockFetchNext = vi.fn().mockResolvedValue(page);
+    const mockQuery = vi.fn().mockReturnValue({ fetchNext: mockFetchNext });
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({ items: { query: mockQuery } }) }),
+    });
+
+    const result = await listTechniciansWithHold();
+
+    expect(mockQuery).toHaveBeenCalledWith(
+      { query: 'SELECT c.id, c.displayName, c.name, c.commissionHold FROM c WHERE IS_DEFINED(c.commissionHold)' },
+      { maxItemCount: 50 },
+    );
+    expect(result.items.map((i) => i.id)).toEqual(['t2', 't1']);
+    expect(result.continuationToken).toBeUndefined();
+  });
+
+  it('passes continuationToken through to the query options and back out', async () => {
+    const mockFetchNext = vi.fn().mockResolvedValue({ resources: [], continuationToken: 'next-token' });
+    const mockQuery = vi.fn().mockReturnValue({ fetchNext: mockFetchNext });
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({ items: { query: mockQuery } }) }),
+    });
+
+    const result = await listTechniciansWithHold('prev-token');
+
+    expect(mockQuery).toHaveBeenCalledWith(
+      { query: 'SELECT c.id, c.displayName, c.name, c.commissionHold FROM c WHERE IS_DEFINED(c.commissionHold)' },
+      { maxItemCount: 50, continuationToken: 'prev-token' },
+    );
+    expect(result.continuationToken).toBe('next-token');
+  });
+
+  it('falls back to c.name when displayName is absent, and omits name when neither is set', async () => {
+    const mockFetchNext = vi.fn().mockResolvedValue({
+      resources: [
+        { id: 't1', name: 'Legacy Name', commissionHold: { outstandingPaise: 100, dueCount: 1, state: 'WARN', evaluatedAt: 'x' } },
+        { id: 't2', commissionHold: { outstandingPaise: 50, dueCount: 1, state: 'WARN', evaluatedAt: 'x' } },
+      ],
+    });
+    const mockQuery = vi.fn().mockReturnValue({ fetchNext: mockFetchNext });
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({ items: { query: mockQuery } }) }),
+    });
+
+    const result = await listTechniciansWithHold();
+
+    expect(result.items[0]).toMatchObject({ id: 't1', name: 'Legacy Name' });
+    expect(result.items[1]).not.toHaveProperty('name');
+  });
+});
+
+describe('patchPaymentProfile', () => {
+  it('patches /paymentProfile', async () => {
+    const mockPatch = vi.fn().mockResolvedValue({});
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({ item: () => ({ patch: mockPatch }) }) }),
+    });
+    const profile = { upiVpa: 'tech@upi', upiUpdatedAt: '2026-09-01T00:00:00.000Z' };
+
+    await patchPaymentProfile('t1', profile);
+
+    expect(mockPatch).toHaveBeenCalledWith({ operations: [{ op: 'set', path: '/paymentProfile', value: profile }] });
+  });
+
+  it('maps a 404 to a TECHNICIAN_NOT_FOUND error', async () => {
+    const mockPatch = vi.fn().mockRejectedValue({ code: 404 });
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({ item: () => ({ patch: mockPatch }) }) }),
+    });
+
+    await expect(patchPaymentProfile('ghost', { upiVpa: 'x@upi', upiUpdatedAt: 'x' }))
+      .rejects.toMatchObject({ code: 'TECHNICIAN_NOT_FOUND' });
+  });
+
+  it('rethrows any other error code', async () => {
+    const mockPatch = vi.fn().mockRejectedValue({ code: 500 });
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({ item: () => ({ patch: mockPatch }) }) }),
+    });
+
+    await expect(patchPaymentProfile('t1', { upiVpa: 'x@upi', upiUpdatedAt: 'x' })).rejects.toMatchObject({ code: 500 });
   });
 });
