@@ -45,7 +45,11 @@ export function buildCommissionDueResponse(input: BuildCommissionDueInput): Tech
     ...(r.cashCollectedAmount !== undefined ? { cashCollectedAmount: r.cashCollectedAmount } : {}),
     commissionDue: r.commissionDue,
     remittedAmount: r.remittedAmount ?? 0,
-    outstandingPaise: outstandingOf(r),
+    // Only a DUE row carries real outstanding balance. A WAIVED row that was never partially
+    // remitted still has remittedAmount 0 (mergeAllocation excludes WAIVER allocations from
+    // remittedAmount), so outstandingOf() alone would show forgiven debt as still owed; a
+    // REMITTED row is settled. Both must read 0 here — aggregate totals already filter to DUE.
+    outstandingPaise: r.remittanceStatus === 'DUE' ? outstandingOf(r) : 0,
     ...(r.collectionMethod !== undefined ? { collectionMethod: r.collectionMethod } : {}),
     remittanceStatus: r.remittanceStatus,
     createdAt: r.createdAt,

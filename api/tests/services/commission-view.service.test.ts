@@ -117,6 +117,41 @@ describe('buildCommissionDueResponse', () => {
     expect(res.entries[0]).toMatchObject({ remittedAmount: 0, outstandingPaise: 10_000 });
   });
 
+  it('a WAIVED row with no remittedAmount shows outstandingPaise 0, not commissionDue (forgiven debt must not read as owed)', () => {
+    const waived = receivable({
+      bookingId: 'waived-never-remitted',
+      remittanceStatus: 'WAIVED',
+      commissionDue: 7500,
+      remittedAmount: undefined, // mergeAllocation excludes WAIVER allocations from remittedAmount
+    });
+    const res = buildCommissionDueResponse({
+      ledger: { receivables: [waived], remittances: [], credits: [] },
+      hold: null,
+      cfg,
+      now: NOW,
+    });
+    const entry = res.entries.find((e) => e.bookingId === 'waived-never-remitted');
+    expect(entry?.outstandingPaise).toBe(0);
+    expect(entry?.remittedAmount).toBe(0);
+  });
+
+  it('a REMITTED row shows outstandingPaise 0', () => {
+    const remitted = receivable({
+      bookingId: 'remitted-row',
+      remittanceStatus: 'REMITTED',
+      commissionDue: 6000,
+      remittedAmount: 6000,
+    });
+    const res = buildCommissionDueResponse({
+      ledger: { receivables: [remitted], remittances: [], credits: [] },
+      hold: null,
+      cfg,
+      now: NOW,
+    });
+    const entry = res.entries.find((e) => e.bookingId === 'remitted-row');
+    expect(entry?.outstandingPaise).toBe(0);
+  });
+
   it('hold falls back to CLEAR with cfg thresholds when null', () => {
     const res = buildCommissionDueResponse({
       ledger: { receivables: [], remittances: [], credits: [] },

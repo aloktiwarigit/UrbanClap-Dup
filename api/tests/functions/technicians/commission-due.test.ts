@@ -55,10 +55,20 @@ beforeEach(() => {
 });
 
 describe('techCommissionDueHandler', () => {
-  it('returns 200 with totalOutstandingPaise equal to the sum of entries[].outstandingPaise', async () => {
+  it('returns 200 with totalOutstandingPaise equal to the sum of entries[].outstandingPaise, including a WAIVED row', async () => {
     const entry2 = { ...dueEntry, bookingId: 'booking-2', id: 'booking-2', commissionDue: 8000, remittedAmount: 3000 };
+    // A WAIVED row never partially remitted (remittedAmount absent) — must contribute 0 to both
+    // entries[].outstandingPaise and totalOutstandingPaise, not its full commissionDue.
+    const waivedEntry = {
+      ...dueEntry,
+      bookingId: 'booking-3',
+      id: 'booking-3',
+      commissionDue: 9000,
+      remittanceStatus: 'WAIVED' as const,
+      remittedAmount: undefined,
+    };
     vi.mocked(commissionReceivableRepo.listLedger).mockResolvedValue({
-      receivables: [dueEntry, entry2],
+      receivables: [dueEntry, entry2, waivedEntry],
       remittances: [],
       credits: [],
     });
@@ -68,11 +78,10 @@ describe('techCommissionDueHandler', () => {
     expect(res.status).toBe(200);
     const body = res.jsonBody as TechnicianCommissionDueV2;
     const sum = body.entries.reduce((s, e) => s + e.outstandingPaise, 0);
-    // Only DUE entries' net outstanding contributes to totalOutstandingPaise — entries also
-    // includes non-DUE rows, so compare against the subset actually summed by the SUT (both
-    // rows here are DUE, so the totals coincide).
     expect(body.totalOutstandingPaise).toBe(sum);
     expect(body.totalOutstandingPaise).toBe(11000 + 5000);
+    const waived = body.entries.find((e) => e.bookingId === 'booking-3');
+    expect(waived?.outstandingPaise).toBe(0);
   });
 
   it('parses a response built from legacy-shaped receivables (no allocations/remittedAmount) against TechnicianCommissionDueV2Schema', async () => {
