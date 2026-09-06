@@ -57,7 +57,9 @@ export type ApplyCreditInput = {
   /** Deterministic anchor document created in the same batch; its 409 is the replay signal.
    *  `build` receives the final plan so the anchor can embed it (a remittance receipt lists its allocations).
    *  `matches` validates a replayed CONFLICT against the request (idempotency-key mismatch guard);
-   *  defaults to comparing `existing.amountPaise` to `input.paise` when that field is a number. */
+   *  the default is FAIL-CLOSED — it requires `existing.amountPaise` to be a number equal to
+   *  `input.paise`, and rejects (IDEMPOTENCY_MISMATCH) on anything else, including it being absent
+   *  or non-numeric. Any anchor type that does not carry `amountPaise` MUST supply its own `matches`. */
   anchor: { id: string; build: (plan: AllocationPlan) => Record<string, unknown>; matches?: (existing: Record<string, unknown>) => boolean };
 };
 export type ApplyCreditResult =
@@ -117,9 +119,10 @@ export async function applyCredit(input: ApplyCreditInput): Promise<ApplyCreditR
       // bare CONFLICT as "this was a replay" without confirming it's the anchor.
       const existing = await commissionReceivableRepo.readLedgerDoc<Record<string, unknown>>(input.technicianId, input.anchor.id);
       if (existing) {
+        // Fail-closed default: an anchor type without a numeric amountPaise MUST supply `matches`.
         const matches = input.anchor.matches
           ? input.anchor.matches(existing)
-          : typeof existing['amountPaise'] !== 'number' || existing['amountPaise'] === input.paise;
+          : typeof existing['amountPaise'] === 'number' && existing['amountPaise'] === input.paise;
         if (!matches) {
           throw Object.assign(new Error('IDEMPOTENCY_MISMATCH'), { code: 'IDEMPOTENCY_MISMATCH', anchorId: input.anchor.id });
         }

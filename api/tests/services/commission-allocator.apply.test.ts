@@ -44,6 +44,19 @@ describe('applyCredit', () => {
     vi.mocked(commissionReceivableRepo.readLedgerDoc).mockResolvedValue({ id: 'rem:k1', amountPaise: 500 });
     await expect(applyCredit({ ...base, paise: 100 })).rejects.toMatchObject({ code: 'IDEMPOTENCY_MISMATCH', anchorId: 'rem:k1' });
   });
+  it('rejects with IDEMPOTENCY_MISMATCH when the existing anchor has no amountPaise and no custom matches is given (fail-closed default)', async () => {
+    vi.mocked(commissionReceivableRepo.getOutstandingByTechnician).mockResolvedValue([row('b1', 200, '2026-09-01')]);
+    vi.mocked(commissionReceivableRepo.runLedgerBatch).mockResolvedValue({ ok: false, reason: 'CONFLICT' });
+    vi.mocked(commissionReceivableRepo.readLedgerDoc).mockResolvedValue({ id: 'rem:k1', docType: 'REMITTANCE' }); // no amountPaise field
+    await expect(applyCredit({ ...base, paise: 100 })).rejects.toMatchObject({ code: 'IDEMPOTENCY_MISMATCH', anchorId: 'rem:k1' });
+  });
+  it('honors a custom anchor.matches even when amountPaise is absent', async () => {
+    vi.mocked(commissionReceivableRepo.getOutstandingByTechnician).mockResolvedValue([row('b1', 200, '2026-09-01')]);
+    vi.mocked(commissionReceivableRepo.runLedgerBatch).mockResolvedValue({ ok: false, reason: 'CONFLICT' });
+    vi.mocked(commissionReceivableRepo.readLedgerDoc).mockResolvedValue({ id: 'rem:k1', docType: 'REMITTANCE' }); // no amountPaise field
+    const input = { ...base, paise: 100, anchor: { ...base.anchor, matches: () => true } };
+    expect(await applyCredit(input)).toEqual({ replayed: true, anchorId: 'rem:k1' });
+  });
   it('re-plans a CONFLICT when the existing-anchor read comes back missing (conflict was not the anchor)', async () => {
     vi.mocked(commissionReceivableRepo.getOutstandingByTechnician)
       .mockResolvedValueOnce([row('b1', 200, '2026-09-01')])
