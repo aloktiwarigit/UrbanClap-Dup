@@ -3,6 +3,7 @@ import { HttpRequest, InvocationContext, type HttpResponseInit } from '@azure/fu
 
 vi.mock('@sentry/node', () => ({
   captureMessage: vi.fn(),
+  captureException: vi.fn(),
   withScope: vi.fn((cb: (scope: { setLevel: (l: string) => void; setExtras: (e: Record<string, unknown>) => void }) => void) => {
     cb({ setLevel: vi.fn(), setExtras: vi.fn() });
   }),
@@ -28,6 +29,15 @@ vi.mock('../../src/cosmos/catalogue-repository.js', () => ({
 vi.mock('../../src/services/fcm.service.js', () => ({
   sendBookingStatusUpdatePush: vi.fn().mockResolvedValue(undefined),
   sendLocationUpdatePush: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('../../src/services/commission-settlement.service.js', () => ({
+  recordCommissionDue: vi.fn().mockResolvedValue({ created: true, commissionDue: 0, commissionBps: 0, commissionResolvedFrom: 'GLOBAL' }),
+  finalizeLedgerForTechnician: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('../../src/services/auditLog.service.js', () => ({
+  auditLog: vi.fn().mockResolvedValue(undefined),
 }));
 
 type MockFn = ReturnType<typeof vi.fn>;
@@ -336,6 +346,175 @@ describe('PATCH /v1/technicians/active-job/:bookingId/transition', () => {
 
       const [, fields] = (updateBookingFields as MockFn).mock.calls[0] as [string, Record<string, unknown>];
       expect(fields['cashCollectionStatus']).toBeUndefined();
+    });
+  });
+
+  describe('E21-S02: synchronous settlement + collectionMethod + cash audit', () => {
+    it('patches all four cash fields, calls recordCommissionDue with the updated booking, finalizes the ledger, and writes CASH_COLLECTION_RECORDED audit', async () => {
+      const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+      const { bookingRepo, updateBookingFields } = await import('../../src/cosmos/booking-repository.js');
+      const { catalogueRepo } = await import('../../src/cosmos/catalogue-repository.js');
+      const { recordCommissionDue, finalizeLedgerForTechnician } = await import('../../src/services/commission-settlement.service.js');
+      const { auditLog } = await import('../../src/services/auditLog.service.js');
+
+      const updatedBooking = {
+        ...aBooking('COMPLETED'),
+        cashCollectionStatus: 'COLLECTED',
+        cashCollectedAmount: 90000,
+        collectionMethod: 'UPI_QR',
+        shortCollectionReason: 'customer_short',
+      };
+
+      (verifyTechnicianToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
+      (bookingRepo.getById as MockFn).mockResolvedValue(aBooking('IN_PROGRESS'));
+      (updateBookingFields as MockFn).mockResolvedValue(updatedBooking);
+      (catalogueRepo.getServiceByIdCrossPartition as MockFn).mockResolvedValue(aService());
+
+      const res = await transitionHandler(
+        makePatchReq('bk-1', {
+          targetStatus: 'COMPLETED',
+          cashCollected: true,
+          collectedAmount: 90000,
+          collectionMethod: 'UPI_QR',
+          shortCollectionReason: 'customer_short',
+        }),
+        new InvocationContext(),
+      ) as HttpResponseInit;
+
+      expect(res.status).toBe(200);
+
+      const [, fields] = (updateBookingFields as MockFn).mock.calls[0] as [string, Record<string, unknown>];
+      expect(fields['cashCollectionStatus']).toBe('COLLECTED');
+      expect(fields['cashCollectedAmount']).toBe(90000);
+      expect(fields['collectionMethod']).toBe('UPI_QR');
+      expect(fields['shortCollectionReason']).toBe('customer_short');
+
+      expect(recordCommissionDue).toHaveBeenCalledWith(updatedBooking);
+      expect(finalizeLedgerForTechnician).toHaveBeenCalledWith('tech-1');
+
+      expect(auditLog).toHaveBeenCalledWith(
+        { adminId: 'system', role: 'system' },
+        'CASH_COLLECTION_RECORDED',
+        'booking',
+        'bk-1',
+        {
+          technicianId: 'tech-1',
+          collectedAmount: 90000,
+          collectionMethod: 'UPI_QR',
+          shortCollectionReason: 'customer_short',
+        },
+      );
+    });
+
+    it('still returns 200 and captures the error in Sentry when recordCommissionDue rejects', async () => {
+      const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+      const { bookingRepo, updateBookingFields } = await import('../../src/cosmos/booking-repository.js');
+      const { catalogueRepo } = await import('../../src/cosmos/catalogue-repository.js');
+      const { recordCommissionDue } = await import('../../src/services/commission-settlement.service.js');
+      const Sentry = await import('@sentry/node');
+
+      (verifyTechnicianToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
+      (bookingRepo.getById as MockFn).mockResolvedValue(aBooking('IN_PROGRESS'));
+      (updateBookingFields as MockFn).mockResolvedValue(aBooking('COMPLETED'));
+      (catalogueRepo.getServiceByIdCrossPartition as MockFn).mockResolvedValue(aService());
+      (recordCommissionDue as MockFn).mockRejectedValueOnce(new Error('boom'));
+
+      const res = await transitionHandler(
+        makePatchReq('bk-1', { targetStatus: 'COMPLETED' }),
+        new InvocationContext(),
+      ) as HttpResponseInit;
+
+      expect(res.status).toBe(200);
+      expect(Sentry.captureException).toHaveBeenCalled();
+    });
+
+    it('does not write an audit entry when cashCollected is absent, but still calls settlement', async () => {
+      const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+      const { bookingRepo, updateBookingFields } = await import('../../src/cosmos/booking-repository.js');
+      const { catalogueRepo } = await import('../../src/cosmos/catalogue-repository.js');
+      const { recordCommissionDue, finalizeLedgerForTechnician } = await import('../../src/services/commission-settlement.service.js');
+      const { auditLog } = await import('../../src/services/auditLog.service.js');
+
+      (verifyTechnicianToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
+      (bookingRepo.getById as MockFn).mockResolvedValue(aBooking('IN_PROGRESS'));
+      (updateBookingFields as MockFn).mockResolvedValue(aBooking('COMPLETED'));
+      (catalogueRepo.getServiceByIdCrossPartition as MockFn).mockResolvedValue(aService());
+
+      const res = await transitionHandler(
+        makePatchReq('bk-1', { targetStatus: 'COMPLETED' }),
+        new InvocationContext(),
+      ) as HttpResponseInit;
+
+      expect(res.status).toBe(200);
+      expect(auditLog).not.toHaveBeenCalled();
+      expect(recordCommissionDue).toHaveBeenCalled();
+      expect(finalizeLedgerForTechnician).toHaveBeenCalledWith('tech-1');
+    });
+
+    it('does not call the settlement service for non-COMPLETED transitions', async () => {
+      const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+      const { bookingRepo, updateBookingFields } = await import('../../src/cosmos/booking-repository.js');
+      const { catalogueRepo } = await import('../../src/cosmos/catalogue-repository.js');
+      const { recordCommissionDue, finalizeLedgerForTechnician } = await import('../../src/services/commission-settlement.service.js');
+
+      (verifyTechnicianToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
+      (bookingRepo.getById as MockFn).mockResolvedValue(aBooking('REACHED'));
+      (updateBookingFields as MockFn).mockResolvedValue(aBooking('IN_PROGRESS'));
+      (catalogueRepo.getServiceByIdCrossPartition as MockFn).mockResolvedValue(aService());
+
+      const res = await transitionHandler(
+        makePatchReq('bk-1', { targetStatus: 'IN_PROGRESS' }),
+        new InvocationContext(),
+      ) as HttpResponseInit;
+
+      expect(res.status).toBe(200);
+      expect(recordCommissionDue).not.toHaveBeenCalled();
+      expect(finalizeLedgerForTechnician).not.toHaveBeenCalled();
+    });
+
+    it('defaults collectionMethod to CASH when cashCollected=true and no collectionMethod is given', async () => {
+      const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+      const { bookingRepo, updateBookingFields } = await import('../../src/cosmos/booking-repository.js');
+      const { catalogueRepo } = await import('../../src/cosmos/catalogue-repository.js');
+      const { auditLog } = await import('../../src/services/auditLog.service.js');
+
+      (verifyTechnicianToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
+      (bookingRepo.getById as MockFn).mockResolvedValue(aBooking('IN_PROGRESS'));
+      (updateBookingFields as MockFn).mockResolvedValue(aBooking('COMPLETED'));
+      (catalogueRepo.getServiceByIdCrossPartition as MockFn).mockResolvedValue(aService());
+
+      const res = await transitionHandler(
+        makePatchReq('bk-1', { targetStatus: 'COMPLETED', cashCollected: true, collectedAmount: 50000 }),
+        new InvocationContext(),
+      ) as HttpResponseInit;
+
+      expect(res.status).toBe(200);
+
+      const [, fields] = (updateBookingFields as MockFn).mock.calls[0] as [string, Record<string, unknown>];
+      expect(fields['collectionMethod']).toBe('CASH');
+
+      expect(auditLog).toHaveBeenCalledWith(
+        { adminId: 'system', role: 'system' },
+        'CASH_COLLECTION_RECORDED',
+        'booking',
+        'bk-1',
+        expect.objectContaining({ collectionMethod: 'CASH' }),
+      );
+    });
+
+    it('returns 400 for an invalid collectionMethod', async () => {
+      const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+      const { bookingRepo } = await import('../../src/cosmos/booking-repository.js');
+
+      (verifyTechnicianToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
+      (bookingRepo.getById as MockFn).mockResolvedValue(aBooking('IN_PROGRESS'));
+
+      const res = await transitionHandler(
+        makePatchReq('bk-1', { targetStatus: 'COMPLETED', cashCollected: true, collectionMethod: 'BITCOIN' }),
+        new InvocationContext(),
+      ) as HttpResponseInit;
+
+      expect(res.status).toBe(400);
     });
   });
 });
