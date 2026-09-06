@@ -6,7 +6,6 @@ vi.mock('../../../src/cosmos/client.js', () => ({
 }));
 
 import {
-  upsertTechnicianProfile,
   getTechniciansWithinRadius,
 } from '../../../src/cosmos/technician-repository.js';
 import { getCosmosClient } from '../../../src/cosmos/client.js';
@@ -28,23 +27,6 @@ const makeContainer = (overrides: Record<string, unknown> = {}) => ({
   item: vi.fn(),
   items: { upsert: vi.fn(), query: vi.fn() },
   ...overrides,
-});
-
-describe('upsertTechnicianProfile', () => {
-  let container: ReturnType<typeof makeContainer>;
-
-  beforeEach(() => {
-    container = makeContainer();
-    vi.mocked(getCosmosClient).mockReturnValue({
-      database: () => ({ container: () => container }),
-    } as any);
-  });
-
-  it('calls container.items.upsert with the profile', async () => {
-    container.items.upsert = vi.fn().mockResolvedValue({});
-    await upsertTechnicianProfile(VALID_PROFILE);
-    expect(container.items.upsert).toHaveBeenCalledWith(VALID_PROFILE);
-  });
 });
 
 describe('getTechniciansWithinRadius', () => {

@@ -1,10 +1,42 @@
 import { getCosmosClient, DB_NAME } from './client.js';
 import { boundingBoxPolygon, haversine } from './geo.js';
+import { isPreconditionFailure, MAX_ETAG_ATTEMPTS } from './retry-utils.js';
 import type { BookingDoc } from '../schemas/booking.js';
 import type { TechnicianKyc, KycStatus } from '../schemas/kyc.js';
 import type { AvailabilityWindow, CommissionHold, PaymentProfile, TechnicianProfile } from '../schemas/technician.js';
 
 const CONTAINER = 'technicians';
+
+/**
+ * ETag-guarded read-modify-write for the `technicians` doc (E21-S02 Task 7). Every writer on
+ * this doc must route through here: a bare read -> spread -> upsert lets a `.patch()` (e.g.
+ * commissionHold, paymentProfile) landing between the read and the write get silently reverted.
+ * `mutate` receives the current doc (or null when absent) and must return the full next doc —
+ * it should spread `existing` first so it never drops fields it doesn't know about.
+ */
+async function readModifyWrite<T extends { id: string }>(
+  technicianId: string,
+  mutate: (existing: T | null) => T,
+): Promise<void> {
+  const container = getCosmosClient().database(DB_NAME).container(CONTAINER);
+  for (let attempt = 0; attempt < MAX_ETAG_ATTEMPTS; attempt++) {
+    const { resource, etag } = await container.item(technicianId, technicianId).read<T>();
+    const next = mutate(resource ?? null);
+    try {
+      if (resource) {
+        await container
+          .item(technicianId, technicianId)
+          .replace(next, { accessCondition: { type: 'IfMatch', condition: etag ?? '' } });
+      } else {
+        await container.items.create(next);
+      }
+      return;
+    } catch (err: unknown) {
+      if (isPreconditionFailure(err) && attempt < MAX_ETAG_ATTEMPTS - 1) continue;
+      throw err;
+    }
+  }
+}
 
 // ── KYC methods (E02-S03 pattern) ────────────────────────────────────────────
 
@@ -17,25 +49,23 @@ export async function upsertKycStatus(
   technicianId: string,
   patch: Partial<TechnicianKyc> & { kycStatus: KycStatus }
 ): Promise<void> {
-  const client = getCosmosClient();
-  const container = client.database(DB_NAME).container(CONTAINER);
-  const { resource } = await container.item(technicianId, technicianId).read<TechnicianDoc>();
-  const existing: TechnicianDoc = resource ?? { id: technicianId };
-  const updated: TechnicianDoc = {
-    ...existing,
-    kyc: {
-      aadhaarVerified: false,
-      aadhaarMaskedNumber: null,
-      panNumber: null,
-      panMaskedNumber: null,
-      panHash: null,
-      panImagePath: null,
-      ...(existing.kyc ?? {}),
-      ...patch,
-      updatedAt: new Date().toISOString(),
-    },
-  };
-  await container.items.upsert(updated);
+  await readModifyWrite<TechnicianDoc>(technicianId, (existing) => {
+    const base: TechnicianDoc = existing ?? { id: technicianId };
+    return {
+      ...base,
+      kyc: {
+        aadhaarVerified: false,
+        aadhaarMaskedNumber: null,
+        panNumber: null,
+        panMaskedNumber: null,
+        panHash: null,
+        panImagePath: null,
+        ...(base.kyc ?? {}),
+        ...patch,
+        updatedAt: new Date().toISOString(),
+      },
+    };
+  });
 }
 
 export async function getKycByTechnicianId(
@@ -48,12 +78,6 @@ export async function getKycByTechnicianId(
 }
 
 // ── Geospatial profile methods (E05-S01) ─────────────────────────────────────
-
-export async function upsertTechnicianProfile(profile: TechnicianProfile): Promise<void> {
-  const client = getCosmosClient();
-  const container = client.database(DB_NAME).container(CONTAINER);
-  await container.items.upsert(profile);
-}
 
 export interface TechnicianAvailability {
   isOnline: boolean;
@@ -112,21 +136,22 @@ export async function patchTechnicianAvailability(
   technicianId: string,
   patch: TechnicianAvailabilityPatch,
 ): Promise<TechnicianAvailability> {
-  const client = getCosmosClient();
-  const container = client.database(DB_NAME).container(CONTAINER);
-  const { resource } = await container.item(technicianId, technicianId).read<Record<string, unknown>>();
   const updatedAt = new Date().toISOString();
-  const updated = {
-    ...(resource ?? { id: technicianId, technicianId }),
-    id: technicianId,
-    technicianId: (resource?.technicianId as string | undefined) ?? technicianId,
-    ...(patch.isOnline !== undefined ? { isOnline: patch.isOnline } : {}),
-    ...(patch.isAvailable !== undefined ? { isAvailable: patch.isAvailable } : {}),
-    ...(patch.availabilityWindows !== undefined ? { availabilityWindows: patch.availabilityWindows } : {}),
-    updatedAt,
-  };
-  await container.items.upsert(updated);
-  return normalizeAvailability(updated);
+  let result!: TechnicianAvailability;
+  await readModifyWrite<Record<string, unknown> & { id: string }>(technicianId, (existing) => {
+    const updated = {
+      ...(existing ?? { id: technicianId, technicianId }),
+      id: technicianId,
+      technicianId: (existing?.technicianId as string | undefined) ?? technicianId,
+      ...(patch.isOnline !== undefined ? { isOnline: patch.isOnline } : {}),
+      ...(patch.isAvailable !== undefined ? { isAvailable: patch.isAvailable } : {}),
+      ...(patch.availabilityWindows !== undefined ? { availabilityWindows: patch.availabilityWindows } : {}),
+      updatedAt,
+    };
+    result = normalizeAvailability(updated);
+    return updated;
+  });
+  return result;
 }
 
 async function readTechnicianDocument(technicianId: string): Promise<Record<string, unknown> | null> {
@@ -165,30 +190,32 @@ export async function patchTechnicianServiceProfile(
   technicianId: string,
   patch: TechnicianServiceProfilePatch,
 ): Promise<TechnicianServiceProfile> {
-  const container = getCosmosClient().database(DB_NAME).container(CONTAINER);
-  const existing = await readTechnicianDocument(technicianId);
-  const existingKyc = existing?.kyc as { kycStatus?: unknown } | undefined;
   const updatedAt = new Date().toISOString();
-  const updated: Record<string, unknown> = {
-    ...(existing ?? {}),
-    id: technicianId,
-    technicianId: typeof existing?.technicianId === 'string' ? existing.technicianId : technicianId,
-    skills: patch.skills,
-    availabilityWindows: Array.isArray(existing?.availabilityWindows) ? existing.availabilityWindows : [],
-    isOnline: typeof existing?.isOnline === 'boolean' ? existing.isOnline : false,
-    isAvailable: typeof existing?.isAvailable === 'boolean' ? existing.isAvailable : false,
-    kycStatus: typeof existing?.kycStatus === 'string'
-      ? existing.kycStatus
-      : typeof existingKyc?.kycStatus === 'string'
-        ? existingKyc.kycStatus
-        : 'PENDING',
-    updatedAt,
-  };
-  if (patch.location !== undefined) {
-    updated.location = { type: 'Point', coordinates: [patch.location.lng, patch.location.lat] };
-  }
-  await container.items.upsert(updated);
-  return toServiceProfile(updated);
+  let result!: TechnicianServiceProfile;
+  await readModifyWrite<Record<string, unknown> & { id: string }>(technicianId, (existing) => {
+    const existingKyc = existing?.kyc as { kycStatus?: unknown } | undefined;
+    const updated: Record<string, unknown> & { id: string } = {
+      ...(existing ?? {}),
+      id: technicianId,
+      technicianId: typeof existing?.technicianId === 'string' ? existing.technicianId : technicianId,
+      skills: patch.skills,
+      availabilityWindows: Array.isArray(existing?.availabilityWindows) ? existing.availabilityWindows : [],
+      isOnline: typeof existing?.isOnline === 'boolean' ? existing.isOnline : false,
+      isAvailable: typeof existing?.isAvailable === 'boolean' ? existing.isAvailable : false,
+      kycStatus: typeof existing?.kycStatus === 'string'
+        ? existing.kycStatus
+        : typeof existingKyc?.kycStatus === 'string'
+          ? existingKyc.kycStatus
+          : 'PENDING',
+      updatedAt,
+    };
+    if (patch.location !== undefined) {
+      updated.location = { type: 'Point', coordinates: [patch.location.lng, patch.location.lat] };
+    }
+    result = toServiceProfile(updated);
+    return updated;
+  });
+  return result;
 }
 
 export async function getTechniciansWithinRadius(
@@ -457,19 +484,24 @@ export async function patchTechnicianAdminFields(
   id: string,
   patch: { isOnline?: boolean; suspended?: boolean; commissionPct?: number; skills?: string[] },
 ): Promise<void> {
-  const client = getCosmosClient();
-  const container = client.database(DB_NAME).container(CONTAINER);
-  const { resource } = await container.item(id, id).read<Record<string, unknown>>();
-  const updated = {
-    ...(resource ?? { id }),
+  await readModifyWrite<Record<string, unknown> & { id: string }>(id, (existing) => ({
+    ...(existing ?? { id }),
     id,
     ...(patch.isOnline !== undefined ? { isOnline: patch.isOnline } : {}),
     ...(patch.suspended !== undefined ? { suspended: patch.suspended } : {}),
     ...(patch.commissionPct !== undefined ? { commissionPct: patch.commissionPct } : {}),
     ...(patch.skills !== undefined ? { skills: patch.skills } : {}),
     updatedAt: new Date().toISOString(),
-  };
-  await container.items.upsert(updated);
+  }));
+}
+
+/** ETag-guarded write of the technician's FCM push token (moved out of the HTTP handler). */
+export async function patchFcmToken(technicianId: string, token: string): Promise<void> {
+  await readModifyWrite<Record<string, unknown> & { id: string }>(technicianId, (existing) => ({
+    ...(existing ?? { id: technicianId }),
+    id: technicianId,
+    fcmToken: token,
+  }));
 }
 
 // ── Commission hold helpers (E21-S02) ─────────────────────────────────────────

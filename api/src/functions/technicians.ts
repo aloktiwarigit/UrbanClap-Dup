@@ -6,6 +6,7 @@ import { getCosmosClient, DB_NAME } from '../cosmos/client.js';
 import {
   getTechnicianAvailability,
   getTechnicianServiceProfile,
+  patchFcmToken,
   patchTechnicianAvailability,
   patchTechnicianServiceProfile,
 } from '../cosmos/technician-repository.js';
@@ -79,10 +80,7 @@ export const patchFcmTokenHandler: HttpHandler = async (req, _ctx: InvocationCon
     return { status: 400, jsonBody: { code: 'PARSE_ERROR' } };
   }
 
-  const container = getCosmosClient().database(DB_NAME).container('technicians');
-  const { resource: existing } = await container.item(uid, uid).read<Record<string, unknown>>();
-  const doc = { ...(existing ?? { id: uid }), fcmToken: body.fcmToken };
-  await container.items.upsert(doc);
+  await patchFcmToken(uid, body.fcmToken);
 
   return { status: 200, jsonBody: { ok: true } };
 };
