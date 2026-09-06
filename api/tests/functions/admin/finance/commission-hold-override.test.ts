@@ -151,6 +151,65 @@ describe('setCommissionHoldOverrideHandler', () => {
 
     expect(res.status).toBe(502);
   });
+
+  it('retries once on STALE and applies on the second attempt, with a fresh read each time', async () => {
+    vi.mocked(readCommissionHold).mockResolvedValue({ hold: existingHold, exists: true });
+    vi.mocked(patchCommissionHold).mockResolvedValueOnce('STALE').mockResolvedValueOnce('APPLIED');
+    vi.mocked(recomputeCommissionHold).mockResolvedValue({ hold: overriddenHold, status: 'APPLIED' });
+
+    const res = (await setCommissionHoldOverrideHandler(
+      makeReq('tech-1', 'POST', validBody),
+      {} as never,
+      ctx,
+    )) as HttpResponseInit;
+
+    expect(res.status).toBe(200);
+    expect(readCommissionHold).toHaveBeenCalledTimes(2);
+    expect(patchCommissionHold).toHaveBeenCalledTimes(2);
+    expect(recomputeCommissionHold).toHaveBeenCalledWith('tech-1');
+    expect(auditLog).toHaveBeenCalledWith(
+      ctx,
+      'COMMISSION_HOLD_OVERRIDDEN',
+      'commission_hold',
+      'tech-1',
+      expect.anything(),
+    );
+  });
+
+  it('returns 404 with no audit when patchCommissionHold reports MISSING mid-loop', async () => {
+    vi.mocked(readCommissionHold).mockResolvedValue({ hold: existingHold, exists: true });
+    vi.mocked(patchCommissionHold).mockResolvedValue('MISSING');
+
+    const res = (await setCommissionHoldOverrideHandler(
+      makeReq('tech-1', 'POST', validBody),
+      {} as never,
+      ctx,
+    )) as HttpResponseInit;
+
+    expect(res.status).toBe(404);
+    expect((res.jsonBody as { code: string }).code).toBe('TECHNICIAN_NOT_FOUND');
+    expect(patchCommissionHold).toHaveBeenCalledTimes(1); // no retry on MISSING
+    expect(recomputeCommissionHold).not.toHaveBeenCalled();
+    expect(auditLog).not.toHaveBeenCalled();
+  });
+
+  it('returns 409 LEDGER_BUSY with no audit after 3 consecutive STALE patches', async () => {
+    vi.mocked(readCommissionHold).mockResolvedValue({ hold: existingHold, exists: true });
+    vi.mocked(patchCommissionHold).mockResolvedValue('STALE');
+
+    const res = (await setCommissionHoldOverrideHandler(
+      makeReq('tech-1', 'POST', validBody),
+      {} as never,
+      ctx,
+    )) as HttpResponseInit;
+
+    expect(res.status).toBe(409);
+    expect((res.jsonBody as { code: string }).code).toBe('LEDGER_BUSY');
+    expect(readCommissionHold).toHaveBeenCalledTimes(3);
+    expect(patchCommissionHold).toHaveBeenCalledTimes(3);
+    expect(recomputeCommissionHold).not.toHaveBeenCalled();
+    expect(auditLog).not.toHaveBeenCalled();
+  });
 });
 
 describe('clearCommissionHoldOverrideHandler', () => {
@@ -203,5 +262,61 @@ describe('clearCommissionHoldOverrideHandler', () => {
     )) as HttpResponseInit;
 
     expect(res.status).toBe(502);
+  });
+
+  it('retries once on STALE and applies on the second attempt', async () => {
+    vi.mocked(readCommissionHold).mockResolvedValue({ hold: overriddenHold, exists: true });
+    vi.mocked(patchCommissionHold).mockResolvedValueOnce('STALE').mockResolvedValueOnce('APPLIED');
+    vi.mocked(recomputeCommissionHold).mockResolvedValue({ hold: existingHold, status: 'APPLIED' });
+
+    const res = (await clearCommissionHoldOverrideHandler(
+      makeReq('tech-1', 'DELETE'),
+      {} as never,
+      ctx,
+    )) as HttpResponseInit;
+
+    expect(res.status).toBe(200);
+    expect(readCommissionHold).toHaveBeenCalledTimes(2);
+    expect(patchCommissionHold).toHaveBeenCalledTimes(2);
+    expect(auditLog).toHaveBeenCalledWith(
+      ctx,
+      'COMMISSION_HOLD_OVERRIDE_CLEARED',
+      'commission_hold',
+      'tech-1',
+      expect.anything(),
+    );
+  });
+
+  it('returns 404 with no audit when patchCommissionHold reports MISSING mid-loop', async () => {
+    vi.mocked(readCommissionHold).mockResolvedValue({ hold: overriddenHold, exists: true });
+    vi.mocked(patchCommissionHold).mockResolvedValue('MISSING');
+
+    const res = (await clearCommissionHoldOverrideHandler(
+      makeReq('tech-1', 'DELETE'),
+      {} as never,
+      ctx,
+    )) as HttpResponseInit;
+
+    expect(res.status).toBe(404);
+    expect(patchCommissionHold).toHaveBeenCalledTimes(1);
+    expect(auditLog).not.toHaveBeenCalled();
+  });
+
+  it('returns 409 LEDGER_BUSY with no audit after 3 consecutive STALE patches', async () => {
+    vi.mocked(readCommissionHold).mockResolvedValue({ hold: overriddenHold, exists: true });
+    vi.mocked(patchCommissionHold).mockResolvedValue('STALE');
+
+    const res = (await clearCommissionHoldOverrideHandler(
+      makeReq('tech-1', 'DELETE'),
+      {} as never,
+      ctx,
+    )) as HttpResponseInit;
+
+    expect(res.status).toBe(409);
+    expect((res.jsonBody as { code: string }).code).toBe('LEDGER_BUSY');
+    expect(readCommissionHold).toHaveBeenCalledTimes(3);
+    expect(patchCommissionHold).toHaveBeenCalledTimes(3);
+    expect(recomputeCommissionHold).not.toHaveBeenCalled();
+    expect(auditLog).not.toHaveBeenCalled();
   });
 });

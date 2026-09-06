@@ -16,6 +16,8 @@ const SetOverrideBodySchema = z
   })
   .strict();
 
+const MAX_OVERRIDE_PATCH_ATTEMPTS = 3;
+
 function getTechnicianId(req: HttpRequest): string | undefined {
   return (req.params as Record<string, string | undefined>)['technicianId'];
 }
@@ -25,11 +27,44 @@ function defaultHold(evaluatedAt: string): CommissionHold {
   return { outstandingPaise: 0, dueCount: 0, state: 'CLEAR', evaluatedAt };
 }
 
+type ApplyHoldPatchResult =
+  | { status: 'APPLIED'; hold: CommissionHold }
+  | { status: 'MISSING' }
+  | { status: 'STALE' };
+
+/**
+ * Retries the read-build-conditional-patch cycle up to `MAX_OVERRIDE_PATCH_ATTEMPTS` times so a
+ * concurrent recompute landing between our read and our patch (`patchCommissionHold` returning
+ * `'STALE'`) gets a fresh read + a fresh `readStartedAt` on the next attempt instead of silently
+ * dropping the admin's override. `buildNext` receives the current hold (or `null` if the
+ * technician has never had one computed) and this attempt's `readStartedAt`, and must return the
+ * FULL next hold — it decides what to keep/strip/add (set vs. clear override).
+ */
+async function applyHoldPatch(
+  technicianId: string,
+  buildNext: (current: CommissionHold | null, readStartedAt: string) => CommissionHold,
+): Promise<ApplyHoldPatchResult> {
+  for (let attempt = 1; attempt <= MAX_OVERRIDE_PATCH_ATTEMPTS; attempt++) {
+    const readStartedAt = new Date().toISOString();
+    const { hold, exists } = await readCommissionHold(technicianId);
+    if (!exists) return { status: 'MISSING' };
+
+    const next = buildNext(hold, readStartedAt);
+    const result = await patchCommissionHold(technicianId, next, readStartedAt);
+    if (result === 'APPLIED') return { status: 'APPLIED', hold: next };
+    if (result === 'MISSING') return { status: 'MISSING' };
+    // STALE: another recompute/patch landed between our read and our write — retry with a
+    // completely fresh read on the next iteration.
+  }
+  return { status: 'STALE' };
+}
+
 /**
  * Sets a manual override that forces a technician's commissionHold to CLEAR until `until`,
  * regardless of outstanding balance (E21-S02 Task 10). Writes the override field via the
- * conditional patch primitive, then immediately recomputes the hold so the response reflects the
- * override's effect (state, outstandingPaise, dueCount) rather than the raw patched field alone.
+ * conditional patch primitive (retried on `STALE`), then immediately recomputes the hold so the
+ * response reflects the override's effect (state, outstandingPaise, dueCount) rather than the raw
+ * patched field alone.
  */
 export const setCommissionHoldOverrideHandler: AdminHttpHandler = async (
   req: HttpRequest,
@@ -52,15 +87,18 @@ export const setCommissionHoldOverrideHandler: AdminHttpHandler = async (
   }
 
   try {
-    const readStartedAt = new Date().toISOString();
-    const { hold, exists } = await readCommissionHold(technicianId);
-    if (!exists) return { status: 404, jsonBody: { code: 'TECHNICIAN_NOT_FOUND' } };
-
-    const nextHold: CommissionHold = {
-      ...(hold ?? defaultHold(readStartedAt)),
+    const patchResult = await applyHoldPatch(technicianId, (current, readStartedAt) => ({
+      ...(current ?? defaultHold(readStartedAt)),
       override: { until: parsed.data.until, byAdminId: admin.adminId, reason: parsed.data.reason },
-    };
-    await patchCommissionHold(technicianId, nextHold, readStartedAt);
+    }));
+
+    if (patchResult.status === 'MISSING') {
+      return { status: 404, jsonBody: { code: 'TECHNICIAN_NOT_FOUND' } };
+    }
+    if (patchResult.status === 'STALE') {
+      return { status: 409, jsonBody: { code: 'LEDGER_BUSY' } };
+    }
+
     const recomputed = await recomputeCommissionHold(technicianId);
 
     await auditLog(admin, 'COMMISSION_HOLD_OVERRIDDEN', 'commission_hold', technicianId, {
@@ -76,8 +114,9 @@ export const setCommissionHoldOverrideHandler: AdminHttpHandler = async (
 
 /**
  * Clears a technician's commissionHold override (E21-S02 Task 10). Strips the `override` field
- * and recomputes so the hold immediately reflects the technician's real outstanding balance again
- * instead of waiting for the next unrelated recompute.
+ * via the same retried conditional-patch primitive and recomputes so the hold immediately
+ * reflects the technician's real outstanding balance again instead of waiting for the next
+ * unrelated recompute.
  */
 export const clearCommissionHoldOverrideHandler: AdminHttpHandler = async (
   req: HttpRequest,
@@ -88,12 +127,21 @@ export const clearCommissionHoldOverrideHandler: AdminHttpHandler = async (
   if (!technicianId) return { status: 400, jsonBody: { code: 'MISSING_TECHNICIAN_ID' } };
 
   try {
-    const readStartedAt = new Date().toISOString();
-    const { hold, exists } = await readCommissionHold(technicianId);
-    if (!exists) return { status: 404, jsonBody: { code: 'TECHNICIAN_NOT_FOUND' } };
+    let clearedOverride: CommissionHold['override'];
+    const patchResult = await applyHoldPatch(technicianId, (current, readStartedAt) => {
+      const base = current ?? defaultHold(readStartedAt);
+      clearedOverride = base.override;
+      const { override: _override, ...rest } = base;
+      return rest;
+    });
 
-    const { override: clearedOverride, ...rest } = hold ?? defaultHold(readStartedAt);
-    await patchCommissionHold(technicianId, rest, readStartedAt);
+    if (patchResult.status === 'MISSING') {
+      return { status: 404, jsonBody: { code: 'TECHNICIAN_NOT_FOUND' } };
+    }
+    if (patchResult.status === 'STALE') {
+      return { status: 409, jsonBody: { code: 'LEDGER_BUSY' } };
+    }
+
     const recomputed = await recomputeCommissionHold(technicianId);
 
     await auditLog(admin, 'COMMISSION_HOLD_OVERRIDE_CLEARED', 'commission_hold', technicianId, {

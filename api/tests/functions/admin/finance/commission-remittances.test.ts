@@ -64,6 +64,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(auditLog).mockResolvedValue(undefined);
   vi.mocked(systemDocsRepo.enqueueHoldRepair).mockResolvedValue(undefined);
+  // Default: technician exists. Tests exercising the 404 TECHNICIAN_NOT_FOUND path override this.
+  vi.mocked(readCommissionHold).mockResolvedValue({ hold: null, exists: true });
 });
 
 describe('recordCommissionRemittanceHandler', () => {
@@ -187,6 +189,74 @@ describe('recordCommissionRemittanceHandler', () => {
     expect(applyCredit).not.toHaveBeenCalled();
     expect(auditLog).not.toHaveBeenCalled();
     expect(recomputeCommissionHold).not.toHaveBeenCalled();
+  });
+
+  it('fast path: same idempotencyKey but a different ref returns 409 IDEMPOTENCY_MISMATCH, no audit', async () => {
+    vi.mocked(commissionReceivableRepo.getRemittance).mockResolvedValue({
+      ...sampleRemittance,
+      ref: 'a-completely-different-ref',
+    } as never);
+
+    const res = (await recordCommissionRemittanceHandler(
+      makeReq(validBody),
+      {} as never,
+      ctx,
+    )) as HttpResponseInit;
+
+    expect(res.status).toBe(409);
+    expect((res.jsonBody as { code: string }).code).toBe('IDEMPOTENCY_MISMATCH');
+    expect(applyCredit).not.toHaveBeenCalled();
+    expect(auditLog).not.toHaveBeenCalled();
+  });
+
+  it('fast path: same idempotencyKey and matching fingerprint replays 200', async () => {
+    vi.mocked(commissionReceivableRepo.getRemittance).mockResolvedValue(sampleRemittance as never);
+    vi.mocked(readCommissionHold).mockResolvedValue({ hold: sampleHold, exists: true });
+
+    const res = (await recordCommissionRemittanceHandler(
+      makeReq(validBody),
+      {} as never,
+      ctx,
+    )) as HttpResponseInit;
+
+    expect(res.status).toBe(200);
+    expect((res.jsonBody as { replayed: boolean }).replayed).toBe(true);
+  });
+
+  it('returns 404 TECHNICIAN_NOT_FOUND when the technician does not exist, without calling applyCredit', async () => {
+    vi.mocked(commissionReceivableRepo.getRemittance).mockResolvedValue(null);
+    vi.mocked(readCommissionHold).mockResolvedValue({ hold: null, exists: false });
+
+    const res = (await recordCommissionRemittanceHandler(
+      makeReq(validBody),
+      {} as never,
+      ctx,
+    )) as HttpResponseInit;
+
+    expect(res.status).toBe(404);
+    expect((res.jsonBody as { code: string }).code).toBe('TECHNICIAN_NOT_FOUND');
+    expect(applyCredit).not.toHaveBeenCalled();
+    expect(auditLog).not.toHaveBeenCalled();
+  });
+
+  it('passes a fingerprint-checking matches() to applyCredit that rejects a differing method', async () => {
+    vi.mocked(commissionReceivableRepo.getRemittance)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(sampleRemittance as never);
+    vi.mocked(applyCredit).mockResolvedValue({
+      replayed: false,
+      anchorId: 'rem:key-1-abcdef',
+      allocations: [{ bookingId: 'booking-1', paise: 10000 }],
+      creditCreatedPaise: 0,
+    });
+    vi.mocked(recomputeCommissionHold).mockResolvedValue({ hold: sampleHold, status: 'APPLIED' });
+
+    await recordCommissionRemittanceHandler(makeReq(validBody), {} as never, ctx);
+
+    const call = vi.mocked(applyCredit).mock.calls[0]![0];
+    expect(call.anchor.matches).toBeDefined();
+    expect(call.anchor.matches!({ ...sampleRemittance, method: 'CASH_DEPOSIT' })).toBe(false);
+    expect(call.anchor.matches!(sampleRemittance)).toBe(true);
   });
 
   it('replay (race detected inside applyCredit): does not audit, reads back the stored remittance', async () => {
