@@ -76,7 +76,7 @@ export function buildCommissionDueResponse(input: BuildCommissionDueInput): Tech
     warnPaise: cfg.warnThresholdPaise,
     blockPaise: cfg.blockThresholdPaise,
     enforcementEnabled: cfg.holdEnforcementEnabled,
-    ...(overrideActive ? { override: { until: hold!.override!.until, reason: hold!.override!.reason } } : {}),
+    ...(overrideActive && hold?.override ? { override: { until: hold.override.until, reason: hold.override.reason } } : {}),
   };
 
   const weekStartIso = istWeekStart(now).toISOString();

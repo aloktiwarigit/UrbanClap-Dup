@@ -141,7 +141,7 @@ export const commissionReceivableRepo = {
   ): Promise<T | null> {
     // Not passed as .read<T>()'s type param: T here is a caller-side cast (e.g. Record<string,
     // unknown>), not necessarily an ItemDefinition, so we take the SDK's untyped default instead.
-    const { resource } = await getCommissionReceivablesContainer().item(id, technicianId).read();
+    const { resource } = (await getCommissionReceivablesContainer().item(id, technicianId).read()) as { resource?: unknown };
     return (resource as T | undefined) ?? null;
   },
 

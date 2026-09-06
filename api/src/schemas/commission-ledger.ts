@@ -42,7 +42,7 @@ export type CreditDoc = z.infer<typeof CreditDocSchema>;
 
 /** Read-path union. Absent docType = RECEIVABLE (every E21-S01 doc). */
 export const LedgerDocSchema = z.preprocess(
-  (v) => (v && typeof v === 'object' && !('docType' in v) ? { ...(v as object), docType: 'RECEIVABLE' } : v),
+  (v) => (v && typeof v === 'object' && !('docType' in v) ? { ...v, docType: 'RECEIVABLE' } : v),
   z.discriminatedUnion('docType', [
     CommissionReceivableEntrySchema.extend({ docType: z.literal('RECEIVABLE') }),
     RemittanceDocSchema,
