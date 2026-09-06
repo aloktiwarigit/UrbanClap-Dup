@@ -1,28 +1,11 @@
 import { getSystemContainer } from './client.js';
+import { definedOnly, isPreconditionFailure, MAX_ETAG_ATTEMPTS } from './retry-utils.js';
 import {
   COMMISSION_CONFIG_DOC_ID,
   toEffectiveConfig,
   type CommissionConfigDoc,
   type UpdateCommissionConfigBody,
 } from '../schemas/commission-config.js';
-
-const MAX_ATTEMPTS = 3;
-
-/** Strip undefined-valued keys so a partial patch never clobbers existing fields. */
-function definedOnly<T extends Record<string, unknown>>(obj: T): Partial<T> {
-  const out: Partial<T> = {};
-  for (const key of Object.keys(obj) as (keyof T)[]) {
-    if (obj[key] !== undefined) {
-      out[key] = obj[key];
-    }
-  }
-  return out;
-}
-
-function isPreconditionFailure(err: unknown): boolean {
-  const code = (err as { code?: number })?.code;
-  return code === 412 || code === 409;
-}
 
 export const commissionConfigRepo = {
   async getCommissionConfig(): Promise<CommissionConfigDoc | null> {
@@ -43,7 +26,7 @@ export const commissionConfigRepo = {
     updatedBy: string,
   ): Promise<CommissionConfigDoc> {
     let lastErr: unknown;
-    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    for (let attempt = 0; attempt < MAX_ETAG_ATTEMPTS; attempt++) {
       const container = getSystemContainer();
       const { resource, etag } = await container
         .item(COMMISSION_CONFIG_DOC_ID, COMMISSION_CONFIG_DOC_ID)
@@ -81,7 +64,7 @@ export const commissionConfigRepo = {
         return merged;
       } catch (err) {
         lastErr = err;
-        if (isPreconditionFailure(err) && attempt < MAX_ATTEMPTS - 1) {
+        if (isPreconditionFailure(err) && attempt < MAX_ETAG_ATTEMPTS - 1) {
           continue;
         }
         throw err;

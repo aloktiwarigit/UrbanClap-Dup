@@ -7,7 +7,7 @@ import type { AdminContext } from '../../../types/admin.js';
 import { commissionConfigRepo } from '../../../cosmos/commission-config-repository.js';
 import { systemDocsRepo } from '../../../cosmos/system-docs-repository.js';
 import { UpdateCommissionConfigBodySchema, toEffectiveConfig } from '../../../schemas/commission-config.js';
-import { _resetCommissionConfigCacheForTest, getCommissionConfig } from '../../../services/commission-config.service.js';
+import { _resetCommissionConfigCacheForTest } from '../../../services/commission-config.service.js';
 import { auditLog } from '../../../services/auditLog.service.js';
 
 const HOLD_REPAIR_TRIGGER_KEYS = [
@@ -23,8 +23,10 @@ export const getAdminCommissionConfigHandler: AdminHttpHandler = async (
   _admin: AdminContext,
 ): Promise<HttpResponseInit> => {
   try {
-    const effective = await getCommissionConfig();
-    return { status: 200, jsonBody: effective };
+    // Raw point read (not the 5-minute cached service) — an admin who saves on one
+    // Functions instance and reloads on another must see their own write immediately.
+    const doc = await commissionConfigRepo.getCommissionConfig();
+    return { status: 200, jsonBody: toEffectiveConfig(doc) };
   } catch {
     return { status: 502, jsonBody: { code: 'UPSTREAM_ERROR' } };
   }

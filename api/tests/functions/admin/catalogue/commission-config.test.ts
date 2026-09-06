@@ -19,16 +19,6 @@ import {
 const superAdminCtx = { adminId: 'admin-1', role: 'super-admin' as const, sessionId: 's1' };
 const financeAdmin = { adminId: 'admin-2', role: 'finance' as const, sessionId: 's2' };
 
-const effectiveConfig = {
-  defaultCommissionBps: 2200,
-  warnThresholdPaise: 250000,
-  blockThresholdPaise: 500000,
-  holdEnforcementEnabled: false,
-  enforceKycInDispatch: false,
-  updatedBy: 'admin-1',
-  updatedAt: '2026-05-01T00:00:00.000Z',
-};
-
 function makePutReq(body: unknown): HttpRequest {
   return new HttpRequest({
     url: 'http://localhost/api/v1/admin/catalogue/commission-config',
@@ -43,17 +33,23 @@ beforeEach(() => vi.clearAllMocks());
 describe('getAdminCommissionConfigHandler', () => {
   const req = new HttpRequest({ url: 'http://localhost/api/v1/admin/catalogue/commission-config', method: 'GET' });
 
-  it('returns the effective config', async () => {
-    vi.mocked(configSvc.getCommissionConfig).mockResolvedValue(effectiveConfig);
+  it('returns the effective config via a raw (uncached) repo read', async () => {
+    vi.mocked(commissionConfigRepo.getCommissionConfig).mockResolvedValue({
+      id: 'commission-config',
+      defaultCommissionBps: 2200,
+      updatedBy: 'admin-1',
+      updatedAt: '2026-05-01T00:00:00.000Z',
+    });
 
     const res = (await getAdminCommissionConfigHandler(req, {} as never, superAdminCtx)) as HttpResponseInit;
 
     expect(res.status).toBe(200);
     expect((res.jsonBody as { defaultCommissionBps: number }).defaultCommissionBps).toBe(2200);
+    expect(configSvc.getCommissionConfig).not.toHaveBeenCalled();
   });
 
   it('returns 502 on upstream error', async () => {
-    vi.mocked(configSvc.getCommissionConfig).mockRejectedValue(new Error('timeout'));
+    vi.mocked(commissionConfigRepo.getCommissionConfig).mockRejectedValue(new Error('timeout'));
 
     const res = (await getAdminCommissionConfigHandler(req, {} as never, superAdminCtx)) as HttpResponseInit;
 

@@ -1,11 +1,11 @@
 import { getSystemContainer } from './client.js';
+import { definedOnly, isPreconditionFailure, MAX_ETAG_ATTEMPTS } from './retry-utils.js';
 import {
   TECHNICIAN_CLIENT_CONFIG_DOC_ID,
   type TechnicianClientConfigDoc,
   type UpdateTechnicianClientConfigBody,
 } from '../schemas/technician-client-config.js';
 
-const MAX_ATTEMPTS = 3;
 const HOLD_REPAIR_DOC_ID = 'hold-repair';
 const HOLD_REPAIR_MAX_IDS = 5000;
 
@@ -16,29 +16,13 @@ export interface HoldRepairDoc {
   updatedAt: string;
 }
 
-/** Strip undefined-valued keys so a partial patch never clobbers existing fields. */
-function definedOnly<T extends Record<string, unknown>>(obj: T): Partial<T> {
-  const out: Partial<T> = {};
-  for (const key of Object.keys(obj) as (keyof T)[]) {
-    if (obj[key] !== undefined) {
-      out[key] = obj[key];
-    }
-  }
-  return out;
-}
-
-function isPreconditionFailure(err: unknown): boolean {
-  const code = (err as { code?: number })?.code;
-  return code === 412 || code === 409;
-}
-
 /** Generic read-merge-write-under-IfMatch loop shared by the docs below. */
 async function readMergeWrite<TDoc extends { id: string }>(
   docId: string,
   computeMerged: (resource: TDoc | undefined) => TDoc,
 ): Promise<TDoc> {
   let lastErr: unknown;
-  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+  for (let attempt = 0; attempt < MAX_ETAG_ATTEMPTS; attempt++) {
     const container = getSystemContainer();
     const { resource, etag } = await container.item(docId, docId).read<TDoc>();
     const merged = computeMerged(resource);
@@ -54,7 +38,7 @@ async function readMergeWrite<TDoc extends { id: string }>(
       return merged;
     } catch (err) {
       lastErr = err;
-      if (isPreconditionFailure(err) && attempt < MAX_ATTEMPTS - 1) {
+      if (isPreconditionFailure(err) && attempt < MAX_ETAG_ATTEMPTS - 1) {
         continue;
       }
       throw err;
@@ -108,7 +92,7 @@ export const systemDocsRepo = {
   async drainHoldRepair(): Promise<{ technicianIds: string[]; all: boolean }> {
     const container = getSystemContainer();
     let lastErr: unknown;
-    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    for (let attempt = 0; attempt < MAX_ETAG_ATTEMPTS; attempt++) {
       const { resource, etag } = await container
         .item(HOLD_REPAIR_DOC_ID, HOLD_REPAIR_DOC_ID)
         .read<HoldRepairDoc>();
@@ -132,7 +116,7 @@ export const systemDocsRepo = {
         return drained;
       } catch (err) {
         lastErr = err;
-        if (isPreconditionFailure(err) && attempt < MAX_ATTEMPTS - 1) {
+        if (isPreconditionFailure(err) && attempt < MAX_ETAG_ATTEMPTS - 1) {
           continue;
         }
         throw err;
