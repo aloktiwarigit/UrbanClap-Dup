@@ -28,7 +28,6 @@ beforeEach(() => {
 
 describe('adminCommissionReceivablesDashboardHandler', () => {
   it('returns empty dashboard when no technicians carry a hold', async () => {
-    vi.mocked(techRepo.listTechniciansWithHold).mockResolvedValue({ items: [] });
     vi.mocked(techRepo.listAllTechniciansWithHold).mockResolvedValue([]);
     vi.mocked(commissionReceivableRepo.sumDueGroupedByTechnician).mockResolvedValue([]);
 
@@ -43,33 +42,21 @@ describe('adminCommissionReceivablesDashboardHandler', () => {
     expect(techRepo.getTechniciansByIds).not.toHaveBeenCalled();
   });
 
-  it('returns enriched rows with technician names, filters CLEAR/zero rows, sums totalOutstanding, forwards continuationToken', async () => {
+  it('returns enriched rows with technician names, filters CLEAR/zero rows, sums totalOutstanding, includes staleAfter', async () => {
     const holdWarn = { outstandingPaise: 5000, dueCount: 1, state: 'WARN' as const, evaluatedAt: '2026-09-01T00:00:00.000Z' };
     const holdClearZero = { outstandingPaise: 0, dueCount: 0, state: 'CLEAR' as const, evaluatedAt: '2026-09-01T00:00:00.000Z' };
-    vi.mocked(techRepo.listTechniciansWithHold).mockResolvedValue({
-      items: [
-        { id: 'tech-1', name: 'Ravi', commissionHold: holdWarn },
-        { id: 'tech-2', name: 'Suresh', commissionHold: holdClearZero }, // filtered out: CLEAR + 0
-      ],
-      continuationToken: 'next-page',
-    });
     vi.mocked(techRepo.listAllTechniciansWithHold).mockResolvedValue([
-      { id: 'tech-1', commissionHold: holdWarn },
-      { id: 'tech-2', commissionHold: holdClearZero },
+      { id: 'tech-1', name: 'Ravi', commissionHold: holdWarn },
+      { id: 'tech-2', name: 'Suresh', commissionHold: holdClearZero }, // filtered out: CLEAR + 0
     ]);
     vi.mocked(commissionReceivableRepo.sumDueGroupedByTechnician).mockResolvedValue([]);
     vi.mocked(techRepo.getTechniciansByIds).mockResolvedValue([
       { id: 'tech-1', technicianId: 'tech-1', displayName: 'Ravi Kumar' },
     ]);
 
-    const res = (await adminCommissionReceivablesDashboardHandler(
-      getReq('http://localhost/api/v1/admin/finance/commission-receivables?continuationToken=abc'),
-      {} as never,
-      ctx,
-    )) as HttpResponseInit;
+    const res = (await adminCommissionReceivablesDashboardHandler(getReq(), {} as never, ctx)) as HttpResponseInit;
 
     expect(res.status).toBe(200);
-    expect(techRepo.listTechniciansWithHold).toHaveBeenCalledWith('abc');
     expect(techRepo.getTechniciansByIds).toHaveBeenCalledWith(['tech-1']);
     const body = res.jsonBody as {
       technicians: Array<Record<string, unknown>>;
@@ -84,31 +71,99 @@ describe('adminCommissionReceivablesDashboardHandler', () => {
       outstandingPaise: 5000,
       dueCount: 1,
       state: 'WARN',
+      staleAfter: '2026-09-01T06:00:00.000Z', // evaluatedAt + 6h
     });
     expect(body.totalOutstanding).toBe(5000);
-    expect(body.continuationToken).toBe('next-page');
+    expect(body.continuationToken).toBeUndefined();
   });
 
-  it('computes unreconciledTechnicianCount from the full roster, not just the current page', async () => {
-    const hold = { outstandingPaise: 5000, dueCount: 1, state: 'WARN' as const, evaluatedAt: '2026-09-01T00:00:00.000Z' };
-    vi.mocked(techRepo.listTechniciansWithHold).mockResolvedValue({ items: [{ id: 'tech-1', commissionHold: hold }] });
-    vi.mocked(techRepo.listAllTechniciansWithHold).mockResolvedValue([{ id: 'tech-1', commissionHold: hold }]);
+  it('computes unreconciledTechnicianCount as a two-direction union: mismatched DUE groups AND holds with no DUE group at all', async () => {
+    const holdMatching = { outstandingPaise: 5000, dueCount: 1, state: 'WARN' as const, evaluatedAt: '2026-09-01T00:00:00.000Z' };
+    const holdMismatched = { outstandingPaise: 5000, dueCount: 1, state: 'WARN' as const, evaluatedAt: '2026-09-01T00:00:00.000Z' };
+    const holdWithNoDueGroup = { outstandingPaise: 4200, dueCount: 1, state: 'WARN' as const, evaluatedAt: '2026-09-01T00:00:00.000Z' };
+    vi.mocked(techRepo.listAllTechniciansWithHold).mockResolvedValue([
+      { id: 'tech-1', commissionHold: holdMismatched }, // hold 5000 vs DUE aggregate 7000 -> unreconciled
+      { id: 'tech-3', commissionHold: holdMatching }, // hold matches its DUE group exactly -> reconciled
+      { id: 'tech-4', commissionHold: holdWithNoDueGroup }, // non-zero hold, no DUE group at all -> unreconciled (the blind spot)
+    ]);
     // tech-2 has DUE receivables but no hold at all -> unreconciled.
-    // tech-1 has a hold whose outstandingPaise (5000) doesn't match the DUE aggregate (7000) -> unreconciled.
     vi.mocked(commissionReceivableRepo.sumDueGroupedByTechnician).mockResolvedValue([
       { technicianId: 'tech-1', outstandingPaise: 7000, dueCount: 2, oldestDueAt: '2026-08-01T00:00:00.000Z' },
       { technicianId: 'tech-2', outstandingPaise: 3000, dueCount: 1, oldestDueAt: '2026-08-15T00:00:00.000Z' },
+      { technicianId: 'tech-3', outstandingPaise: 5000, dueCount: 1, oldestDueAt: '2026-08-20T00:00:00.000Z' },
     ]);
     vi.mocked(techRepo.getTechniciansByIds).mockResolvedValue([]);
 
     const res = (await adminCommissionReceivablesDashboardHandler(getReq(), {} as never, ctx)) as HttpResponseInit;
 
     const body = res.jsonBody as { unreconciledTechnicianCount: number };
-    expect(body.unreconciledTechnicianCount).toBe(2);
+    expect(body.unreconciledTechnicianCount).toBe(3); // tech-1, tech-2, tech-4 — NOT tech-3
+  });
+
+  it('does NOT count a technician whose cached hold is already zero and has no DUE group (nothing to reconcile)', async () => {
+    const holdClearZero = { outstandingPaise: 0, dueCount: 0, state: 'CLEAR' as const, evaluatedAt: '2026-09-01T00:00:00.000Z' };
+    vi.mocked(techRepo.listAllTechniciansWithHold).mockResolvedValue([{ id: 'tech-5', commissionHold: holdClearZero }]);
+    vi.mocked(commissionReceivableRepo.sumDueGroupedByTechnician).mockResolvedValue([]);
+    vi.mocked(techRepo.getTechniciansByIds).mockResolvedValue([]);
+
+    const res = (await adminCommissionReceivablesDashboardHandler(getReq(), {} as never, ctx)) as HttpResponseInit;
+
+    const body = res.jsonBody as { unreconciledTechnicianCount: number };
+    expect(body.unreconciledTechnicianCount).toBe(0);
+  });
+
+  it('pages in memory over the full roster sorted by outstandingPaise desc: page 1 is the 50 largest with a token, page 2 is the remaining 10 with none', async () => {
+    const roster = Array.from({ length: 60 }, (_, i) => ({
+      id: `tech-${String(i).padStart(3, '0')}`,
+      commissionHold: {
+        outstandingPaise: (i + 1) * 100, // tech-000 smallest, tech-059 largest
+        dueCount: 1,
+        state: 'WARN' as const,
+        evaluatedAt: '2026-09-01T00:00:00.000Z',
+      },
+    }));
+    vi.mocked(techRepo.listAllTechniciansWithHold).mockResolvedValue(roster);
+    vi.mocked(commissionReceivableRepo.sumDueGroupedByTechnician).mockResolvedValue([]);
+    vi.mocked(techRepo.getTechniciansByIds).mockResolvedValue([]);
+
+    const page1 = (await adminCommissionReceivablesDashboardHandler(getReq(), {} as never, ctx)) as HttpResponseInit;
+    const body1 = page1.jsonBody as { technicians: Array<{ technicianId: string; outstandingPaise: number }>; continuationToken?: string };
+    expect(body1.technicians).toHaveLength(50);
+    expect(body1.technicians[0]).toMatchObject({ technicianId: 'tech-059', outstandingPaise: 6000 });
+    expect(body1.technicians[49]).toMatchObject({ technicianId: 'tech-010', outstandingPaise: 1100 });
+    // strictly descending
+    for (let i = 1; i < body1.technicians.length; i++) {
+      expect(body1.technicians[i]!.outstandingPaise).toBeLessThanOrEqual(body1.technicians[i - 1]!.outstandingPaise);
+    }
+    expect(body1.continuationToken).toBeDefined();
+
+    const page2 = (await adminCommissionReceivablesDashboardHandler(
+      getReq(`http://localhost/api/v1/admin/finance/commission-receivables?continuationToken=${body1.continuationToken}`),
+      {} as never,
+      ctx,
+    )) as HttpResponseInit;
+    const body2 = page2.jsonBody as { technicians: Array<{ technicianId: string; outstandingPaise: number }>; continuationToken?: string };
+    expect(body2.technicians).toHaveLength(10);
+    expect(body2.technicians[0]).toMatchObject({ technicianId: 'tech-009', outstandingPaise: 1000 });
+    expect(body2.technicians[9]).toMatchObject({ technicianId: 'tech-000', outstandingPaise: 100 });
+    expect(body2.continuationToken).toBeUndefined();
+  });
+
+  it('returns 400 INVALID_CONTINUATION_TOKEN for a malformed token', async () => {
+    const res = (await adminCommissionReceivablesDashboardHandler(
+      getReq('http://localhost/api/v1/admin/finance/commission-receivables?continuationToken=not-a-valid-token!!!'),
+      {} as never,
+      ctx,
+    )) as HttpResponseInit;
+
+    expect(res.status).toBe(400);
+    expect((res.jsonBody as { code: string }).code).toBe('INVALID_CONTINUATION_TOKEN');
+    expect(techRepo.listAllTechniciansWithHold).not.toHaveBeenCalled();
   });
 
   it('returns 502 when a repository call throws', async () => {
-    vi.mocked(techRepo.listTechniciansWithHold).mockRejectedValue(new Error('cosmos down'));
+    vi.mocked(techRepo.listAllTechniciansWithHold).mockRejectedValue(new Error('cosmos down'));
+    vi.mocked(commissionReceivableRepo.sumDueGroupedByTechnician).mockResolvedValue([]);
 
     const res = (await adminCommissionReceivablesDashboardHandler(getReq(), {} as never, ctx)) as HttpResponseInit;
 

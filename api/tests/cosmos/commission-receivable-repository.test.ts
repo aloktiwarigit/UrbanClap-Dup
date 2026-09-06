@@ -167,6 +167,16 @@ describe('runLedgerBatch', () => {
     mockBatch.mockRejectedValue(new Error('Batch request error: 429'));
     await expect(commissionReceivableRepo.runLedgerBatch('tech-1', [])).rejects.toThrow(/429/);
   });
+
+  it('maps a thrown { code: 412 } to PRECONDITION instead of rethrowing', async () => {
+    mockBatch.mockRejectedValue({ code: 412 });
+    expect(await commissionReceivableRepo.runLedgerBatch('tech-1', [])).toEqual({ ok: false, reason: 'PRECONDITION' });
+  });
+
+  it('maps a thrown 409/Conflict error message to CONFLICT instead of rethrowing', async () => {
+    mockBatch.mockRejectedValue(new Error('Batch request error: 409 Conflict'));
+    expect(await commissionReceivableRepo.runLedgerBatch('tech-1', [])).toEqual({ ok: false, reason: 'CONFLICT' });
+  });
 });
 
 describe('readLedgerDoc', () => {

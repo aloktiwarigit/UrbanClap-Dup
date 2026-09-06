@@ -7,7 +7,7 @@ import type { AdminContext } from '../../../types/admin.js';
 import { commissionReceivableRepo } from '../../../cosmos/commission-receivable-repository.js';
 import { readCommissionHold } from '../../../cosmos/technician-repository.js';
 import { systemDocsRepo } from '../../../cosmos/system-docs-repository.js';
-import { applyCredit } from '../../../services/commission-allocator.service.js';
+import { applyCredit, consumePendingCredits } from '../../../services/commission-allocator.service.js';
 import { recomputeCommissionHold } from '../../../services/commission-hold.service.js';
 import { auditLog } from '../../../services/auditLog.service.js';
 import {
@@ -121,6 +121,18 @@ export const recordCommissionRemittanceHandler: AdminHttpHandler = async (
         matches: (existingDoc) => remittanceFingerprintMatches(existingDoc as unknown as RemittanceDoc, body),
       },
     });
+
+    if (!result.replayed && result.creditCreatedPaise > 0) {
+      // Best-effort: an overpayment just created a CREDIT doc. Try to consume it against this
+      // technician's existing DUE rows right away rather than leaving it sitting inert until some
+      // unrelated future write touches the ledger. Never fails the remittance — the money and the
+      // credit doc are already committed regardless of whether this succeeds.
+      try {
+        await consumePendingCredits(body.technicianId);
+      } catch (e: unknown) {
+        Sentry.captureException(e);
+      }
+    }
 
     let hold: CommissionHold | null = null;
     let holdRecomputePending = false;

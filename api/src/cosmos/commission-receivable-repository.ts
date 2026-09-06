@@ -61,7 +61,21 @@ export const commissionReceivableRepo = {
    * op carries 409/412 and the others 424; batch-level errors (400/429) DO throw.
    */
   async runLedgerBatch(technicianId: string, ops: OperationInput[]): Promise<LedgerBatchResult> {
-    const res = await getCommissionReceivablesContainer().items.batch(ops, technicianId);
+    let res: { result?: ReadonlyArray<{ statusCode: number }> };
+    try {
+      res = await getCommissionReceivablesContainer().items.batch(ops, technicianId);
+    } catch (err: unknown) {
+      // Defensive mapping: the SDK is documented to resolve `items.batch()` with a per-op status
+      // array on a partial failure (the path handled below), but some SDK versions/transports
+      // throw instead — a bare `code` (Cosmos-style) or a message embedding the HTTP status. Map
+      // those the same way as the resolve-path 409/412 so a thrown conflict/precondition still
+      // becomes a retryable result instead of an unhandled rejection; anything else rethrows.
+      const code = (err as { code?: number }).code;
+      const message = err instanceof Error ? err.message : String(err);
+      if (code === 409 || /\b409\b|Conflict/i.test(message)) return { ok: false, reason: 'CONFLICT' };
+      if (code === 412 || /\b412\b|Precondition/i.test(message)) return { ok: false, reason: 'PRECONDITION' };
+      throw err;
+    }
     const codes = (res.result ?? []).map((r) => r.statusCode);
     if (codes.every((c) => c >= 200 && c < 300)) return { ok: true };
     if (codes.includes(409)) return { ok: false, reason: 'CONFLICT' };

@@ -1343,6 +1343,7 @@ export interface components {
             /** @enum {string} */
             state: "CLEAR" | "WARN" | "BLOCKED";
             evaluatedAt: string;
+            staleAfter: string;
             override?: components["schemas"]["CommissionHoldOverride"];
         };
         CommissionReceivablesDashboardV2: {
@@ -2853,6 +2854,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CommissionReceivablesDashboardV2"];
                 };
+            };
+            /** @description INVALID_CONTINUATION_TOKEN */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Unauthenticated */
             401: {

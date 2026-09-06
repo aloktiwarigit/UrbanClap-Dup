@@ -173,4 +173,79 @@ describe('consumePendingCredits', () => {
     expect(creditBody.remainingPaise).toBe(0);
     expect(creditBody.consumedBy).toHaveLength(2);
   });
+
+  it('abandons a credit on CONFLICT without throwing, and still consumes the next credit', async () => {
+    const creditA = { id: 'cr:a', docType: 'CREDIT' as const, technicianId: 't1', partitionKey: 't1', source: 'OVERPAYMENT' as const, refId: 'a', originalPaise: 100, remainingPaise: 100, consumedBy: [], createdAt: '2026-08-01' };
+    const creditB = { id: 'cr:b', docType: 'CREDIT' as const, technicianId: 't1', partitionKey: 't1', source: 'OVERPAYMENT' as const, refId: 'b', originalPaise: 50, remainingPaise: 50, consumedBy: [], createdAt: '2026-08-02' };
+    vi.mocked(commissionReceivableRepo.getOpenCredits).mockResolvedValue([
+      { doc: creditA, etag: '"a1"' },
+      { doc: creditB, etag: '"b1"' },
+    ]);
+    vi.mocked(commissionReceivableRepo.getOutstandingByTechnician).mockResolvedValue([row('b1', 200, '2026-09-01')]);
+    vi.mocked(commissionReceivableRepo.runLedgerBatch)
+      .mockResolvedValueOnce({ ok: false, reason: 'CONFLICT' }) // creditA's only attempt
+      .mockResolvedValueOnce({ ok: true }); // creditB succeeds
+
+    const r = await consumePendingCredits('t1');
+
+    expect(r.consumedPaise).toBe(50); // only creditB's consumption counted
+    expect(commissionReceivableRepo.runLedgerBatch).toHaveBeenCalledTimes(2);
+    const creditIdOf = (ops: unknown[]) => (ops[0] as unknown as { resourceBody: { id: string } }).resourceBody.id;
+    expect(creditIdOf(vi.mocked(commissionReceivableRepo.runLedgerBatch).mock.calls[0]![1])).toBe('cr:a');
+    expect(creditIdOf(vi.mocked(commissionReceivableRepo.runLedgerBatch).mock.calls[1]![1])).toBe('cr:b');
+  });
+
+  it('re-reads the credit etag between PRECONDITION retries and carries the refreshed etag into the next attempt', async () => {
+    const credit = { id: 'cr:rem:k1', docType: 'CREDIT' as const, technicianId: 't1', partitionKey: 't1', source: 'OVERPAYMENT' as const, refId: 'rem:k1', originalPaise: 60, remainingPaise: 60, consumedBy: [], createdAt: '2026-09-01' };
+    vi.mocked(commissionReceivableRepo.getOpenCredits)
+      .mockResolvedValueOnce([{ doc: credit, etag: '"c1"' }]) // initial read
+      .mockResolvedValueOnce([{ doc: credit, etag: '"c2"' }]) // refresh after 1st PRECONDITION
+      .mockResolvedValueOnce([{ doc: credit, etag: '"c3"' }]); // refresh after 2nd PRECONDITION
+    vi.mocked(commissionReceivableRepo.getOutstandingByTechnician).mockResolvedValue([row('b9', 60, '2026-09-05')]);
+    vi.mocked(commissionReceivableRepo.runLedgerBatch)
+      .mockResolvedValueOnce({ ok: false, reason: 'PRECONDITION' }) // attempt 1, etag c1
+      .mockResolvedValueOnce({ ok: false, reason: 'PRECONDITION' }) // attempt 2, etag c2
+      .mockResolvedValueOnce({ ok: true }); // attempt 3, etag c3 — fully consumes the credit (60/60)
+
+    const r = await consumePendingCredits('t1');
+
+    expect(r.consumedPaise).toBe(60);
+    expect(commissionReceivableRepo.getOpenCredits).toHaveBeenCalledTimes(3);
+    expect(commissionReceivableRepo.runLedgerBatch).toHaveBeenCalledTimes(3);
+    const thirdOps = vi.mocked(commissionReceivableRepo.runLedgerBatch).mock.calls[2]![1];
+    expect((thirdOps[0] as { ifMatch?: string }).ifMatch).toBe('"c3"');
+  });
+
+  it('gives up on a credit after 3 PRECONDITION failures without throwing, and moves on to the next credit', async () => {
+    const creditA = { id: 'cr:a', docType: 'CREDIT' as const, technicianId: 't1', partitionKey: 't1', source: 'OVERPAYMENT' as const, refId: 'a', originalPaise: 100, remainingPaise: 100, consumedBy: [], createdAt: '2026-08-01' };
+    const creditB = { id: 'cr:b', docType: 'CREDIT' as const, technicianId: 't1', partitionKey: 't1', source: 'OVERPAYMENT' as const, refId: 'b', originalPaise: 60, remainingPaise: 60, consumedBy: [], createdAt: '2026-08-02' };
+    vi.mocked(commissionReceivableRepo.getOpenCredits)
+      .mockResolvedValueOnce([{ doc: creditA, etag: '"a1"' }, { doc: creditB, etag: '"b1"' }]) // initial read
+      .mockResolvedValueOnce([{ doc: creditA, etag: '"a2"' }]) // refresh after 1st PRECONDITION
+      .mockResolvedValueOnce([{ doc: creditA, etag: '"a3"' }]); // refresh after 2nd PRECONDITION
+    vi.mocked(commissionReceivableRepo.getOutstandingByTechnician).mockResolvedValue([row('b1', 100, '2026-09-01')]);
+    vi.mocked(commissionReceivableRepo.runLedgerBatch)
+      .mockResolvedValueOnce({ ok: false, reason: 'PRECONDITION' }) // creditA attempt 1
+      .mockResolvedValueOnce({ ok: false, reason: 'PRECONDITION' }) // creditA attempt 2
+      .mockResolvedValueOnce({ ok: false, reason: 'PRECONDITION' }) // creditA attempt 3 — retries exhausted, no rethrow
+      .mockResolvedValueOnce({ ok: true }); // creditB succeeds
+
+    await expect(consumePendingCredits('t1')).resolves.toEqual({ consumedPaise: 60 });
+    expect(commissionReceivableRepo.runLedgerBatch).toHaveBeenCalledTimes(4);
+    // Only 2 refreshes happened for creditA (between attempts 1→2 and 2→3) — the 3rd failure hits
+    // MAX_ATTEMPTS and abandons without a further refresh call.
+    expect(commissionReceivableRepo.getOpenCredits).toHaveBeenCalledTimes(3);
+  });
+
+  it('breaks cleanly without throwing when a PRECONDITION refresh finds the credit already gone', async () => {
+    const credit = { id: 'cr:gone', docType: 'CREDIT' as const, technicianId: 't1', partitionKey: 't1', source: 'OVERPAYMENT' as const, refId: 'gone', originalPaise: 100, remainingPaise: 100, consumedBy: [], createdAt: '2026-08-01' };
+    vi.mocked(commissionReceivableRepo.getOpenCredits)
+      .mockResolvedValueOnce([{ doc: credit, etag: '"c1"' }])
+      .mockResolvedValueOnce([]); // credit vanished (fully consumed/removed elsewhere) before the retry
+    vi.mocked(commissionReceivableRepo.getOutstandingByTechnician).mockResolvedValue([row('b1', 100, '2026-09-01')]);
+    vi.mocked(commissionReceivableRepo.runLedgerBatch).mockResolvedValue({ ok: false, reason: 'PRECONDITION' });
+
+    await expect(consumePendingCredits('t1')).resolves.toEqual({ consumedPaise: 0 });
+    expect(commissionReceivableRepo.runLedgerBatch).toHaveBeenCalledTimes(1);
+  });
 });

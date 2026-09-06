@@ -13,7 +13,7 @@ vi.mock('@sentry/node', () => ({ captureException: vi.fn() }));
 import { commissionReceivableRepo } from '../../../../src/cosmos/commission-receivable-repository.js';
 import { readCommissionHold } from '../../../../src/cosmos/technician-repository.js';
 import { systemDocsRepo } from '../../../../src/cosmos/system-docs-repository.js';
-import { applyCredit } from '../../../../src/services/commission-allocator.service.js';
+import { applyCredit, consumePendingCredits } from '../../../../src/services/commission-allocator.service.js';
 import { recomputeCommissionHold } from '../../../../src/services/commission-hold.service.js';
 import { auditLog } from '../../../../src/services/auditLog.service.js';
 import * as Sentry from '@sentry/node';
@@ -354,6 +354,74 @@ describe('recordCommissionRemittanceHandler', () => {
       'rem:key-1-abcdef',
       expect.anything(),
     );
+  });
+
+  it('overpayment (creditCreatedPaise > 0, not replayed): consumes the new credit before recomputing the hold', async () => {
+    vi.mocked(commissionReceivableRepo.getRemittance)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ ...sampleRemittance, creditCreatedPaise: 100 } as never);
+    vi.mocked(applyCredit).mockResolvedValue({
+      replayed: false,
+      anchorId: 'rem:key-1-abcdef',
+      allocations: [{ bookingId: 'booking-1', paise: 10000 }],
+      creditCreatedPaise: 100,
+    });
+    vi.mocked(recomputeCommissionHold).mockResolvedValue({ hold: sampleHold, status: 'APPLIED' });
+
+    const res = (await recordCommissionRemittanceHandler(
+      makeReq(validBody),
+      {} as never,
+      ctx,
+    )) as HttpResponseInit;
+
+    expect(res.status).toBe(200);
+    expect(consumePendingCredits).toHaveBeenCalledTimes(1);
+    expect(consumePendingCredits).toHaveBeenCalledWith('tech-1');
+  });
+
+  it('no overpayment (creditCreatedPaise === 0): does not call consumePendingCredits', async () => {
+    vi.mocked(commissionReceivableRepo.getRemittance)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(sampleRemittance as never);
+    vi.mocked(applyCredit).mockResolvedValue({
+      replayed: false,
+      anchorId: 'rem:key-1-abcdef',
+      allocations: [{ bookingId: 'booking-1', paise: 10000 }],
+      creditCreatedPaise: 0,
+    });
+    vi.mocked(recomputeCommissionHold).mockResolvedValue({ hold: sampleHold, status: 'APPLIED' });
+
+    const res = (await recordCommissionRemittanceHandler(
+      makeReq(validBody),
+      {} as never,
+      ctx,
+    )) as HttpResponseInit;
+
+    expect(res.status).toBe(200);
+    expect(consumePendingCredits).not.toHaveBeenCalled();
+  });
+
+  it('best-effort consumePendingCredits: a failure is Sentry-captured but does not fail the remittance', async () => {
+    vi.mocked(commissionReceivableRepo.getRemittance)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ ...sampleRemittance, creditCreatedPaise: 100 } as never);
+    vi.mocked(applyCredit).mockResolvedValue({
+      replayed: false,
+      anchorId: 'rem:key-1-abcdef',
+      allocations: [{ bookingId: 'booking-1', paise: 10000 }],
+      creditCreatedPaise: 100,
+    });
+    vi.mocked(consumePendingCredits).mockRejectedValue(new Error('cosmos timeout'));
+    vi.mocked(recomputeCommissionHold).mockResolvedValue({ hold: sampleHold, status: 'APPLIED' });
+
+    const res = (await recordCommissionRemittanceHandler(
+      makeReq(validBody),
+      {} as never,
+      ctx,
+    )) as HttpResponseInit;
+
+    expect(res.status).toBe(200);
+    expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error));
   });
 
   it('returns 502 when the post-applyCredit getRemittance re-read comes back null', async () => {

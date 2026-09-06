@@ -50,6 +50,7 @@ import {
   RemittanceDocSchema,
   CreditDocSchema,
   RecordRemittanceBodySchema,
+  SetCommissionHoldOverrideBodySchema,
 } from '../schemas/commission-ledger.js';
 import { CommissionHoldSchema, HoldStateSchema } from '../schemas/technician.js';
 import { TechnicianConfigResponseSchema } from '../schemas/technician-client-config.js';
@@ -554,6 +555,7 @@ const CommissionDashboardTechnicianEntrySchema = z.object({
   oldestDueAt: z.string().optional(),
   state: HoldStateSchema,
   evaluatedAt: z.string(),
+  staleAfter: z.string(),
   override: CommissionHoldOverrideSchema.optional(),
 }).openapi('CommissionDashboardTechnicianEntry');
 
@@ -574,11 +576,6 @@ const CommissionLedgerDetailSchema = z.object({
   cashCollectedPaise: z.number().int().nonnegative(),
   creditAppliedPaise: z.number().int().nonnegative(),
 }).openapi('CommissionLedgerDetail');
-
-const SetCommissionHoldOverrideBodySchema = z.object({
-  until: z.string().datetime(),
-  reason: z.string().min(1).max(200),
-}).openapi('SetCommissionHoldOverrideBody');
 
 const CommissionHoldResponseSchema = z.object({
   hold: CommissionHoldSchema.nullable(),
@@ -653,6 +650,7 @@ registry.registerPath({
   parameters: [{ name: 'continuationToken', in: 'query', required: false, schema: { type: 'string' } }],
   responses: {
     200: { description: 'Per-tech hold summary + total outstanding', content: { 'application/json': { schema: CommissionReceivablesDashboardV2Schema } } },
+    400: { description: 'INVALID_CONTINUATION_TOKEN' },
     401: { description: 'Unauthenticated' },
     403: { description: 'Forbidden' },
   },
@@ -706,7 +704,7 @@ registry.registerPath({
   tags: ['admin-finance'], summary: 'Force a technician\'s commission hold to CLEAR until a given time (super-admin only)',
   security: [{ cookieAuth: [] }],
   parameters: [{ name: 'technicianId', in: 'path', required: true, schema: { type: 'string' } }],
-  request: { body: { content: { 'application/json': { schema: SetCommissionHoldOverrideBodySchema } } } },
+  request: { body: { content: { 'application/json': { schema: SetCommissionHoldOverrideBodySchema.openapi('SetCommissionHoldOverrideBody') } } } },
   responses: {
     200: { description: 'Hold recomputed with the override applied', content: { 'application/json': { schema: CommissionHoldResponseSchema } } },
     400: { description: 'Validation error' },

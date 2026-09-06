@@ -1,6 +1,5 @@
 import '../../../bootstrap.js';
 import { app } from '@azure/functions';
-import { z } from 'zod';
 import type { HttpRequest, InvocationContext, HttpResponseInit } from '@azure/functions';
 import { requireAdmin, type AdminHttpHandler } from '../../../middleware/requireAdmin.js';
 import type { AdminContext } from '../../../types/admin.js';
@@ -8,13 +7,7 @@ import { readCommissionHold, patchCommissionHold } from '../../../cosmos/technic
 import { recomputeCommissionHold } from '../../../services/commission-hold.service.js';
 import { auditLog } from '../../../services/auditLog.service.js';
 import type { CommissionHold } from '../../../schemas/technician.js';
-
-const SetOverrideBodySchema = z
-  .object({
-    until: z.string().datetime(),
-    reason: z.string().min(1).max(200),
-  })
-  .strict();
+import { SetCommissionHoldOverrideBodySchema } from '../../../schemas/commission-ledger.js';
 
 const MAX_OVERRIDE_PATCH_ATTEMPTS = 3;
 
@@ -81,7 +74,7 @@ export const setCommissionHoldOverrideHandler: AdminHttpHandler = async (
     return { status: 400, jsonBody: { code: 'PARSE_ERROR' } };
   }
 
-  const parsed = SetOverrideBodySchema.safeParse(raw);
+  const parsed = SetCommissionHoldOverrideBodySchema.safeParse(raw);
   if (!parsed.success) {
     return { status: 400, jsonBody: { code: 'VALIDATION_ERROR', issues: parsed.error.issues } };
   }

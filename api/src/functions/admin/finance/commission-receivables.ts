@@ -6,7 +6,6 @@ import type { AdminContext } from '../../../types/admin.js';
 import { commissionReceivableRepo } from '../../../cosmos/commission-receivable-repository.js';
 import {
   getTechniciansByIds,
-  listTechniciansWithHold,
   listAllTechniciansWithHold,
   readCommissionHold,
 } from '../../../cosmos/technician-repository.js';
@@ -14,12 +13,42 @@ import { systemDocsRepo } from '../../../cosmos/system-docs-repository.js';
 import { auditLog } from '../../../services/auditLog.service.js';
 import { outstandingOf } from '../../../schemas/commission-receivable.js';
 
+/** Dashboard page size (in-memory pagination over the full drained roster — see below). */
+const DASHBOARD_PAGE_SIZE = 50;
+
+/** Full-sweep cadence: the async hold-repair sweep re-evaluates every hold roughly every 6h, so a
+ *  row's cached commissionHold should be treated as possibly-stale once this much time has
+ *  elapsed since `evaluatedAt`. */
+const HOLD_STALE_AFTER_MS = 6 * 60 * 60 * 1000;
+
 /**
- * Hold-based admin dashboard (E21-S02 Task 10, replaces the E21-S01 DUE-count dashboard). One
- * page of technicians currently carrying a commissionHold, filtered to those actually worth an
- * admin's attention (non-zero outstanding or a non-CLEAR state). `unreconciledTechnicianCount` is
- * computed across the FULL technician roster (not just this page) so an admin paging through
- * never sees a count that silently depends on which page they're looking at.
+ * Decodes the dashboard's opaque `continuationToken` (base64 of a decimal offset) back into an
+ * in-memory array offset. `undefined` (no token — first page) decodes to offset 0. Returns `null`
+ * for anything that isn't a clean non-negative integer once decoded, so the handler can reject it
+ * with 400 rather than silently clamping to some page.
+ */
+function decodeContinuationToken(token: string | undefined): number | null {
+  if (token === undefined) return 0;
+  let decoded: string;
+  try {
+    decoded = Buffer.from(token, 'base64').toString('utf8');
+  } catch {
+    return null;
+  }
+  if (!/^\d+$/.test(decoded)) return null;
+  const offset = Number(decoded);
+  return Number.isSafeInteger(offset) && offset >= 0 ? offset : null;
+}
+
+/**
+ * Hold-based admin dashboard (E21-S02 Task 10, replaces the E21-S01 DUE-count dashboard). Pages
+ * in memory over the full drained roster (`listAllTechniciansWithHold`), sorted by
+ * `outstandingPaise` desc, so ordering is stable and consistent across pages — a Cosmos-paged
+ * query only sorts within its own page. `unreconciledTechnicianCount` is computed across the FULL
+ * technician roster (not just this page) so an admin paging through never sees a count that
+ * silently depends on which page they're looking at, and is a two-direction union: a DUE group
+ * whose hold doesn't match, AND a cached hold with no matching DUE group at all (e.g. a hold
+ * left over after every DUE row was waived/remitted elsewhere).
  */
 export const adminCommissionReceivablesDashboardHandler: AdminHttpHandler = async (
   req: HttpRequest,
@@ -27,21 +56,37 @@ export const adminCommissionReceivablesDashboardHandler: AdminHttpHandler = asyn
   _admin: AdminContext,
 ): Promise<HttpResponseInit> => {
   const continuationToken = req.query.get('continuationToken') ?? undefined;
+  const offset = decodeContinuationToken(continuationToken);
+  if (offset === null) {
+    return { status: 400, jsonBody: { code: 'INVALID_CONTINUATION_TOKEN' } };
+  }
 
   try {
-    const [page, allWithHold, dueGroups] = await Promise.all([
-      listTechniciansWithHold(continuationToken),
+    const [allWithHold, dueGroups] = await Promise.all([
       listAllTechniciansWithHold(),
       commissionReceivableRepo.sumDueGroupedByTechnician(),
     ]);
 
+    const dueById = new Map(dueGroups.map((g) => [g.technicianId, g.outstandingPaise]));
     const holdById = new Map(allWithHold.map((t) => [t.id, t.commissionHold]));
-    const unreconciledTechnicianCount = dueGroups.filter((g) => {
+    const unreconciled = new Set<string>();
+    for (const g of dueGroups) {
       const h = holdById.get(g.technicianId);
-      return !h || h.outstandingPaise !== g.outstandingPaise;
-    }).length;
+      if (!h || h.outstandingPaise !== g.outstandingPaise) unreconciled.add(g.technicianId);
+    }
+    for (const t of allWithHold) {
+      if (!dueById.has(t.id) && t.commissionHold.outstandingPaise !== 0) unreconciled.add(t.id);
+    }
+    const unreconciledTechnicianCount = unreconciled.size;
 
-    const relevant = page.items.filter(
+    const sorted = [...allWithHold].sort(
+      (a, b) => b.commissionHold.outstandingPaise - a.commissionHold.outstandingPaise,
+    );
+    const pageItems = sorted.slice(offset, offset + DASHBOARD_PAGE_SIZE);
+    const nextOffset = offset + DASHBOARD_PAGE_SIZE;
+    const hasMore = nextOffset < sorted.length;
+
+    const relevant = pageItems.filter(
       (t) => t.commissionHold.outstandingPaise > 0 || t.commissionHold.state !== 'CLEAR',
     );
 
@@ -58,6 +103,7 @@ export const adminCommissionReceivablesDashboardHandler: AdminHttpHandler = asyn
       ...(t.commissionHold.oldestDueAt !== undefined ? { oldestDueAt: t.commissionHold.oldestDueAt } : {}),
       state: t.commissionHold.state,
       evaluatedAt: t.commissionHold.evaluatedAt,
+      staleAfter: new Date(new Date(t.commissionHold.evaluatedAt).getTime() + HOLD_STALE_AFTER_MS).toISOString(),
       ...(t.commissionHold.override !== undefined ? { override: t.commissionHold.override } : {}),
     }));
     const totalOutstanding = technicians.reduce((acc, t) => acc + t.outstandingPaise, 0);
@@ -68,7 +114,7 @@ export const adminCommissionReceivablesDashboardHandler: AdminHttpHandler = asyn
         technicians,
         totalOutstanding,
         unreconciledTechnicianCount,
-        ...(page.continuationToken !== undefined ? { continuationToken: page.continuationToken } : {}),
+        ...(hasMore ? { continuationToken: Buffer.from(String(nextOffset)).toString('base64') } : {}),
       },
     };
   } catch {

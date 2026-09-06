@@ -231,7 +231,7 @@ rules:
   # The commission-receivable-repository.ts helper itself (which implements the batch)
   # is exempt via paths.exclude.
   #
-  # References: E21-S02 Task 3, docs/adr/0031-commission-ledger-batch-writes.md
+  # References: E21-S02 Task 3, docs/adr/0031-single-partition-commission-ledger.md
   - id: ledger-batch-only
     message: Money docs in commission_receivables must be written through commissionReceivableRepo.runLedgerBatch (single-partition transactional batch). See docs/adr/0031.
     severity: ERROR
@@ -256,7 +256,7 @@ rules:
   # reassignment of the form `x.figure = x.figure + y` violates the invariant.
   # If you need to update a figure, recompute it absolutely in a batch mutation.
   #
-  # References: E21-S02 spec §3.2, docs/adr/0031-commission-ledger-batch-writes.md
+  # References: E21-S02 spec §3.2, docs/adr/0031-single-partition-commission-ledger.md
   - id: no-increment-on-ledger
     message: Derived ledger figures are recomputed absolutely, never incremented (spec §3.2).
     severity: ERROR

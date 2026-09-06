@@ -2734,6 +2734,9 @@
           "evaluatedAt": {
             "type": "string"
           },
+          "staleAfter": {
+            "type": "string"
+          },
           "override": {
             "$ref": "#/components/schemas/CommissionHoldOverride"
           }
@@ -2744,7 +2747,8 @@
           "outstandingPaise",
           "dueCount",
           "state",
-          "evaluatedAt"
+          "evaluatedAt",
+          "staleAfter"
         ]
       },
       "CommissionReceivablesDashboardV2": {
@@ -3282,7 +3286,8 @@
         "required": [
           "until",
           "reason"
-        ]
+        ],
+        "additionalProperties": false
       },
       "AdminLoginRequest": {
         "anyOf": [
@@ -5297,6 +5302,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "INVALID_CONTINUATION_TOKEN"
           },
           "401": {
             "description": "Unauthenticated"

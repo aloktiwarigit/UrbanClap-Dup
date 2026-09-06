@@ -66,3 +66,15 @@ export type RecordRemittanceBody = z.infer<typeof RecordRemittanceBodySchema>;
 export const remittanceDocId = (idempotencyKey: string): string => `rem:${idempotencyKey}`;
 export const creditDocId = (refId: string): string => `cr:${refId}`;
 export const allocationId = (refId: string, bookingId: string): string => `${refId}:${bookingId}`;
+
+/**
+ * Canonical body schema for `POST/DELETE .../commission-hold/{technicianId}/override`. Single
+ * source of truth shared by the handler and the OpenAPI registry (E21-S02 final-review fix) — the
+ * two previously drifted, with the registry's copy silently missing `.strict()` and therefore
+ * never surfacing `additionalProperties: false` in the generated contract.
+ */
+export const SetCommissionHoldOverrideBodySchema = z.object({
+  until: z.string().datetime(),
+  reason: z.string().min(1).max(200),
+}).strict();
+export type SetCommissionHoldOverrideBody = z.infer<typeof SetCommissionHoldOverrideBodySchema>;
