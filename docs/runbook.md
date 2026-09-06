@@ -639,6 +639,11 @@ instead of failing.
 
 `RAZORPAY_KEY_ID` is deliberately blank for the cash-only pilot and is not covered by that gate.
 
+CI sets `ALLOW_BLANK_OBSERVABILITY_KEYS=true` in `customer-ship.yml` and `technician-ship.yml`:
+its release build is an R8/ProGuard compile check and its AAB is a 7-day `upload-artifact`, never
+published to Play. A CI AAB sideloaded for testing therefore reports nothing — use a locally built
+one when you need telemetry.
+
 
 ---
 

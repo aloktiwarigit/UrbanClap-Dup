@@ -29,6 +29,12 @@ permissions:
 env:
   GIT_SHA: ${{ github.sha }}
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  # CI's release build is an R8/ProGuard compile check, and its AAB is a 7-day
+  # upload-artifact — nothing here is ever published to Play (that happens locally via
+  # tools/build-play-bundles.ps1). So CI acknowledges the blank observability keys rather
+  # than failing on them; the hard gate stays on the builds that actually ship.
+  # A CI AAB sideloaded for testing therefore reports no Sentry/PostHog/GrowthBook data.
+  ALLOW_BLANK_OBSERVABILITY_KEYS: 'true'
 
 jobs:
   quality-gate:
