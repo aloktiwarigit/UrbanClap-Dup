@@ -72,7 +72,20 @@ export async function recordCommissionDue(booking: BookingDoc): Promise<RecordCo
   });
 
   if (!created) {
-    return { created: false, commissionDue, commissionBps: bps, commissionResolvedFrom };
+    // A concurrent invocation won the race and created the row first. Never fabricate the
+    // returned values from what THIS invocation computed — a racing invocation may have resolved
+    // a different commissionBps (e.g. a config edit landed between the two reads). Re-read the
+    // stored row so the caller (and finalizeLedgerForTechnician) always acts on ledger truth.
+    const stored = await commissionReceivableRepo.getByBookingId(bookingId, technicianId);
+    if (!stored) {
+      throw Object.assign(new Error('RECEIVABLE_RACE_UNREADABLE'), { code: 'RECEIVABLE_RACE_UNREADABLE' });
+    }
+    return {
+      created: false,
+      commissionDue: stored.commissionDue,
+      commissionBps: stored.commissionBps,
+      commissionResolvedFrom: stored.commissionResolvedFrom,
+    };
   }
 
   return { created: true, commissionDue, commissionBps: bps, commissionResolvedFrom };

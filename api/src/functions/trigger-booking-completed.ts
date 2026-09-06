@@ -220,6 +220,29 @@ export async function settleBooking(bookingRaw: unknown, ctx: InvocationContext)
   }
 }
 
+/**
+ * P1 (Codex review, E21-S02 Task 8): a money-critical settlement failure (e.g. `recordCommissionDue`
+ * rejecting because `getGlobalCommissionBps` or a catalogue lookup threw) must NOT be swallowed
+ * here — swallowing it lets the change-feed processor checkpoint the lease, and the receivable is
+ * then never created or retried. Sentry-capture and log for visibility, but rethrow so the lease is
+ * NOT checkpointed and the whole batch is redelivered. settleBooking/recordCommissionDue/
+ * finalizeLedgerForTechnician are all idempotent by bookingId, so redelivering documents already
+ * processed successfully in this batch is safe.
+ */
+export async function handleBookingCompletedBatch(documents: unknown[], context: InvocationContext): Promise<void> {
+  for (const doc of documents) {
+    try {
+      await settleBooking(doc, context);
+    } catch (err: unknown) {
+      Sentry.captureException(err);
+      context.log(
+        `settleBooking ERROR: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      throw err;
+    }
+  }
+}
+
 app.cosmosDB('triggerBookingCompleted', {
   connection: 'COSMOS_CONNECTION_STRING',
   databaseName: DB_NAME,
@@ -227,16 +250,5 @@ app.cosmosDB('triggerBookingCompleted', {
   leaseContainerName: 'booking_completed_leases',
   createLeaseContainerIfNotExists: true,
   startFromBeginning: false,
-  handler: async (documents: unknown[], context: InvocationContext): Promise<void> => {
-    for (const doc of documents) {
-      try {
-        await settleBooking(doc, context);
-      } catch (err: unknown) {
-        Sentry.captureException(err);
-        context.log(
-          `settleBooking ERROR: ${err instanceof Error ? err.message : String(err)}`,
-        );
-      }
-    }
-  },
+  handler: handleBookingCompletedBatch,
 });

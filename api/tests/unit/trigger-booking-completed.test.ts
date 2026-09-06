@@ -9,8 +9,10 @@ vi.mock('../../src/services/commission-config.service.js');
 vi.mock('../../src/services/commission-settlement.service.js');
 vi.mock('../../src/services/fcm.service.js');
 vi.mock('../../src/services/razorpayRoute.service.js');
+vi.mock('@sentry/node', () => ({ captureException: vi.fn() }));
 
-import { settleBooking } from '../../src/functions/trigger-booking-completed.js';
+import { settleBooking, handleBookingCompletedBatch } from '../../src/functions/trigger-booking-completed.js';
+import * as Sentry from '@sentry/node';
 import { walletLedgerRepo } from '../../src/cosmos/wallet-ledger-repository.js';
 import * as techRepo from '../../src/cosmos/technician-repository.js';
 import * as auditRepo from '../../src/cosmos/audit-log-repository.js';
@@ -198,6 +200,37 @@ describe('settleBooking — CASH_ON_SERVICE path (pilot)', () => {
       expect(auditRepo.appendAuditEntry).not.toHaveBeenCalled();
       expect(settlementSvc.finalizeLedgerForTechnician).not.toHaveBeenCalled();
     });
+  });
+
+  describe('P1 (Codex review): money-critical settlement failures must propagate, not be swallowed', () => {
+    it('settleBooking rejects when recordCommissionDue rejects', async () => {
+      const err = new Error('getGlobalCommissionBps unavailable');
+      vi.mocked(settlementSvc.recordCommissionDue).mockRejectedValue(err);
+
+      await expect(settleBooking(cashBooking, mockCtx)).rejects.toThrow(err);
+      expect(settlementSvc.finalizeLedgerForTechnician).not.toHaveBeenCalled();
+    });
+  });
+});
+
+describe('handleBookingCompletedBatch (registered change-feed handler)', () => {
+  it('rethrows after Sentry-capturing and logging a failing document, so the lease is not checkpointed', async () => {
+    const err = new Error('getGlobalCommissionBps unavailable');
+    vi.mocked(settlementSvc.recordCommissionDue).mockRejectedValue(err);
+
+    await expect(handleBookingCompletedBatch([cashBooking], mockCtx)).rejects.toThrow(err);
+
+    expect(Sentry.captureException).toHaveBeenCalledWith(err);
+    expect(mockCtx.log).toHaveBeenCalledWith(expect.stringContaining('settleBooking ERROR'));
+  });
+
+  it('does not throw for a non-COMPLETED or unparseable document', async () => {
+    await expect(
+      handleBookingCompletedBatch([{ ...cashBooking, status: 'IN_PROGRESS' }, { invalid: true }], mockCtx),
+    ).resolves.toBeUndefined();
+
+    expect(Sentry.captureException).not.toHaveBeenCalled();
+    expect(settlementSvc.recordCommissionDue).not.toHaveBeenCalled();
   });
 });
 

@@ -208,12 +208,40 @@ describe('recordCommissionDue — existing-row and 409 paths', () => {
     expect(configSvc.getGlobalCommissionBps).not.toHaveBeenCalled();
   });
 
-  it('returns created:false with the computed values when createDueEntry 409s (concurrent invocation)', async () => {
+  it('returns created:false with the STORED row values (not the locally computed ones) when createDueEntry 409s', async () => {
+    vi.mocked(commissionReceivableRepo.getByBookingId)
+      .mockResolvedValueOnce(null) // initial existence check: row doesn't exist yet
+      .mockResolvedValueOnce({
+        // re-read after the 409: the racing invocation resolved a different bps than we did.
+        id: 'booking-abc',
+        bookingId: 'booking-abc',
+        technicianId: 'tech-1',
+        partitionKey: 'tech-1',
+        serviceId: 'svc-1',
+        categoryId: 'cat-1',
+        bookingAmount: 50000,
+        commissionBps: 2500,
+        commissionDue: 12500,
+        commissionResolvedFrom: 'SERVICE',
+        remittanceStatus: 'DUE',
+        createdAt: '2026-04-24T10:00:00.000Z',
+      });
     vi.mocked(commissionReceivableRepo.createDueEntry).mockResolvedValue(false);
 
     const r = await recordCommissionDue(cashBooking);
 
-    expect(r).toEqual({ created: false, commissionDue: 11000, commissionBps: 2200, commissionResolvedFrom: 'GLOBAL' });
+    expect(r).toEqual({ created: false, commissionDue: 12500, commissionBps: 2500, commissionResolvedFrom: 'SERVICE' });
+    expect(commissionReceivableRepo.getByBookingId).toHaveBeenCalledTimes(2);
+  });
+
+  it('throws RECEIVABLE_RACE_UNREADABLE when createDueEntry 409s but the re-read comes back null', async () => {
+    vi.mocked(commissionReceivableRepo.getByBookingId).mockResolvedValue(null);
+    vi.mocked(commissionReceivableRepo.createDueEntry).mockResolvedValue(false);
+
+    await expect(recordCommissionDue(cashBooking)).rejects.toMatchObject({
+      message: 'RECEIVABLE_RACE_UNREADABLE',
+      code: 'RECEIVABLE_RACE_UNREADABLE',
+    });
   });
 });
 
