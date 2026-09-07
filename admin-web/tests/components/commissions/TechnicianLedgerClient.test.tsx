@@ -18,6 +18,7 @@ vi.mock('next-intl', () => ({
       'detail.heading': 'Technician {technicianId}',
       'detail.loading': 'Loading technician ledger…',
       'errors.detailLoadFailed': "Could not load this technician's ledger.",
+      'errors.configLoadFailed': 'Commission thresholds unavailable — showing hold status without the reason.',
       'errors.overrideFailed': 'Could not save the hold override.',
       'errors.clearOverrideFailed': 'Could not clear the hold override.',
       'messages.overrideSaved': 'Hold override saved.',
@@ -351,5 +352,36 @@ describe('TechnicianLedgerClient', () => {
     fetchCommissionConfig.mockResolvedValue(config({}));
     render(<TechnicianLedgerClient technicianId="t1" />);
     expect(await screen.findByText("Could not load this technician's ledger.")).toBeInTheDocument();
+  });
+
+  // Fix round 1: Promise.all previously failed the whole page when either fetch failed, blanking
+  // the ledger over a config hiccup that only the hold-reason sentence actually needs. Config
+  // degrades, it does not block — this is the page the owner opens at 11pm with a technician on
+  // the phone, and it must not go blank because a rarely-changing config lookup failed.
+  it('renders the ledger even when the commission config fails to load', async () => {
+    fetchTechnicianLedger.mockResolvedValue(
+      detail({
+        hold: { outstandingPaise: 13478, dueCount: 3, state: 'WARN', evaluatedAt: '2026-09-07T13:24:00.000Z' },
+      }),
+    );
+    fetchCommissionConfig.mockRejectedValue(new Error('config unavailable'));
+
+    render(<TechnicianLedgerClient technicianId="t1" />);
+
+    // The ledger renders in full: balance stack, events, and the receivables table. "Balance due"
+    // (not the bare "Balance" heading) is used here because "Balance" also appears as the events
+    // table's column header, which would make the query ambiguous.
+    expect(await screen.findByText('Balance due')).toBeInTheDocument();
+    expect(screen.getByText('Balance events')).toBeInTheDocument();
+    expect(screen.getByText('Receivables')).toBeInTheDocument();
+    // The bare hold state still renders...
+    expect(screen.getByText('Warn')).toBeInTheDocument();
+    // ...but the money-terms hold-reason sentence, which needs config, does not — replaced by a
+    // note scoped to that spot, not a page-level error.
+    expect(screen.queryByText(/exceeds the/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Commission thresholds unavailable/)).toBeInTheDocument();
+    // No page-level error for a config-only failure.
+    expect(screen.queryByText("Could not load this technician's ledger.")).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });

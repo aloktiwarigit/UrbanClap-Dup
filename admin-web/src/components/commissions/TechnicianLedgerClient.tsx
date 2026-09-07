@@ -50,18 +50,23 @@ export function TechnicianLedgerClient({
 
   const [detail, setDetail] = useState<CommissionLedgerDetail | null>(initialDetail ?? null);
   const [config, setConfig] = useState<CommissionConfig | null>(initialConfig ?? null);
-  const [loading, setLoading] = useState(initialDetail === undefined || initialConfig === undefined);
+  const [loading, setLoading] = useState(initialDetail === undefined);
   const [error, setError] = useState<string | null>(null);
+  const [configError, setConfigError] = useState<string | null>(null);
   const [overrideDialogOpen, setOverrideDialogOpen] = useState(false);
   const [overrideSubmitting, setOverrideSubmitting] = useState(false);
 
-  const loadAll = useCallback(async () => {
+  // Fetched independently of `loadConfig` below (fix round 1): this is the page the owner opens
+  // at 11pm with a technician on the phone, and only the one "why is this technician on hold"
+  // sentence needs `config` at all. A `Promise.all` that fails the whole page on either call
+  // failing would blank the entire ledger — balance, events, receivables, remittances, credits —
+  // over a rarely-changing config lookup hiccup that has nothing to do with the ledger itself.
+  const loadDetail = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [d, c] = await Promise.all([fetchTechnicianLedger(technicianId), fetchCommissionConfig()]);
+      const d = await fetchTechnicianLedger(technicianId);
       setDetail(d);
-      setConfig(c);
     } catch {
       setError(t('errors.detailLoadFailed'));
     } finally {
@@ -69,9 +74,26 @@ export function TechnicianLedgerClient({
     }
   }, [technicianId, t]);
 
+  // Config degrades, it does not block: a failure here never blanks the ledger, and is
+  // deliberately not surfaced as a page-level error — only as a scoped note where the
+  // money-terms hold-reason sentence would have gone (see the hold-status section below).
+  const loadConfig = useCallback(async () => {
+    setConfigError(null);
+    try {
+      const c = await fetchCommissionConfig();
+      setConfig(c);
+    } catch {
+      setConfigError(t('errors.configLoadFailed'));
+    }
+  }, [t]);
+
   useEffect(() => {
-    if (initialDetail !== undefined && initialConfig !== undefined) return;
-    void loadAll();
+    if (initialDetail === undefined) {
+      void loadDetail();
+    }
+    if (initialConfig === undefined) {
+      void loadConfig();
+    }
     // Mount-only: initialDetail/initialConfig are one-time hydration seeds, not values this
     // effect should react to on every change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -129,7 +151,7 @@ export function TechnicianLedgerClient({
         </p>
       )}
 
-      {!loading && detail && config && (
+      {!loading && detail && (
         <>
           <section aria-labelledby="hold-status-heading" className="space-y-[var(--space-2)]">
             <div className="flex items-center justify-between gap-[var(--space-3)]">
@@ -167,13 +189,19 @@ export function TechnicianLedgerClient({
                   state={detail.hold.state}
                   {...(detail.hold.override !== undefined ? { override: detail.hold.override } : {})}
                 />
-                <p className="text-sm text-[var(--color-text)]">
-                  {holdReason(
-                    detail.hold,
-                    { warnPaise: config.warnThresholdPaise, blockPaise: config.blockThresholdPaise },
-                    locale,
-                  )}
-                </p>
+                {config !== null ? (
+                  <p className="text-sm text-[var(--color-text)]">
+                    {holdReason(
+                      detail.hold,
+                      { warnPaise: config.warnThresholdPaise, blockPaise: config.blockThresholdPaise },
+                      locale,
+                    )}
+                  </p>
+                ) : (
+                  configError !== null && (
+                    <p className="text-xs text-[var(--color-text-muted)]">{configError}</p>
+                  )
+                )}
               </div>
             )}
           </section>

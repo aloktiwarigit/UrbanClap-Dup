@@ -87,42 +87,47 @@ export function BalanceEvents({ events }: BalanceEventsProps) {
             </tr>
           </thead>
           <tbody className="divide-y divide-[var(--color-border)]">
-            {events.map((event) => (
-              <tr key={event.id}>
-                <td className="px-3 py-2 whitespace-nowrap">{formatDate(event.at, locale)}</td>
-                <td className="px-3 py-2">
-                  <span>{event.label}</span>
-                  {event.bookingId !== undefined && (
-                    <span className="block font-mono text-xs text-[var(--color-text-muted)]">
-                      {event.bookingId}
-                    </span>
-                  )}
-                  {event.ref !== undefined && (
-                    <span className="mt-[var(--space-1)] flex items-center gap-[var(--space-2)]">
-                      <span className="font-mono text-xs text-[var(--color-text-muted)]">
-                        {event.ref}
+            {events.map((event) => {
+              // Bound to a local so the click closure below captures a plain `string` — narrowed
+              // once here rather than cast (`as string`) at the closure's call site.
+              const ref = event.ref;
+              return (
+                <tr key={event.id}>
+                  <td className="px-3 py-2 whitespace-nowrap">{formatDate(event.at, locale)}</td>
+                  <td className="px-3 py-2">
+                    <span>{event.label}</span>
+                    {event.bookingId !== undefined && (
+                      <span className="block font-mono text-xs text-[var(--color-text-muted)]">
+                        {event.bookingId}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => void handleCopy(event.ref as string, event.id)}
-                        className="text-xs text-[var(--color-text-muted)] underline hover:text-[var(--color-text)]"
-                      >
-                        {copiedId === event.id
-                          ? t('detail.events.copied')
-                          : t('detail.events.copyReference')}
-                      </button>
-                    </span>
-                  )}
-                </td>
-                <td className="px-3 py-2 text-right font-mono tabular-nums">
-                  {formatDelta(event.changePaise, locale)}
-                </td>
-                <td className="px-3 py-2 text-right font-mono tabular-nums">
-                  {formatINR(event.balancePaise, locale)}
-                </td>
-                <td className="px-3 py-2">{event.actorId ?? '—'}</td>
-              </tr>
-            ))}
+                    )}
+                    {ref !== undefined && (
+                      <span className="mt-[var(--space-1)] flex items-center gap-[var(--space-2)]">
+                        <span className="font-mono text-xs text-[var(--color-text-muted)]">
+                          {ref}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => void handleCopy(ref, event.id)}
+                          className="text-xs text-[var(--color-text-muted)] underline hover:text-[var(--color-text)]"
+                        >
+                          {copiedId === event.id
+                            ? t('detail.events.copied')
+                            : t('detail.events.copyReference')}
+                        </button>
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-right font-mono tabular-nums">
+                    {formatDelta(event.changePaise, locale)}
+                  </td>
+                  <td className="px-3 py-2 text-right font-mono tabular-nums">
+                    {formatINR(event.balancePaise, locale)}
+                  </td>
+                  <td className="px-3 py-2">{event.actorId ?? '—'}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

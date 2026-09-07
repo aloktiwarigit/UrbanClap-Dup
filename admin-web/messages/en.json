@@ -492,7 +492,8 @@
       "recomputeFailed": "Could not queue the recompute. Try again.",
       "detailLoadFailed": "Could not load this technician's ledger.",
       "overrideFailed": "Could not save the hold override. Try again.",
-      "clearOverrideFailed": "Could not clear the hold override. Try again."
+      "clearOverrideFailed": "Could not clear the hold override. Try again.",
+      "configLoadFailed": "Commission thresholds unavailable — showing hold status without the reason."
     },
     "messages": {
       "recomputeQueued": "Recompute queued. Balances will update shortly.",
