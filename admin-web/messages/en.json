@@ -479,6 +479,55 @@
       }
     }
   },
+  "commissions": {
+    "title": "Commissions",
+    "subtitle": "Technicians who owe commission on cash jobs.",
+    "metadata": {
+      "title": "Commissions — HomeHeroo admin"
+    },
+    "loading": "Loading commission dashboard…",
+    "errors": {
+      "loadFailed": "Could not load the commission dashboard.",
+      "recomputeFailed": "Could not queue the recompute. Try again."
+    },
+    "messages": {
+      "recomputeQueued": "Recompute queued. Balances will update shortly."
+    },
+    "summaryBand": {
+      "outstandingLabel": "Outstanding commission",
+      "cachedTotal": "Cached total",
+      "technicianCount": "{count, plural, one {# technician} other {# technicians}}",
+      "oldest": "oldest {date}",
+      "reconciled": "All balances reconciled",
+      "unreconciled": "{count, plural, one {# technician has} other {# technicians have}} unreconciled balances — figures below may be out of date.",
+      "recompute": "Recompute"
+    },
+    "holdChip": {
+      "warn": "Warn",
+      "blocked": "Blocked",
+      "override": "Override · {actor} · {date}"
+    },
+    "table": {
+      "columns": {
+        "technician": "Technician",
+        "outstanding": "Outstanding",
+        "jobs": "Jobs",
+        "oldestDue": "Oldest due",
+        "lastChecked": "Last checked",
+        "state": "State"
+      },
+      "stale": "stale"
+    },
+    "emptyState": {
+      "eyebrow": "Commissions",
+      "headline": "No outstanding commission",
+      "copy": "Every technician is reconciled. New cash-job commission will appear here as it accrues."
+    },
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next"
+    }
+  },
   "auditLog": {
     "title": "Audit Log",
     "metadata": {

@@ -1,0 +1,252 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
+import { useTranslations, useLocale } from 'next-intl';
+import { formatINR, formatDate, formatDateTime } from '@/lib/format/intl';
+import {
+  fetchCommissionDashboard,
+  recomputeAllHolds,
+  type CommissionDashboard,
+} from '@/api/commissions';
+import { isStale } from '@/lib/commissions/derive';
+import { hasCapability } from '@/admin/capabilities';
+import { useAdminAuth } from '@/lib/auth/context';
+import { SummaryBand } from './SummaryBand';
+import { HoldChip } from './HoldChip';
+import { EmptyState } from '@/components/EmptyState';
+
+export interface CommissionsClientProps {
+  // Seeds initial state without the mount-time fetch — used by tests, and available for a future
+  // SSR handoff. Fetches on mount only when this is omitted; it is never re-read after mount, so
+  // changing it on a re-render (which does not happen from any current caller) would not refetch.
+  initialData?: CommissionDashboard;
+}
+
+type Toast = { message: string; type: 'success' | 'error' };
+
+/**
+ * The commission-console roll-up screen (design doc §3, task-6 brief). Owns all state; `page.tsx`
+ * is a thin server component that only renders this.
+ *
+ * Binding rule: hold state is an eligibility filter, never a ranking input. Rows render in exactly
+ * the order the server returns (outstanding-desc) — this component must never sort, filter-then-
+ * reorder, or otherwise let `state` influence row order.
+ */
+export function CommissionsClient({ initialData }: CommissionsClientProps) {
+  const t = useTranslations('commissions');
+  const locale = useLocale();
+  const { auth } = useAdminAuth();
+  const canRecompute = hasCapability(auth?.role, 'finance.settleCommission');
+
+  const [data, setData] = useState<CommissionDashboard | null>(initialData ?? null);
+  const [loading, setLoading] = useState(initialData === undefined);
+  const [error, setError] = useState<string | null>(null);
+  const [continuationStack, setContinuationStack] = useState<string[]>([]);
+  const [recomputing, setRecomputing] = useState(false);
+  const [toast, setToast] = useState<Toast | null>(null);
+
+  const fetchPage = useCallback(
+    async (continuationToken?: string) => {
+      setLoading(true);
+      setError(null);
+      try {
+        setData(await fetchCommissionDashboard(continuationToken));
+      } catch {
+        setError(t('errors.loadFailed'));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [t],
+  );
+
+  useEffect(() => {
+    if (initialData === undefined) {
+      void fetchPage();
+    }
+    // Mount-only: initialData is a one-time hydration seed, not a value this effect should react
+    // to on every change (there is currently no caller that re-passes a different initialData).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function handleNextPage() {
+    if (!data?.continuationToken) return;
+    const token = data.continuationToken;
+    setContinuationStack((prev) => [...prev, token]);
+    void fetchPage(token);
+  }
+
+  function handlePrevPage() {
+    const stack = [...continuationStack];
+    stack.pop();
+    setContinuationStack(stack);
+    void fetchPage(stack[stack.length - 1]);
+  }
+
+  async function handleRecompute() {
+    setRecomputing(true);
+    try {
+      await recomputeAllHolds();
+      setToast({ message: t('messages.recomputeQueued'), type: 'success' });
+    } catch {
+      setToast({ message: t('errors.recomputeFailed'), type: 'error' });
+    } finally {
+      setRecomputing(false);
+    }
+  }
+
+  const rows = data?.technicians ?? [];
+
+  // No top-level "oldest due" field on the dashboard response — derived client-side from
+  // whichever rows are currently loaded. On a paginated view this is the oldest due date among
+  // the rows fetched so far, not necessarily the true global oldest across every page; the
+  // server sorts by outstanding amount, not by due date, so a later page could in principle
+  // surface an older one. Acceptable at pilot scale (roster small enough that pagination is rare)
+  // and stated here rather than silently assumed.
+  const oldestDueAt = rows.reduce<string | undefined>((oldest, row) => {
+    if (row.oldestDueAt === undefined) return oldest;
+    if (oldest === undefined) return row.oldestDueAt;
+    return new Date(row.oldestDueAt).getTime() < new Date(oldest).getTime() ? row.oldestDueAt : oldest;
+  }, undefined);
+
+  return (
+    <div className="p-[var(--space-6)] space-y-[var(--space-6)]">
+      <div>
+        <h1 className="text-[length:var(--text-2xl)] font-bold text-[var(--color-text)]">
+          {t('title')}
+        </h1>
+        <p className="text-sm text-[var(--color-text-muted)] mt-[var(--space-1)]">
+          {t('subtitle')}
+        </p>
+      </div>
+
+      {toast && (
+        <p
+          role="status"
+          className={`text-sm rounded p-[var(--space-3)] ${
+            toast.type === 'success'
+              ? 'bg-green-50 text-[var(--color-success)]'
+              : 'bg-red-50 text-[var(--color-danger)]'
+          }`}
+        >
+          {toast.message}
+        </p>
+      )}
+
+      {data && (
+        <SummaryBand
+          totalOutstanding={data.totalOutstanding}
+          technicianCount={rows.length}
+          unreconciledTechnicianCount={data.unreconciledTechnicianCount}
+          {...(oldestDueAt !== undefined ? { oldestDueAt } : {})}
+          onRecompute={() => void handleRecompute()}
+          canRecompute={canRecompute}
+          recomputing={recomputing}
+        />
+      )}
+
+      {loading && <p className="text-sm text-[var(--color-text-muted)]">{t('loading')}</p>}
+      {error && (
+        <p role="alert" className="text-sm text-[var(--color-danger)]">
+          {error}
+        </p>
+      )}
+
+      {!loading && data && rows.length === 0 && (
+        <EmptyState
+          eyebrow={t('emptyState.eyebrow')}
+          headline={t('emptyState.headline')}
+          copy={t('emptyState.copy')}
+        />
+      )}
+
+      {!loading && rows.length > 0 && (
+        <div className="overflow-x-auto rounded border border-[var(--color-border)]">
+          <table className="w-full text-sm text-left text-[var(--color-text)]">
+            <thead className="bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]">
+              <tr>
+                <th scope="col" className="px-3 py-2 font-medium">
+                  {t('table.columns.technician')}
+                </th>
+                <th scope="col" className="px-3 py-2 font-medium text-right">
+                  {t('table.columns.outstanding')}
+                </th>
+                <th scope="col" className="px-3 py-2 font-medium text-right">
+                  {t('table.columns.jobs')}
+                </th>
+                <th scope="col" className="px-3 py-2 font-medium">
+                  {t('table.columns.oldestDue')}
+                </th>
+                <th scope="col" className="px-3 py-2 font-medium">
+                  {t('table.columns.lastChecked')}
+                </th>
+                <th scope="col" className="px-3 py-2 font-medium">
+                  {t('table.columns.state')}
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--color-border)]">
+              {rows.map((row) => {
+                const stale = isStale(row, new Date());
+                return (
+                  <tr key={row.technicianId} className="hover:bg-[var(--color-surface-alt)]">
+                    <td className="px-3 py-2">
+                      <Link
+                        href={`/finance/commissions/${row.technicianId}`}
+                        className="text-[var(--color-text)] hover:underline"
+                        data-testid="commission-row-name"
+                      >
+                        {row.technicianName}
+                      </Link>
+                    </td>
+                    <td className="px-3 py-2 text-right font-mono tabular-nums">
+                      {formatINR(row.outstandingPaise, locale)}
+                    </td>
+                    <td className="px-3 py-2 text-right font-mono tabular-nums">{row.dueCount}</td>
+                    <td className="px-3 py-2">
+                      {row.oldestDueAt !== undefined ? formatDate(row.oldestDueAt, locale) : '—'}
+                    </td>
+                    <td className="px-3 py-2">
+                      {formatDateTime(row.evaluatedAt, locale)}
+                      {stale && (
+                        <span className="ml-1 font-medium text-[var(--color-warn)]">
+                          · {t('table.stale')}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2">
+                      <HoldChip
+                        state={row.state}
+                        {...(row.override !== undefined ? { override: row.override } : {})}
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <div className="flex gap-[var(--space-3)]">
+        <button
+          type="button"
+          onClick={handlePrevPage}
+          disabled={continuationStack.length === 0}
+          className="px-3 py-1 text-sm rounded border border-[var(--color-border)] disabled:opacity-40"
+        >
+          {t('pagination.previous')}
+        </button>
+        <button
+          type="button"
+          onClick={handleNextPage}
+          disabled={!data?.continuationToken}
+          className="px-3 py-1 text-sm rounded border border-[var(--color-border)] disabled:opacity-40"
+        >
+          {t('pagination.next')}
+        </button>
+      </div>
+    </div>
+  );
+}

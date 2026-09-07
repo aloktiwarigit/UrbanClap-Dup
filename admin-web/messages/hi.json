@@ -479,6 +479,55 @@
       }
     }
   },
+  "commissions": {
+    "title": "कमीशन",
+    "subtitle": "नकद जॉब पर कमीशन बकाया वाले तकनीशियन।",
+    "metadata": {
+      "title": "कमीशन — HomeHeroo एडमिन"
+    },
+    "loading": "कमीशन डैशबोर्ड लोड हो रहा है…",
+    "errors": {
+      "loadFailed": "कमीशन डैशबोर्ड लोड नहीं हो सका।",
+      "recomputeFailed": "रीकंप्यूट कतार में नहीं जोड़ा जा सका। पुनः प्रयास करें।"
+    },
+    "messages": {
+      "recomputeQueued": "रीकंप्यूट कतार में जोड़ा गया। शेष राशि जल्द ही अपडेट होगी।"
+    },
+    "summaryBand": {
+      "outstandingLabel": "बकाया कमीशन",
+      "cachedTotal": "कैश्ड कुल राशि",
+      "technicianCount": "{count, plural, one {# तकनीशियन} other {# तकनीशियन}}",
+      "oldest": "सबसे पुराना {date}",
+      "reconciled": "सभी शेष राशियाँ समाधानित हैं",
+      "unreconciled": "{count, plural, one {# तकनीशियन की शेष राशि असमाधानित है} other {# तकनीशियनों की शेष राशियाँ असमाधानित हैं}} — नीचे दिए गए आंकड़े पुराने हो सकते हैं।",
+      "recompute": "रीकंप्यूट करें"
+    },
+    "holdChip": {
+      "warn": "चेतावनी",
+      "blocked": "अवरुद्ध",
+      "override": "ओवरराइड · {actor} · {date}"
+    },
+    "table": {
+      "columns": {
+        "technician": "तकनीशियन",
+        "outstanding": "बकाया",
+        "jobs": "जॉब्स",
+        "oldestDue": "सबसे पुरानी देय तारीख",
+        "lastChecked": "अंतिम जांच",
+        "state": "स्थिति"
+      },
+      "stale": "पुराना"
+    },
+    "emptyState": {
+      "eyebrow": "कमीशन",
+      "headline": "कोई बकाया कमीशन नहीं",
+      "copy": "सभी तकनीशियन समाधानित हैं। नए नकद-जॉब कमीशन यहाँ जमा होते ही दिखाई देंगे।"
+    },
+    "pagination": {
+      "previous": "पिछला",
+      "next": "अगला"
+    }
+  },
   "auditLog": {
     "title": "ऑडिट लॉग",
     "metadata": {
