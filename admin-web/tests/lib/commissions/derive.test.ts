@@ -55,22 +55,112 @@ const detail = {
   creditAppliedPaise: 0,
 } as unknown as CommissionLedgerDetail;
 
+// Reconciliation fixture: one partially-remitted (still DUE) row, one
+// WAIVED row that was partially remitted before being waived, and one
+// fully REMITTED row. Chosen specifically to exercise the C1 regression
+// (fix round 1 review) — a waived receivable's `remittedAmount` does not
+// include the waiver itself, so a stack that only subtracts `repaidPaise`
+// would show this technician as still owing the waived row's full
+// commissionDue even though the server's own `outstandingPaise` is 0 for it.
+const reconcileDetail = {
+  technicianId: 't2',
+  hold: null,
+  receivables: [
+    {
+      id: 'rA',
+      bookingId: 'rA',
+      commissionDue: 10000,
+      remittedAmount: 4000,
+      remittanceStatus: 'DUE',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      outstandingPaise: 6000,
+    },
+    {
+      id: 'rB',
+      bookingId: 'rB',
+      commissionDue: 8000,
+      remittedAmount: 2000,
+      remittanceStatus: 'WAIVED',
+      createdAt: '2026-01-02T00:00:00.000Z',
+      updatedAt: '2026-01-05T00:00:00.000Z',
+      outstandingPaise: 0,
+      waivedReason: 'goodwill',
+      markedByAdminId: 'admin-2',
+    },
+    {
+      id: 'rC',
+      bookingId: 'rC',
+      commissionDue: 5000,
+      remittedAmount: 5000,
+      remittanceStatus: 'REMITTED',
+      createdAt: '2026-01-03T00:00:00.000Z',
+      outstandingPaise: 0,
+    },
+  ],
+  remittances: [
+    {
+      id: 'remA',
+      amountPaise: 4000,
+      method: 'UPI',
+      ref: 'ref-a',
+      allocations: [{ bookingId: 'rA', paise: 4000 }],
+      creditCreatedPaise: 0,
+      recordedByAdminId: 'admin-1',
+      createdAt: '2026-01-01T01:00:00.000Z',
+    },
+    {
+      id: 'remB',
+      amountPaise: 2000,
+      method: 'UPI',
+      ref: 'ref-b',
+      allocations: [{ bookingId: 'rB', paise: 2000 }],
+      creditCreatedPaise: 0,
+      recordedByAdminId: 'admin-1',
+      createdAt: '2026-01-02T01:00:00.000Z',
+    },
+    {
+      id: 'remC',
+      amountPaise: 5000,
+      method: 'UPI',
+      ref: 'ref-c',
+      allocations: [{ bookingId: 'rC', paise: 5000 }],
+      creditCreatedPaise: 0,
+      recordedByAdminId: 'admin-1',
+      createdAt: '2026-01-03T01:00:00.000Z',
+    },
+  ],
+  credits: [],
+  cashCollectedPaise: 11000,
+  creditAppliedPaise: 0,
+} as unknown as CommissionLedgerDetail;
+
 describe('buildBalanceStack', () => {
-  it('balance stack states commission due, what was repaid, what was credited, and the balance', () => {
+  it('balance stack states commission due, what was repaid, what was waived, and the balance', () => {
     expect(buildBalanceStack(detail)).toEqual({
       commissionDuePaise: 26956,
       repaidPaise: 13478,
-      creditedPaise: 0,
+      waivedPaise: 0,
       balancePaise: 13478,
+      creditAppliedPaise: 0,
     });
   });
 
-  it('balance stack never includes cashCollectedPaise in any line', () => {
-    const stack = buildBalanceStack(detail);
-    expect(Object.values(stack)).not.toContain(detail.cashCollectedPaise);
-    // Cash is evidence for why commission exists, not a balance line. Guarding this
-    // in a test because it is the single easiest mistake to make on this screen.
-    expect(stack.balancePaise).toBe(stack.commissionDuePaise - stack.repaidPaise - stack.creditedPaise);
+  it('balance stack is invariant to cashCollectedPaise — cash is evidence, not a balance line', () => {
+    // A `not.toContain` check on the raw cash figure cannot do this job: on
+    // real data, when remittances are fully allocated, repaidPaise
+    // legitimately *equals* cashCollectedPaise by coincidence, and such a
+    // check would misfire on correct code. A perturbation test is immune
+    // to that — it proves the value is never read, not merely that it
+    // doesn't happen to match a line today.
+    expect(buildBalanceStack({ ...detail, cashCollectedPaise: 999_999_999 })).toEqual(
+      buildBalanceStack(detail),
+    );
+  });
+
+  it('reconciles to the server truth across DUE, REMITTED, and WAIVED rows (regression: a waived row must not read as still owed)', () => {
+    expect(buildBalanceStack(reconcileDetail).balancePaise).toBe(
+      reconcileDetail.receivables.reduce((sum, r) => sum + r.outstandingPaise, 0),
+    );
   });
 });
 
@@ -88,6 +178,11 @@ describe('buildBalanceEvents', () => {
     const events = buildBalanceEvents(detail);
     expect(events[0]).toMatchObject({ bookingId: 'b1' });
     expect(events[2]).toMatchObject({ ref: 'upi-1', actorId: 'admin-1' });
+  });
+
+  it('the last balance event matches the balance stack total, including a waived row', () => {
+    const events = buildBalanceEvents(reconcileDetail);
+    expect(events.at(-1)?.balancePaise).toBe(buildBalanceStack(reconcileDetail).balancePaise);
   });
 });
 
