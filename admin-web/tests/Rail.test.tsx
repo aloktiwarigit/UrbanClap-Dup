@@ -40,12 +40,11 @@ function renderRail(role: AdminRole) {
 }
 
 describe('Rail capability filtering', () => {
-  it('hides Audit Log from primary nav for super-admin (route still reachable directly)', () => {
+  it('shows Audit Log in primary nav for super-admin again (E21-S03 un-hides it)', () => {
     pathname = '/dashboard';
     renderRail('super-admin');
-    // Audit Log no longer appears in the rail — operators reach it via deep link or
-    // the capability-gated entry point we keep around for future surfacing.
-    expect(screen.queryByText('Audit Log')).not.toBeInTheDocument();
+    // PRIMARY_NAV_HIDDEN was emptied in E21-S03 — Audit Log is back in the rail.
+    expect(screen.getAllByText('Audit Log').length).toBeGreaterThan(0);
     // Other super-admin nav items still present
     expect(screen.getAllByText('Admin Users').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Compliance').length).toBeGreaterThan(0);
