@@ -242,6 +242,18 @@ describe('backfill-historical-receivables CLI', () => {
     );
   });
 
+  // Codex review round 3, 2026-09-07 (P2): Cosmos compares these lexicographically, so a
+  // non-ISO cutoff would sort after real timestamps and widen the window instead of narrowing it.
+  it('normalises a non-ISO cutoff to canonical ISO before binding it', async () => {
+    onePage([booking()]);
+
+    await main(['--completed-before=9/1/2026', '--dry-run']);
+
+    const [spec] = querySpy.mock.calls.at(-1) as [{ parameters: Array<{ name: string; value: string }> }];
+    expect(spec.parameters[0]!.value).toBe(new Date('9/1/2026').toISOString());
+    expect(spec.parameters[0]!.value).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
   it('rejects unknown flags and both-mode invocations', async () => {
     await main([CUTOFF, '--nope']);
     expect(exitSpy).toHaveBeenCalledWith(2);

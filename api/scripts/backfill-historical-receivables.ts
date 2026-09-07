@@ -58,8 +58,14 @@ export async function main(argvArgs: string[]): Promise<void> {
 
   // Fail closed: an operator must state the cutoff, rather than inherit a default that silently
   // swallows a job completed thirty seconds ago.
-  const cutoff = cutoffArg?.slice(CUTOFF_FLAG.length);
-  if (!cutoff || Number.isNaN(Date.parse(cutoff))) {
+  const cutoffRaw = cutoffArg?.slice(CUTOFF_FLAG.length);
+  // Normalise to canonical ISO before binding. Cosmos compares these timestamps
+  // lexicographically, so a parseable-but-non-ISO cutoff like "9/1/2026" would sort *after*
+  // "2026-09-07T..." and silently widen the window to include live completions — the exact
+  // thing the cutoff exists to prevent.
+  const cutoff =
+    cutoffRaw && !Number.isNaN(Date.parse(cutoffRaw)) ? new Date(cutoffRaw).toISOString() : undefined;
+  if (!cutoff) {
     console.error('--completed-before=<ISO timestamp> is required (e.g. --completed-before=2026-09-01T00:00:00.000Z).');
     console.error('Only bookings completed strictly before it are eligible, so a job settling right now is never claimed.');
     process.exit(2);
