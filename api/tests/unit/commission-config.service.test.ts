@@ -15,6 +15,7 @@ vi.mock('@sentry/node', () => ({ captureMessage: vi.fn(), captureException: vi.f
 import {
   resolveCommissionBps,
   getGlobalCommissionBps,
+  getCommissionConfig,
   DEFAULT_COMMISSION_BPS,
   _resetCommissionConfigCacheForTest,
 } from '../../src/services/commission-config.service.js';
@@ -177,5 +178,37 @@ describe('getGlobalCommissionBps', () => {
 
     await getGlobalCommissionBps();
     expect(vi.mocked(commissionConfigRepo.getCommissionConfig)).toHaveBeenCalledTimes(2);
+  });
+});
+
+// ── getCommissionConfig ────────────────────────────────────────────────────────
+
+describe('getCommissionConfig', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useRealTimers();
+    _resetCommissionConfigCacheForTest();
+  });
+
+  it('fills defaults for a legacy doc and caches for 5 minutes', async () => {
+    vi.mocked(commissionConfigRepo.getCommissionConfig).mockResolvedValue({
+      id: 'commission-config',
+      defaultCommissionBps: 2400,
+      updatedBy: 'a',
+      updatedAt: 't',
+    });
+
+    const a = await getCommissionConfig();
+    const b = await getCommissionConfig();
+
+    expect(a).toMatchObject({
+      defaultCommissionBps: 2400,
+      warnThresholdPaise: 250000,
+      blockThresholdPaise: 500000,
+      holdEnforcementEnabled: false,
+    });
+    expect(b).toBe(a);
+    expect(commissionConfigRepo.getCommissionConfig).toHaveBeenCalledTimes(1);
+    expect(await getGlobalCommissionBps()).toBe(2400);
   });
 });

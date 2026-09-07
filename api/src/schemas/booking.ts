@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { PendingAddOnSchema } from './addon-approval.js';
+import { CollectionMethodSchema } from './commission-receivable.js';
 
 const BOOKING_STATUSES = [
   'PENDING_PAYMENT', 'SEARCHING', 'ASSIGNED', 'EN_ROUTE',
@@ -16,6 +17,8 @@ export const LatLngSchema = z.object({
 });
 export const PaymentMethodSchema = z.enum(PAYMENT_METHODS);
 export const CashCollectionStatusSchema = z.enum(CASH_COLLECTION_STATUSES);
+/** E21-S02: why the collected cash fell short of the booking amount. Read-path widening only. */
+export const ShortCollectionReasonSchema = z.enum(['customer_short', 'discount_given', 'other']);
 
 export const BookingDocSchema = z.object({
   id: z.string(),
@@ -38,6 +41,10 @@ export const BookingDocSchema = z.object({
   cashCollectedAt: z.string().optional(),
   /** E21-S01: Actual cash amount (paise) the technician confirmed collecting. May differ from finalAmount. */
   cashCollectedAmount: z.number().int().nonnegative().optional(),
+  /** E21-S02: how the money changed hands at the door (completion-time), denormalised onto the commission receivable at settlement. Distinct from paymentMethod. Read-path widening only. */
+  collectionMethod: CollectionMethodSchema.optional(),
+  /** E21-S02: why the collected cash fell short of the booking amount, when the technician flags it at completion. Read-path widening only. */
+  shortCollectionReason: ShortCollectionReasonSchema.optional(),
   paymentId: z.string().nullable(),
   paymentSignature: z.string().nullable(),
   amount: z.number().int().positive(),

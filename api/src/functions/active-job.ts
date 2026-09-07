@@ -8,7 +8,11 @@ import { bookingEventRepo } from '../cosmos/booking-event-repository.js';
 import { catalogueRepo } from '../cosmos/catalogue-repository.js';
 import { haversine } from '../cosmos/geo.js';
 import { sendBookingStatusUpdatePush, sendLocationUpdatePush } from '../services/fcm.service.js';
+import { settleCashCompletion } from '../services/commission-settlement.service.js';
+import { auditLog } from '../services/auditLog.service.js';
 import type { BookingDoc as _BookingDoc } from '../schemas/booking.js';
+import { CollectionMethodSchema } from '../schemas/commission-receivable.js';
+import { ShortCollectionReasonSchema } from '../schemas/booking.js';
 import { normalizeAddressText } from '../shared/address-text.js';
 
 const TRANSITION_ORDER = ['ASSIGNED', 'EN_ROUTE', 'REACHED', 'IN_PROGRESS', 'COMPLETED'] as const;
@@ -35,6 +39,10 @@ const TransitionBodySchema = z.object({
   cashCollected: z.boolean().optional(),
   /** E21-S01: Cash amount in paise the technician collected. Only honoured when cashCollected=true. */
   collectedAmount: z.number().int().nonnegative().optional(),
+  /** E21-S02: how the money changed hands at the door. Only honoured when cashCollected=true; defaults to CASH. */
+  collectionMethod: CollectionMethodSchema.optional(),
+  /** E21-S02: why the collected amount fell short of the booking amount. */
+  shortCollectionReason: ShortCollectionReasonSchema.optional(),
 });
 
 export const getActiveJobHandler: HttpHandler = async (req, _ctx: InvocationContext) => {
@@ -123,6 +131,10 @@ export const transitionStatusHandler: HttpHandler = async (req, ctx: InvocationC
                 ...(body.collectedAmount !== undefined
                   ? { cashCollectedAmount: body.collectedAmount }
                   : {}),
+                collectionMethod: body.collectionMethod ?? 'CASH',
+                ...(body.shortCollectionReason !== undefined
+                  ? { shortCollectionReason: body.shortCollectionReason }
+                  : {}),
               }
             : {}),
         }
@@ -136,6 +148,26 @@ export const transitionStatusHandler: HttpHandler = async (req, ctx: InvocationC
     technicianId: uid,
     metadata: { from: booking.status, to: body.targetStatus },
   });
+
+  if (body.targetStatus === 'COMPLETED') {
+    try {
+      // E21-S02 Codex P1 fix: settleCashCompletion internally guards RAZORPAY bookings
+      // (skipped: 'NOT_CASH') and only fires side effects for whichever caller actually
+      // creates the receivable — see commission-settlement.service.ts.
+      await settleCashCompletion(updated, { log: (s) => ctx.log(s) });
+    } catch (e: unknown) {
+      // The change-feed trigger is the at-least-once catch-up; never fail the transition here.
+      Sentry.captureException(e);
+    }
+    if (body.cashCollected === true) {
+      await auditLog({ adminId: 'system', role: 'system' }, 'CASH_COLLECTION_RECORDED', 'booking', bookingId, {
+        technicianId: uid,
+        collectedAmount: body.collectedAmount,
+        collectionMethod: body.collectionMethod ?? 'CASH',
+        shortCollectionReason: body.shortCollectionReason,
+      });
+    }
+  }
 
   await sendBookingStatusUpdatePush({
     customerId: updated.customerId,

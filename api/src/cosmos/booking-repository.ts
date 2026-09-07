@@ -255,34 +255,6 @@ export const bookingRepo = {
     return resource ?? null;
   },
 
-  async markCashCollected(bookingId: string, amount?: number): Promise<BookingDoc | null> {
-    const { resource: existing, etag } = await getBookingsContainer().item(bookingId, bookingId).read<BookingDoc>();
-    if (!existing) return null;
-    if (existing.cashCollectionStatus === 'COLLECTED') return existing; // idempotent
-    const updated: BookingDoc = {
-      ...existing,
-      cashCollectionStatus: 'COLLECTED',
-      cashCollectedAt: new Date().toISOString(),
-      ...(amount !== undefined ? { cashCollectedAmount: amount } : {}),
-    };
-    const useEtag = process.env.BOOKINGS_ETAG_GUARDS === 'on';
-    if (useEtag) {
-      try {
-        const { resource } = await getBookingsContainer()
-          .item(bookingId, bookingId)
-          .replace<BookingDoc>(updated, { accessCondition: { type: 'IfMatch', condition: etag ?? '' } });
-        return resource ?? null;
-      } catch (e: unknown) {
-        if (typeof e === 'object' && e !== null && 'code' in e && (e as { code: number }).code === 412) {
-          return null; // lost ETag race — idempotent by design
-        }
-        throw e;
-      }
-    }
-    const { resource } = await getBookingsContainer().item(bookingId, bookingId).replace<BookingDoc>(updated);
-    return resource!;
-  },
-
   async markSosActivated(id: string): Promise<BookingDoc | null> {
     const { resource: existing, etag } = await getBookingsContainer().item(id, id).read<BookingDoc>();
     if (!existing) return null;

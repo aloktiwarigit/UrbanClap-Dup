@@ -214,6 +214,78 @@ async function main() {
       throw err;
     }
   }
+
+  // E21-S02: Seed the technician-app remote-config doc (system container). Every feature flag
+  // starts off — dark-launched until an admin explicitly turns one on. No admin PUT endpoint
+  // exists yet for this doc (E21-S03 scope); until then it's edited directly via the Cosmos
+  // data explorer for a controlled pilot rollout.
+  try {
+    await systemContainer.items.create({
+      id: 'technician-client-config',
+      features: { wallet: false, duesBanner: false, upiQr: false, incentives: false, addOnRequests: false },
+      minSupportedVersionCode: 0,
+      updatedBy: 'system',
+      updatedAt: new Date().toISOString(),
+    });
+    console.log("Seeded 'technician-client-config' doc in system container (all features off).");
+  } catch (err: unknown) {
+    if ((err as { code?: number }).code === 409) {
+      console.log("'technician-client-config' doc already exists in system container — skipping seed.");
+    } else {
+      throw err;
+    }
+  }
+
+  // E21-S02: Seed the hold-repair queue doc (system container) — starts empty. Populated by
+  // best-effort recompute failures and the admin recompute-all endpoint; drained by the E21-S04
+  // reconciler timer.
+  try {
+    await systemContainer.items.create({
+      id: 'hold-repair',
+      technicianIds: [],
+      all: false,
+      updatedAt: new Date().toISOString(),
+    });
+    console.log("Seeded 'hold-repair' doc in system container (empty queue).");
+  } catch (err: unknown) {
+    if ((err as { code?: number }).code === 409) {
+      console.log("'hold-repair' doc already exists in system container — skipping seed.");
+    } else {
+      throw err;
+    }
+  }
+
+  // E21-S02: Add the hold-threshold/enforcement fields to the existing commission-config doc,
+  // only where the key is currently absent — an admin who already customized
+  // warnThresholdPaise before this script ran must not have it silently reset back to default.
+  // Read-merge under an IfMatch condition so a concurrent admin PUT can't be clobbered.
+  {
+    const { resource: cfg, etag } = await systemContainer
+      .item('commission-config', 'commission-config')
+      .read<Record<string, unknown>>();
+
+    if (cfg) {
+      const additions: Record<string, unknown> = {};
+      if (cfg['warnThresholdPaise'] === undefined) additions['warnThresholdPaise'] = 250_000;
+      if (cfg['blockThresholdPaise'] === undefined) additions['blockThresholdPaise'] = 500_000;
+      if (cfg['holdEnforcementEnabled'] === undefined) additions['holdEnforcementEnabled'] = false;
+      if (cfg['enforceKycInDispatch'] === undefined) additions['enforceKycInDispatch'] = false;
+
+      if (Object.keys(additions).length > 0) {
+        await systemContainer
+          .item('commission-config', 'commission-config')
+          .replace(
+            { ...cfg, ...additions },
+            { accessCondition: { type: 'IfMatch', condition: etag ?? '' } },
+          );
+        console.log(`Added commission-config field(s) (only-if-absent): ${Object.keys(additions).join(', ')}.`);
+      } else {
+        console.log('commission-config already has every threshold/flag field — skipping merge.');
+      }
+    } else {
+      console.log('commission-config doc not found — skipping threshold merge (seeded above on this same run).');
+    }
+  }
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

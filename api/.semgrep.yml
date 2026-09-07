@@ -220,3 +220,53 @@ rules:
   # Re-introduce this Semgrep rule when semgrep-action is upgraded to a version
   # that respects severity (or replaced with a non-blocking SARIF reporter).
   # See docs/adr/0027-cross-partition-query-guardrails.md.
+
+  # E21-S02 — Commission ledger batch-only writes.
+  #
+  # All writes to commission_receivables MUST go through the transactional batch
+  # helper (commissionReceivableRepo.runLedgerBatch) to ensure atomic, isolated
+  # ledger mutations. Direct .items.create/upsert or .item().replace/delete/patch
+  # calls bypass the batch and risk partial writes or race-condition ledger corruption.
+  #
+  # The commission-receivable-repository.ts helper itself (which implements the batch)
+  # is exempt via paths.exclude.
+  #
+  # References: E21-S02 Task 3, docs/adr/0031-single-partition-commission-ledger.md
+  - id: ledger-batch-only
+    message: Money docs in commission_receivables must be written through commissionReceivableRepo.runLedgerBatch (single-partition transactional batch). See docs/adr/0031.
+    severity: ERROR
+    languages: [typescript]
+    paths:
+      include:
+        - "api/src/**"
+      exclude:
+        - "api/src/cosmos/commission-receivable-repository.ts"
+    pattern-either:
+      - pattern: getCommissionReceivablesContainer().items.create(...)
+      - pattern: getCommissionReceivablesContainer().items.upsert(...)
+      - pattern: getCommissionReceivablesContainer().item(...).replace(...)
+      - pattern: getCommissionReceivablesContainer().item(...).patch(...)
+      - pattern: getCommissionReceivablesContainer().item(...).delete(...)
+
+  # E21-S02 — No incremental mutations on derived ledger figures.
+  #
+  # Ledger figures (remittedAmount, remainingPaise, outstandingPaise) are COMPUTED
+  # absolute values based on a scan of the full ledger history — they are never
+  # incremented or decremented (spec §3.2, ADR-0031 §5). Any +=/-= operation or
+  # reassignment of the form `x.figure = x.figure + y` violates the invariant.
+  # If you need to update a figure, recompute it absolutely in a batch mutation.
+  #
+  # References: E21-S02 spec §3.2, docs/adr/0031-single-partition-commission-ledger.md
+  - id: no-increment-on-ledger
+    message: Derived ledger figures are recomputed absolutely, never incremented (spec §3.2).
+    severity: ERROR
+    languages: [typescript]
+    paths:
+      include:
+        - "api/src/**"
+    pattern-either:
+      - pattern: $X.remittedAmount += $Y
+      - pattern: $X.remittedAmount = $X.remittedAmount + $Y
+      - pattern: $X.remainingPaise -= $Y
+      - pattern: $X.outstandingPaise += $Y
+      - pattern: $X.commissionHold.outstandingPaise = $X.commissionHold.outstandingPaise + $Y

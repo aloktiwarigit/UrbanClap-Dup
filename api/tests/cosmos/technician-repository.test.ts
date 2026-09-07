@@ -9,51 +9,64 @@ import { getCosmosClient } from '../../src/cosmos/client.js';
 import {
   getKycByTechnicianId,
   getTechnicianServiceProfile,
+  listAllTechniciansWithHold,
+  listTechniciansWithExpiredOverride,
+  listTechniciansWithHold,
+  patchCommissionHold,
+  patchFcmToken,
+  patchPaymentProfile,
+  patchTechnicianAdminFields,
+  patchTechnicianAvailability,
   patchTechnicianServiceProfile,
+  readCommissionHold,
   upsertKycStatus,
 } from '../../src/cosmos/technician-repository.js';
+import type { CommissionHold, PaymentProfile } from '../../src/schemas/technician.js';
 
 describe('upsertKycStatus', () => {
-  it('upserts with merged kyc fields', async () => {
-    const mockUpsert = vi.fn().mockResolvedValue({});
-    const mockRead = vi.fn().mockResolvedValue({ resource: { id: 'tech_1' } });
+  it('replaces with merged kyc fields using the read ETag', async () => {
+    const mockReplace = vi.fn().mockResolvedValue({});
+    const mockRead = vi.fn().mockResolvedValue({ resource: { id: 'tech_1' }, etag: '"3"' });
     (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
       database: () => ({ container: () => ({
-        item: () => ({ read: mockRead }),
-        items: { upsert: mockUpsert },
+        item: () => ({ read: mockRead, replace: mockReplace }),
+        items: { create: vi.fn() },
       }) }),
     });
 
     await upsertKycStatus('tech_1', { kycStatus: 'AADHAAR_DONE', aadhaarVerified: true, aadhaarMaskedNumber: 'XXXX-XXXX-1234' });
-    expect(mockUpsert).toHaveBeenCalledWith(expect.objectContaining({
-      kyc: expect.objectContaining({ kycStatus: 'AADHAAR_DONE', aadhaarVerified: true }),
-    }));
+    expect(mockReplace).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kyc: expect.objectContaining({ kycStatus: 'AADHAAR_DONE', aadhaarVerified: true }),
+      }),
+      { accessCondition: { type: 'IfMatch', condition: '"3"' } },
+    );
   });
 
-  it('creates new document when technician does not exist', async () => {
-    const mockUpsert = vi.fn().mockResolvedValue({});
-    const mockRead = vi.fn().mockResolvedValue({ resource: undefined });
+  it('creates new document via items.create when technician does not exist', async () => {
+    const mockCreate = vi.fn().mockResolvedValue({});
+    const mockRead = vi.fn().mockResolvedValue({ resource: undefined, etag: undefined });
     (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
       database: () => ({ container: () => ({
-        item: () => ({ read: mockRead }),
-        items: { upsert: mockUpsert },
+        item: () => ({ read: mockRead, replace: vi.fn() }),
+        items: { create: mockCreate },
       }) }),
     });
 
     await upsertKycStatus('tech_new', { kycStatus: 'PENDING' });
-    expect(mockUpsert).toHaveBeenCalledWith(expect.objectContaining({
+    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({
       id: 'tech_new',
       kyc: expect.objectContaining({ kycStatus: 'PENDING' }),
     }));
   });
 
   it('[E19-S01] writes panMaskedNumber + panHash when provided, zeroes raw panNumber', async () => {
-    const mockUpsert = vi.fn().mockResolvedValue({});
-    const mockRead = vi.fn().mockResolvedValue({ resource: { id: 'tech_1' } });
+    const mockReplace = vi.fn().mockResolvedValue({});
+    const mockRead = vi.fn().mockResolvedValue({ resource: { id: 'tech_1' }, etag: '"3"' });
     (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
       database: () => ({ container: () => ({
-        item: () => ({ read: mockRead }),
-        items: { upsert: mockUpsert },
+        item: () => ({ read: mockRead, replace: mockReplace }),
+        items: { create: vi.fn() },
       }) }),
     });
 
@@ -65,7 +78,7 @@ describe('upsertKycStatus', () => {
       panNumber: null,
     });
 
-    const call = mockUpsert.mock.calls[0];
+    const call = mockReplace.mock.calls[0];
     const kyc = (call?.[0] as Record<string, unknown>)['kyc'] as Record<string, unknown>;
     expect(kyc['panMaskedNumber']).toBe('XXXXX1234F');
     expect(kyc['panHash']).toBe(fakeHash);
@@ -73,18 +86,18 @@ describe('upsertKycStatus', () => {
   });
 
   it('[E19-S01] initializes panMaskedNumber and panHash to null for new docs', async () => {
-    const mockUpsert = vi.fn().mockResolvedValue({});
-    const mockRead = vi.fn().mockResolvedValue({ resource: undefined });
+    const mockCreate = vi.fn().mockResolvedValue({});
+    const mockRead = vi.fn().mockResolvedValue({ resource: undefined, etag: undefined });
     (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
       database: () => ({ container: () => ({
-        item: () => ({ read: mockRead }),
-        items: { upsert: mockUpsert },
+        item: () => ({ read: mockRead, replace: vi.fn() }),
+        items: { create: mockCreate },
       }) }),
     });
 
     await upsertKycStatus('tech_fresh', { kycStatus: 'PENDING' });
 
-    const call = mockUpsert.mock.calls[0];
+    const call = mockCreate.mock.calls[0];
     const kyc = (call?.[0] as Record<string, unknown>)['kyc'] as Record<string, unknown>;
     expect(kyc['panMaskedNumber']).toBeNull();
     expect(kyc['panHash']).toBeNull();
@@ -161,11 +174,11 @@ describe('technician service profile helpers', () => {
   });
 
   it('patches skills and location while initializing non-dispatchable defaults', async () => {
-    const mockUpsert = vi.fn().mockResolvedValue({});
+    const mockCreate = vi.fn().mockResolvedValue({});
     (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
       database: () => ({ container: () => ({
-        item: () => ({ read: vi.fn().mockResolvedValue({ resource: undefined }) }),
-        items: { upsert: mockUpsert },
+        item: () => ({ read: vi.fn().mockResolvedValue({ resource: undefined, etag: undefined }), replace: vi.fn() }),
+        items: { create: mockCreate },
       }) }),
     });
 
@@ -174,7 +187,7 @@ describe('technician service profile helpers', () => {
       location: { lat: 12.9716, lng: 77.5946 },
     });
 
-    expect(mockUpsert).toHaveBeenCalledWith(expect.objectContaining({
+    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({
       id: 'tech_new',
       technicianId: 'tech_new',
       skills: ['svc-plumbing'],
@@ -191,7 +204,7 @@ describe('technician service profile helpers', () => {
   });
 
   it('preserves existing dispatch and KYC fields when patching skills only', async () => {
-    const mockUpsert = vi.fn().mockResolvedValue({});
+    const mockReplace = vi.fn().mockResolvedValue({});
     const existing = {
       id: 'tech_1',
       technicianId: 'tech_1',
@@ -205,21 +218,403 @@ describe('technician service profile helpers', () => {
     };
     (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
       database: () => ({ container: () => ({
-        item: () => ({ read: vi.fn().mockResolvedValue({ resource: existing }) }),
-        items: { upsert: mockUpsert },
+        item: () => ({ read: vi.fn().mockResolvedValue({ resource: existing, etag: '"9"' }), replace: mockReplace }),
+        items: { create: vi.fn() },
       }) }),
     });
 
     await patchTechnicianServiceProfile('tech_1', { skills: ['svc-plumbing'] });
 
-    expect(mockUpsert).toHaveBeenCalledWith(expect.objectContaining({
-      displayName: 'Existing Tech',
-      skills: ['svc-plumbing'],
-      location: { type: 'Point', coordinates: [77.5, 12.9] },
-      availabilityWindows: [{ dayOfWeek: 1, startHour: 8, endHour: 12 }],
-      isOnline: true,
-      isAvailable: true,
-      kycStatus: 'APPROVED',
-    }));
+    expect(mockReplace).toHaveBeenCalledWith(
+      expect.objectContaining({
+        displayName: 'Existing Tech',
+        skills: ['svc-plumbing'],
+        location: { type: 'Point', coordinates: [77.5, 12.9] },
+        availabilityWindows: [{ dayOfWeek: 1, startHour: 8, endHour: 12 }],
+        isOnline: true,
+        isAvailable: true,
+        kycStatus: 'APPROVED',
+      }),
+      { accessCondition: { type: 'IfMatch', condition: '"9"' } },
+    );
+  });
+});
+
+// ── ETag-guarded read-modify-write (E21-S02 Task 7) ──────────────────────────
+
+describe('readModifyWrite ETag guard — all five technician writers + patchFcmToken', () => {
+  const commissionHold: CommissionHold = {
+    outstandingPaise: 500000,
+    dueCount: 2,
+    state: 'WARN',
+    evaluatedAt: '2026-09-01T00:00:00.000Z',
+  };
+  const paymentProfile: PaymentProfile = { upiVpa: 'tech@upi', upiUpdatedAt: '2026-09-01T00:00:00.000Z' };
+
+  const existingDoc: Record<string, unknown> = {
+    id: 'tech_etag',
+    technicianId: 'tech_etag',
+    commissionHold,
+    paymentProfile,
+    kyc: { kycStatus: 'APPROVED' },
+    skills: ['svc-old'],
+    availabilityWindows: [],
+    isOnline: false,
+    isAvailable: false,
+    suspended: false,
+    fcmToken: 'old-token',
+  };
+
+  interface WriterCase {
+    name: string;
+    invoke: (technicianId: string) => Promise<unknown>;
+  }
+
+  const writers: WriterCase[] = [
+    { name: 'upsertKycStatus', invoke: (id) => upsertKycStatus(id, { kycStatus: 'PENDING' }) },
+    { name: 'patchTechnicianAvailability', invoke: (id) => patchTechnicianAvailability(id, { isOnline: true }) },
+    { name: 'patchTechnicianServiceProfile', invoke: (id) => patchTechnicianServiceProfile(id, { skills: ['svc-plumbing'] }) },
+    { name: 'patchTechnicianAdminFields', invoke: (id) => patchTechnicianAdminFields(id, { suspended: true }) },
+    { name: 'patchFcmToken', invoke: (id) => patchFcmToken(id, 'fcm-tok-new') },
+  ];
+
+  describe.each(writers)('$name', ({ invoke }) => {
+    it('replaces with IfMatch using the read ETag and preserves commissionHold + paymentProfile', async () => {
+      const mockRead = vi.fn().mockResolvedValue({ resource: existingDoc, etag: '"7"' });
+      const mockReplace = vi.fn().mockResolvedValue({});
+      const mockCreate = vi.fn();
+      (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+        database: () => ({ container: () => ({
+          item: () => ({ read: mockRead, replace: mockReplace }),
+          items: { create: mockCreate },
+        }) }),
+      });
+
+      await invoke('tech_etag');
+
+      expect(mockReplace).toHaveBeenCalledTimes(1);
+      const [body, options] = mockReplace.mock.calls[0] as [Record<string, unknown>, unknown];
+      expect(options).toEqual({ accessCondition: { type: 'IfMatch', condition: '"7"' } });
+      expect(body['commissionHold']).toEqual(commissionHold);
+      expect(body['paymentProfile']).toEqual(paymentProfile);
+      expect(mockCreate).not.toHaveBeenCalled();
+    });
+
+    it('re-reads and retries once after a 412, then succeeds', async () => {
+      const mockRead = vi.fn()
+        .mockResolvedValueOnce({ resource: existingDoc, etag: '"7"' })
+        .mockResolvedValueOnce({ resource: existingDoc, etag: '"8"' });
+      const mockReplace = vi.fn()
+        .mockRejectedValueOnce({ code: 412 })
+        .mockResolvedValueOnce({});
+      (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+        database: () => ({ container: () => ({
+          item: () => ({ read: mockRead, replace: mockReplace }),
+          items: { create: vi.fn() },
+        }) }),
+      });
+
+      await invoke('tech_etag');
+
+      expect(mockRead).toHaveBeenCalledTimes(2);
+      expect(mockReplace).toHaveBeenCalledTimes(2);
+      expect(mockReplace.mock.calls[1]?.[1]).toEqual({ accessCondition: { type: 'IfMatch', condition: '"8"' } });
+    });
+
+    it('throws after three consecutive 412s', async () => {
+      const mockRead = vi.fn().mockResolvedValue({ resource: existingDoc, etag: '"7"' });
+      const mockReplace = vi.fn().mockRejectedValue({ code: 412 });
+      (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+        database: () => ({ container: () => ({
+          item: () => ({ read: mockRead, replace: mockReplace }),
+          items: { create: vi.fn() },
+        }) }),
+      });
+
+      await expect(invoke('tech_etag')).rejects.toMatchObject({ code: 412 });
+      expect(mockReplace).toHaveBeenCalledTimes(3);
+    });
+
+    it('creates the doc via items.create when the technician doc is absent', async () => {
+      const mockRead = vi.fn().mockResolvedValue({ resource: undefined, etag: undefined });
+      const mockReplace = vi.fn();
+      const mockCreate = vi.fn().mockResolvedValue({});
+      (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+        database: () => ({ container: () => ({
+          item: () => ({ read: mockRead, replace: mockReplace }),
+          items: { create: mockCreate },
+        }) }),
+      });
+
+      await invoke('tech_new');
+
+      expect(mockCreate).toHaveBeenCalledTimes(1);
+      expect(mockReplace).not.toHaveBeenCalled();
+      const body = mockCreate.mock.calls[0]?.[0] as Record<string, unknown>;
+      expect(body['id']).toBe('tech_new');
+    });
+  });
+
+  it('also retries on a 409 conflict (isPreconditionFailure covers both codes)', async () => {
+    const mockRead = vi.fn()
+      .mockResolvedValueOnce({ resource: existingDoc, etag: '"7"' })
+      .mockResolvedValueOnce({ resource: existingDoc, etag: '"8"' });
+    const mockReplace = vi.fn()
+      .mockRejectedValueOnce({ code: 409 })
+      .mockResolvedValueOnce({});
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({
+        item: () => ({ read: mockRead, replace: mockReplace }),
+        items: { create: vi.fn() },
+      }) }),
+    });
+
+    await upsertKycStatus('tech_etag', { kycStatus: 'PENDING' });
+
+    expect(mockReplace).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('readCommissionHold', () => {
+  it('returns exists:true and the commissionHold when the technician doc has one', async () => {
+    const hold: CommissionHold = { outstandingPaise: 300000, dueCount: 1, state: 'WARN', evaluatedAt: '2026-09-01T00:00:00.000Z' };
+    const mockRead = vi.fn().mockResolvedValue({ resource: { id: 't1', commissionHold: hold } });
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({ item: () => ({ read: mockRead }) }) }),
+    });
+
+    expect(await readCommissionHold('t1')).toEqual({ exists: true, hold });
+  });
+
+  it('returns exists:true, hold:null when the doc exists but has no commissionHold field', async () => {
+    const mockRead = vi.fn().mockResolvedValue({ resource: { id: 't1' } });
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({ item: () => ({ read: mockRead }) }) }),
+    });
+
+    expect(await readCommissionHold('t1')).toEqual({ exists: true, hold: null });
+  });
+
+  it('returns exists:false, hold:null when the technician doc is absent', async () => {
+    const mockRead = vi.fn().mockResolvedValue({ resource: undefined });
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({ item: () => ({ read: mockRead }) }) }),
+    });
+
+    expect(await readCommissionHold('ghost')).toEqual({ exists: false, hold: null });
+  });
+});
+
+describe('patchCommissionHold', () => {
+  const hold: CommissionHold = { outstandingPaise: 300000, dueCount: 1, state: 'WARN', evaluatedAt: '2026-09-01T00:00:00.000Z' };
+  const readStartedAt = '2026-09-01T00:00:00.000Z';
+
+  it('patches /commissionHold with a condition string containing readStartedAt and returns APPLIED', async () => {
+    const mockPatch = vi.fn().mockResolvedValue({});
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({ item: () => ({ patch: mockPatch }) }) }),
+    });
+
+    const result = await patchCommissionHold('t1', hold, readStartedAt);
+
+    expect(result).toBe('APPLIED');
+    expect(mockPatch).toHaveBeenCalledTimes(1);
+    const call = mockPatch.mock.calls[0]![0] as { operations: Array<{ op: string; path: string; value: unknown }>; condition: string };
+    expect(call.operations).toEqual([{ op: 'set', path: '/commissionHold', value: hold }]);
+    expect(call.condition).toBe(
+      `FROM c WHERE NOT IS_DEFINED(c.commissionHold) OR NOT IS_DEFINED(c.commissionHold.evaluatedAt) OR c.commissionHold.evaluatedAt < "${readStartedAt}"`,
+    );
+  });
+
+  it('maps a 412 precondition failure to STALE', async () => {
+    const mockPatch = vi.fn().mockRejectedValue({ code: 412 });
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({ item: () => ({ patch: mockPatch }) }) }),
+    });
+
+    expect(await patchCommissionHold('t1', hold, readStartedAt)).toBe('STALE');
+  });
+
+  it('maps a 404 not-found to MISSING', async () => {
+    const mockPatch = vi.fn().mockRejectedValue({ code: 404 });
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({ item: () => ({ patch: mockPatch }) }) }),
+    });
+
+    expect(await patchCommissionHold('t1', hold, readStartedAt)).toBe('MISSING');
+  });
+
+  it('rethrows any other error code', async () => {
+    const mockPatch = vi.fn().mockRejectedValue({ code: 429 });
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({ item: () => ({ patch: mockPatch }) }) }),
+    });
+
+    await expect(patchCommissionHold('t1', hold, readStartedAt)).rejects.toMatchObject({ code: 429 });
+  });
+});
+
+describe('listTechniciansWithHold', () => {
+  it('queries IS_DEFINED(c.commissionHold), maxItemCount 50, and sorts the page by outstandingPaise desc', async () => {
+    const page = {
+      resources: [
+        { id: 't1', displayName: 'Low', commissionHold: { outstandingPaise: 100, dueCount: 1, state: 'WARN', evaluatedAt: 'x' } },
+        { id: 't2', displayName: 'High', commissionHold: { outstandingPaise: 900000, dueCount: 3, state: 'BLOCKED', evaluatedAt: 'x' } },
+      ],
+      continuationToken: undefined,
+    };
+    const mockFetchNext = vi.fn().mockResolvedValue(page);
+    const mockQuery = vi.fn().mockReturnValue({ fetchNext: mockFetchNext });
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({ items: { query: mockQuery } }) }),
+    });
+
+    const result = await listTechniciansWithHold();
+
+    expect(mockQuery).toHaveBeenCalledWith(
+      { query: 'SELECT c.id, c.displayName, c.name, c.commissionHold FROM c WHERE IS_DEFINED(c.commissionHold)' },
+      { maxItemCount: 50 },
+    );
+    expect(result.items.map((i) => i.id)).toEqual(['t2', 't1']);
+    expect(result.continuationToken).toBeUndefined();
+  });
+
+  it('passes continuationToken through to the query options and back out', async () => {
+    const mockFetchNext = vi.fn().mockResolvedValue({ resources: [], continuationToken: 'next-token' });
+    const mockQuery = vi.fn().mockReturnValue({ fetchNext: mockFetchNext });
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({ items: { query: mockQuery } }) }),
+    });
+
+    const result = await listTechniciansWithHold('prev-token');
+
+    expect(mockQuery).toHaveBeenCalledWith(
+      { query: 'SELECT c.id, c.displayName, c.name, c.commissionHold FROM c WHERE IS_DEFINED(c.commissionHold)' },
+      { maxItemCount: 50, continuationToken: 'prev-token' },
+    );
+    expect(result.continuationToken).toBe('next-token');
+  });
+
+  it('falls back to c.name when displayName is absent, and omits name when neither is set', async () => {
+    const mockFetchNext = vi.fn().mockResolvedValue({
+      resources: [
+        { id: 't1', name: 'Legacy Name', commissionHold: { outstandingPaise: 100, dueCount: 1, state: 'WARN', evaluatedAt: 'x' } },
+        { id: 't2', commissionHold: { outstandingPaise: 50, dueCount: 1, state: 'WARN', evaluatedAt: 'x' } },
+      ],
+    });
+    const mockQuery = vi.fn().mockReturnValue({ fetchNext: mockFetchNext });
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({ items: { query: mockQuery } }) }),
+    });
+
+    const result = await listTechniciansWithHold();
+
+    expect(result.items[0]).toMatchObject({ id: 't1', name: 'Legacy Name' });
+    expect(result.items[1]).not.toHaveProperty('name');
+  });
+});
+
+describe('listAllTechniciansWithHold', () => {
+  it('drains every page via hasMoreResults() and maps rows the same as the paged variant', async () => {
+    const mockHasMoreResults = vi.fn().mockReturnValueOnce(true).mockReturnValueOnce(true).mockReturnValueOnce(false);
+    const mockFetchNext = vi.fn()
+      .mockResolvedValueOnce({ resources: [{ id: 't1', displayName: 'Low', commissionHold: { outstandingPaise: 100, dueCount: 1, state: 'WARN', evaluatedAt: 'x' } }] })
+      .mockResolvedValueOnce({ resources: [{ id: 't2', commissionHold: { outstandingPaise: 900000, dueCount: 3, state: 'BLOCKED', evaluatedAt: 'x' } }] });
+    const mockQuery = vi.fn().mockReturnValue({ fetchNext: mockFetchNext, hasMoreResults: mockHasMoreResults });
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({ items: { query: mockQuery } }) }),
+    });
+
+    const result = await listAllTechniciansWithHold();
+
+    expect(mockQuery).toHaveBeenCalledWith(
+      { query: 'SELECT c.id, c.displayName, c.name, c.commissionHold FROM c WHERE IS_DEFINED(c.commissionHold)' },
+      { maxItemCount: 50 },
+    );
+    expect(mockFetchNext).toHaveBeenCalledTimes(2);
+    expect(result).toEqual([
+      { id: 't1', name: 'Low', commissionHold: { outstandingPaise: 100, dueCount: 1, state: 'WARN', evaluatedAt: 'x' } },
+      { id: 't2', commissionHold: { outstandingPaise: 900000, dueCount: 3, state: 'BLOCKED', evaluatedAt: 'x' } },
+    ]);
+  });
+
+  it('returns an empty array when no technician has a commissionHold', async () => {
+    const mockHasMoreResults = vi.fn().mockReturnValue(false);
+    const mockFetchNext = vi.fn();
+    const mockQuery = vi.fn().mockReturnValue({ fetchNext: mockFetchNext, hasMoreResults: mockHasMoreResults });
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({ items: { query: mockQuery } }) }),
+    });
+
+    expect(await listAllTechniciansWithHold()).toEqual([]);
+    expect(mockFetchNext).not.toHaveBeenCalled();
+  });
+});
+
+describe('listTechniciansWithExpiredOverride', () => {
+  it('queries with a parameterised @now and drains every page', async () => {
+    const mockHasMoreResults = vi.fn().mockReturnValueOnce(true).mockReturnValueOnce(false);
+    const mockFetchNext = vi.fn().mockResolvedValueOnce({ resources: [{ id: 't1' }, { id: 't2' }] });
+    const mockQuery = vi.fn().mockReturnValue({ fetchNext: mockFetchNext, hasMoreResults: mockHasMoreResults });
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({ items: { query: mockQuery } }) }),
+    });
+    const nowIso = '2026-09-05T00:00:00.000Z';
+
+    const result = await listTechniciansWithExpiredOverride(nowIso);
+
+    expect(mockQuery).toHaveBeenCalledWith(
+      {
+        query: 'SELECT c.id FROM c WHERE IS_DEFINED(c.commissionHold.override) AND c.commissionHold.override.until <= @now',
+        parameters: [{ name: '@now', value: nowIso }],
+      },
+      { maxItemCount: 100 },
+    );
+    expect(result).toEqual(['t1', 't2']);
+  });
+
+  it('returns an empty array when no technician has an expired override', async () => {
+    const mockHasMoreResults = vi.fn().mockReturnValue(false);
+    const mockFetchNext = vi.fn();
+    const mockQuery = vi.fn().mockReturnValue({ fetchNext: mockFetchNext, hasMoreResults: mockHasMoreResults });
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({ items: { query: mockQuery } }) }),
+    });
+
+    expect(await listTechniciansWithExpiredOverride('2026-09-05T00:00:00.000Z')).toEqual([]);
+    expect(mockFetchNext).not.toHaveBeenCalled();
+  });
+});
+
+describe('patchPaymentProfile', () => {
+  it('patches /paymentProfile', async () => {
+    const mockPatch = vi.fn().mockResolvedValue({});
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({ item: () => ({ patch: mockPatch }) }) }),
+    });
+    const profile = { upiVpa: 'tech@upi', upiUpdatedAt: '2026-09-01T00:00:00.000Z' };
+
+    await patchPaymentProfile('t1', profile);
+
+    expect(mockPatch).toHaveBeenCalledWith({ operations: [{ op: 'set', path: '/paymentProfile', value: profile }] });
+  });
+
+  it('maps a 404 to a TECHNICIAN_NOT_FOUND error', async () => {
+    const mockPatch = vi.fn().mockRejectedValue({ code: 404 });
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({ item: () => ({ patch: mockPatch }) }) }),
+    });
+
+    await expect(patchPaymentProfile('ghost', { upiVpa: 'x@upi', upiUpdatedAt: 'x' }))
+      .rejects.toMatchObject({ code: 'TECHNICIAN_NOT_FOUND' });
+  });
+
+  it('rethrows any other error code', async () => {
+    const mockPatch = vi.fn().mockRejectedValue({ code: 500 });
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({ item: () => ({ patch: mockPatch }) }) }),
+    });
+
+    await expect(patchPaymentProfile('t1', { upiVpa: 'x@upi', upiUpdatedAt: 'x' })).rejects.toMatchObject({ code: 500 });
   });
 });

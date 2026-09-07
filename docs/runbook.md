@@ -1380,3 +1380,128 @@ coupling.
 moves while disabled and that the guard is still lexically present ahead of every
 `RazorpayRouteService` construction. It is a static scan rather than a Semgrep rule, deliberately —
 see the E19-S03 note in `api/.semgrep.yml` on findings blocking deploys.
+
+---
+
+## Commission ledger v2 (E21-S02)
+
+Extends the E21-S01 cash-pilot commission model: remittances (a lump-sum payment against several
+outstanding bookings), overpayment credit, per-technician commission holds (WARN/BLOCK), and
+configurable thresholds — all living in the same `commission_receivables` partition per
+technician, discriminated by `docType`. See `docs/adr/0031-single-partition-commission-ledger.md`
+for the design rationale (why single-container/single-batch, why absolute recomputation, why the
+hold is a cache with a repair queue).
+
+### Record a commission remittance
+
+`POST /v1/admin/finance/commission-remittances` (super-admin or finance role), body:
+
+```json
+{
+  "technicianId": "tech-ayd-003",
+  "amountPaise": 220000,
+  "method": "UPI",
+  "ref": "upi-txn-abc123",
+  "idempotencyKey": "a-client-generated-uuid-per-attempt"
+}
+```
+
+- `idempotencyKey` **must** be a fresh client-generated UUID per distinct remittance attempt, and
+  is scoped per technician (`rem:<idempotencyKey>` inside that technician's partition). Retrying
+  the *same* attempt (e.g. a timed-out request the admin's browser resubmits) with the *same* key
+  is safe and returns the original receipt with `replayed: true` — no double-charge, no
+  double-credit.
+- The amount is allocated oldest-due-first across the technician's outstanding receivables. Any
+  amount left over after every DUE receivable is cleared becomes a `CREDIT` doc
+  (`creditCreatedPaise` in the response), which is automatically consumed by that technician's
+  next dues.
+- Response includes the recomputed `hold` (or `null` + `holdRecomputePending: true` if the
+  best-effort recompute failed — the technician is queued for the async hold-repair sweep
+  instead; the remittance itself is never rolled back for a hold-recompute failure).
+- Error codes to know: `404 TECHNICIAN_NOT_FOUND`; `409 IDEMPOTENCY_MISMATCH` (the same
+  `idempotencyKey` was reused for a *different* amount/method/ref — this is a client bug, not a
+  legitimate replay, and is rejected rather than silently accepted); `409 LEDGER_BUSY` (ETag
+  contention on the technician partition exhausted its retries — safe to retry the call with the
+  *same* idempotency key).
+- `POST .../commission-receivables/settle` with `action: "REMIT"` is retired and now returns
+  `410 USE_COMMISSION_REMITTANCES` — it only still accepts `action: "WAIVE"` (write off a single
+  booking's commission, e.g. a goodwill gesture).
+
+### Technician says he is blocked / hold looks wrong
+
+1. Pull the live ledger: `GET /v1/admin/finance/commission-receivables/{technicianId}` — returns
+   `hold`, every `receivables` row (with `outstandingPaise` computed fresh), every `remittances`
+   and `credits` doc, plus `cashCollectedPaise`/`creditAppliedPaise` totals. This is the
+   ground truth; the cached `commissionHold` on the technician doc should match it.
+2. If it doesn't match (stale cache, a recompute that failed silently), force a recompute:
+   - Single technician: `POST /v1/admin/finance/commission-hold/{technicianId}/override` with
+     `{ until, reason }` if you need to unblock them *immediately* while investigating (this
+     forces CLEAR regardless of balance until `until`), then `DELETE` the same route to clear the
+     override once the real issue is fixed.
+   - Whole roster: `POST /v1/admin/finance/commission-receivables/recompute` (super-admin only,
+     `202` — enqueues every technician onto the `system/hold-repair` queue).
+3. The hold-repair queue (`system/hold-repair` doc: `{ technicianIds: [], all: boolean }`) is
+   drained by the E21-S04 reconciler timer, which also runs an `EXPIRED_OVERRIDES` scope every
+   run so a lapsed manual override doesn't sit inert until something else happens to touch that
+   technician. `sweepAllHolds({ scope: 'FULL' | 'EXPIRED_OVERRIDES' })` in
+   `api/src/services/commission-hold.service.ts` is the shared primitive behind both the
+   reconciler and `backfill-commission-holds.ts` below — read there for the drift-detection log
+   format if you're debugging why a recompute isn't converging.
+4. A hold "looks wrong" because it's stale, never because the underlying receivables/remittances
+   themselves are wrong — every derived total is recomputed absolutely from the ledger's source
+   arrays on every read, never incremented. If step 1's ledger detail itself looks wrong, that's a
+   data bug in the receivables/remittances, not a hold-cache staleness issue — escalate
+   differently (check the booking-completion trigger and the remittance allocation, not the hold
+   service).
+
+### Rollout order for E21-S02
+
+Deploying this story to an environment that already has E21-S01 data requires this exact order —
+skipping the backfill step leaves every technician's cached `commissionHold` at its pre-v2 (or
+absent) value until something incidentally triggers a recompute:
+
+1. Deploy the Azure Functions app (new/changed handlers, the new `docType` read-path union, the
+   commission-hold service).
+2. Run `npx tsx scripts/setup-cosmos.ts` against the target environment. Idempotent — safe to
+   re-run. Seeds `system/technician-client-config` (all features off) and `system/hold-repair`
+   (empty queue) if absent, and read-merges `warnThresholdPaise` / `blockThresholdPaise` /
+   `holdEnforcementEnabled` / `enforceKycInDispatch` onto the existing `system/commission-config`
+   doc **only for keys that are currently absent** — an admin who already customized a threshold
+   keeps their value.
+3. Run `npx tsx scripts/backfill-commission-holds.ts --dry-run` (the default — no flag needed, but
+   pass it explicitly for clarity in a runbook step). This recomputes every technician's hold in
+   memory and prints the drift against what's currently cached, without writing anything.
+4. **Read the diff.** Every technician who has any E21-S01 receivable history will show up as
+   drift (their hold has never been computed before), which is expected the first time this runs
+   in an environment. What you're actually checking for: totals that look implausible (a
+   technician showing millions of paise outstanding is a sign something upstream is wrong, not
+   that the backfill is wrong) before you commit to writing them.
+5. Run `npx tsx scripts/backfill-commission-holds.ts --apply` once the diff looks sane. Prints
+   `recomputed=<N> drifted=<N>` — `recomputed` should equal the number of technicians with any
+   hold-relevant history; `drifted` should roughly match what the dry-run reported.
+6. Verify: `GET /v1/admin/finance/commission-receivables` dashboard →
+   `unreconciledTechnicianCount === 0`. A non-zero count here means some technician's cached hold
+   still disagrees with their live DUE total — re-run the backfill, and if it doesn't converge,
+   treat it as a P1 (a technician could be wrongly blocked, or wrongly *not* blocked, from
+   dispatch/payout decisions that read the cache).
+
+### Flags
+
+All default **off** — this story ships the mechanism dark-launched, matching the ₹0-infra pilot
+posture of shipping observable-but-inert first:
+
+| Flag | Doc | Default | Effect when on |
+|---|---|---|---|
+| `holdEnforcementEnabled` | `system/commission-config` | `false` | Technician-app actually gates job acceptance/dispatch on `commissionHold.state === 'BLOCKED'` (enforcement, not just visibility) |
+| `enforceKycInDispatch` | `system/commission-config` | `false` | Dispatch also gates on KYC status, independent of the commission hold |
+| `features.wallet` / `duesBanner` / `upiQr` / `incentives` / `addOnRequests` | `system/technician-client-config` | all `false` | Technician-app UI surfaces for the wallet screen, dues banner, UPI QR collection flow, incentive milestones, and add-on requests respectively |
+
+Change the commission-config flags/thresholds: `PUT /v1/admin/catalogue/commission-config`
+(super-admin only), partial patch, e.g. `{ "holdEnforcementEnabled": true }` — rejects
+`warnThresholdPaise >= blockThresholdPaise` with `400 THRESHOLD_ORDER`. Every threshold/flag key
+change also enqueues a full hold-repair sweep, since the thresholds that decide WARN/BLOCK just
+moved and every cached hold needs re-evaluating against them.
+
+Change the technician-app feature flags: `PUT` on the technician-client-config doc (E21-S03 admin
+UI; until that ships, edit the `system/technician-client-config` doc directly via the Cosmos data
+explorer for a controlled pilot rollout to a specific cohort).

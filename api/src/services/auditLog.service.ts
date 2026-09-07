@@ -1,7 +1,7 @@
 import * as Sentry from '@sentry/node';
 import { randomUUID } from 'node:crypto';
 import { appendAuditEntry } from '../cosmos/audit-log-repository.js';
-import type { AdminRole } from '../types/admin.js';
+import type { AdminRole, AuditAction } from '../types/admin.js';
 import type { AuditLogDoc } from '../schemas/audit-log.js';
 
 export interface AuditLogContext {
@@ -12,7 +12,7 @@ export interface AuditLogContext {
 
 export async function auditLog(
   ctx: AuditLogContext,
-  action: string,
+  action: AuditAction,
   resourceType: string,
   resourceId: string,
   payload: Record<string, unknown>,
@@ -40,4 +40,17 @@ export async function auditLog(
   } catch (err) {
     Sentry.captureException(err);
   }
+}
+
+/**
+ * Convenience helper for system-initiated audit entries (E21-S02 Task 12).
+ * Calls auditLog with adminId='system' and role='system'.
+ */
+export async function systemAudit(
+  action: AuditAction,
+  resourceType: string,
+  resourceId: string,
+  payload: Record<string, unknown>,
+): Promise<void> {
+  return auditLog({ adminId: 'system', role: 'system' }, action, resourceType, resourceId, payload);
 }

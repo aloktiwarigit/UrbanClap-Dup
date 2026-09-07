@@ -5,7 +5,6 @@ import * as Sentry from '@sentry/node';
 import { randomUUID } from 'node:crypto';
 import { BookingDocSchema } from '../schemas/booking.js';
 import { catalogueRepo } from '../cosmos/catalogue-repository.js';
-import { commissionReceivableRepo } from '../cosmos/commission-receivable-repository.js';
 import { walletLedgerRepo } from '../cosmos/wallet-ledger-repository.js';
 import { arePayoutsEnabled } from '../shared/payouts-enabled.js';
 import { getTechnicianForSettlement, incrementCompletedJobCount } from '../cosmos/technician-repository.js';
@@ -14,10 +13,12 @@ import { calculateCommission } from '../services/commission.service.js';
 import { getGlobalCommissionBps, resolveCommissionBps } from '../services/commission-config.service.js';
 import { RazorpayRouteService } from '../services/razorpayRoute.service.js';
 import { sendTechEarningsUpdate } from '../services/fcm.service.js';
+import { settleCashCompletion } from '../services/commission-settlement.service.js';
+import type { AuditAction } from '../types/admin.js';
 
 const DB_NAME = process.env['COSMOS_DATABASE'] ?? 'homeservices';
 
-function systemAuditEntry(action: string, resourceId: string, payload: Record<string, unknown>) {
+function systemAuditEntry(action: AuditAction, resourceId: string, payload: Record<string, unknown>) {
   const timestamp = new Date().toISOString();
   return appendAuditEntry({
     id: randomUUID(),
@@ -53,65 +54,13 @@ export async function settleBooking(bookingRaw: unknown, ctx: InvocationContext)
 
   // ── CASH_ON_SERVICE path (pilot default) ────────────────────────────────────
   // Technician already holds the cash; platform records a commission receivable.
-  // No money transfer to technician.
+  // No money transfer to technician. Side effects (audit, job-count increment, FCM) live in
+  // settleCashCompletion so this trigger and the synchronous active-job COMPLETED transition
+  // (Task 9) share exactly-once semantics regardless of which one wins the race to create the
+  // receivable row. A throwing recordCommissionDue (inside settleCashCompletion) propagates —
+  // see handleBookingCompletedBatch below for why that must not be swallowed.
   if (paymentMethod !== 'RAZORPAY') {
-    const existing = await commissionReceivableRepo.getByBookingId(bookingId, technicianId);
-    if (existing) {
-      ctx.log(`settleBooking: commission receivable already exists for ${bookingId} — skipping`);
-      return;
-    }
-
-    const [globalBps, service, category] = await Promise.all([
-      getGlobalCommissionBps(),
-      catalogueRepo.getServiceByIdCrossPartition(booking.serviceId),
-      catalogueRepo.getCategoryById(booking.categoryId),
-    ]);
-
-    const { bps, from: commissionResolvedFrom } = resolveCommissionBps({
-      ...(service?.commissionBps !== undefined ? { serviceBps: service.commissionBps } : {}),
-      ...(category?.commissionBps !== undefined ? { categoryBps: category.commissionBps } : {}),
-      globalBps,
-    });
-    const commissionDue = Math.round((bookingAmount * bps) / 10000);
-
-    const created = await commissionReceivableRepo.createDueEntry({
-      bookingId,
-      technicianId,
-      serviceId: booking.serviceId,
-      categoryId: booking.categoryId,
-      bookingAmount,
-      commissionBps: bps,
-      commissionDue,
-      commissionResolvedFrom,
-      ...(booking.cashCollectedAmount !== undefined
-        ? { cashCollectedAmount: booking.cashCollectedAmount }
-        : {}),
-    });
-    if (!created) {
-      ctx.log(`settleBooking: concurrent invocation already created commission receivable for ${bookingId} — skipping`);
-      return;
-    }
-
-    try {
-      await systemAuditEntry('COMMISSION_DUE_RECORDED', bookingId, {
-        technicianId,
-        bookingAmount,
-        commissionBps: bps,
-        commissionDue,
-        commissionResolvedFrom,
-      });
-    } catch (auditErr: unknown) {
-      Sentry.captureException(auditErr);
-    }
-
-    try {
-      await Promise.all([
-        incrementCompletedJobCount(technicianId),
-        sendTechEarningsUpdate(technicianId, { bookingId, commissionDue }),
-      ]);
-    } catch (err: unknown) {
-      Sentry.captureException(err);
-    }
+    await settleCashCompletion(booking, { log: (s) => ctx.log(s) });
     return;
   }
 
@@ -248,6 +197,29 @@ export async function settleBooking(bookingRaw: unknown, ctx: InvocationContext)
   }
 }
 
+/**
+ * P1 (Codex review, E21-S02 Task 8): a money-critical settlement failure (e.g. `recordCommissionDue`
+ * rejecting because `getGlobalCommissionBps` or a catalogue lookup threw) must NOT be swallowed
+ * here — swallowing it lets the change-feed processor checkpoint the lease, and the receivable is
+ * then never created or retried. Sentry-capture and log for visibility, but rethrow so the lease is
+ * NOT checkpointed and the whole batch is redelivered. settleBooking/recordCommissionDue/
+ * finalizeLedgerForTechnician are all idempotent by bookingId, so redelivering documents already
+ * processed successfully in this batch is safe.
+ */
+export async function handleBookingCompletedBatch(documents: unknown[], context: InvocationContext): Promise<void> {
+  for (const doc of documents) {
+    try {
+      await settleBooking(doc, context);
+    } catch (err: unknown) {
+      Sentry.captureException(err);
+      context.log(
+        `settleBooking ERROR: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      throw err;
+    }
+  }
+}
+
 app.cosmosDB('triggerBookingCompleted', {
   connection: 'COSMOS_CONNECTION_STRING',
   databaseName: DB_NAME,
@@ -255,16 +227,5 @@ app.cosmosDB('triggerBookingCompleted', {
   leaseContainerName: 'booking_completed_leases',
   createLeaseContainerIfNotExists: true,
   startFromBeginning: false,
-  handler: async (documents: unknown[], context: InvocationContext): Promise<void> => {
-    for (const doc of documents) {
-      try {
-        await settleBooking(doc, context);
-      } catch (err: unknown) {
-        Sentry.captureException(err);
-        context.log(
-          `settleBooking ERROR: ${err instanceof Error ? err.message : String(err)}`,
-        );
-      }
-    }
-  },
+  handler: handleBookingCompletedBatch,
 });

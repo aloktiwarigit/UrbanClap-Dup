@@ -18,98 +18,135 @@ const MOCK_DOC: CommissionConfigDoc = {
   updatedAt: '2026-05-24T00:00:00.000Z',
 };
 
-function makeContainer(readResource: unknown, mockUpsert = vi.fn().mockResolvedValue({})) {
+const mockRead = vi.fn();
+const mockReplace = vi.fn();
+const mockCreate = vi.fn();
+
+function makeContainer() {
   return {
     item: vi.fn().mockReturnValue({
-      read: vi.fn().mockResolvedValue({ resource: readResource }),
+      read: mockRead,
+      replace: mockReplace,
     }),
-    items: { upsert: mockUpsert },
+    items: { create: mockCreate },
   };
 }
 
-describe('commissionConfigRepo.getCommissionConfig', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.mocked(getSystemContainer).mockReturnValue(
+    makeContainer() as unknown as ReturnType<typeof getSystemContainer>,
+  );
+});
 
+describe('commissionConfigRepo.getCommissionConfig', () => {
   it('returns null when the doc does not exist', async () => {
-    const container = makeContainer(undefined);
-    vi.mocked(getSystemContainer).mockReturnValue(
-      container as unknown as ReturnType<typeof getSystemContainer>,
-    );
+    mockRead.mockResolvedValue({ resource: undefined, etag: undefined });
 
     const result = await commissionConfigRepo.getCommissionConfig();
     expect(result).toBeNull();
   });
 
   it('returns the doc when it exists', async () => {
-    const container = makeContainer(MOCK_DOC);
-    vi.mocked(getSystemContainer).mockReturnValue(
-      container as unknown as ReturnType<typeof getSystemContainer>,
-    );
+    mockRead.mockResolvedValue({ resource: MOCK_DOC, etag: '"1"' });
 
     const result = await commissionConfigRepo.getCommissionConfig();
     expect(result).toEqual(MOCK_DOC);
   });
 
   it('performs a point read with the singleton id', async () => {
-    const container = makeContainer(MOCK_DOC);
-    vi.mocked(getSystemContainer).mockReturnValue(
-      container as unknown as ReturnType<typeof getSystemContainer>,
-    );
+    mockRead.mockResolvedValue({ resource: MOCK_DOC, etag: '"1"' });
 
+    const container = getSystemContainer();
     await commissionConfigRepo.getCommissionConfig();
     expect(container.item).toHaveBeenCalledWith('commission-config', 'commission-config');
   });
 });
 
-describe('commissionConfigRepo.upsertCommissionConfig', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('upserts a doc with the correct id and returns it', async () => {
-    const mockUpsert = vi.fn().mockResolvedValue({});
-    const container = makeContainer(undefined, mockUpsert);
-    vi.mocked(getSystemContainer).mockReturnValue(
-      container as unknown as ReturnType<typeof getSystemContainer>,
-    );
-
-    const result = await commissionConfigRepo.upsertCommissionConfig(2500, 'admin@test.com');
-
-    expect(result.id).toBe('commission-config');
-    expect(result.defaultCommissionBps).toBe(2500);
-    expect(result.updatedBy).toBe('admin@test.com');
-    expect(result.updatedAt).toBeTruthy();
-  });
-
-  it('writes the doc to Cosmos via upsert', async () => {
-    const mockUpsert = vi.fn().mockResolvedValue({});
-    const container = makeContainer(undefined, mockUpsert);
-    vi.mocked(getSystemContainer).mockReturnValue(
-      container as unknown as ReturnType<typeof getSystemContainer>,
-    );
-
-    await commissionConfigRepo.upsertCommissionConfig(3000, 'owner');
-
-    expect(mockUpsert).toHaveBeenCalledWith(
-      expect.objectContaining({
+describe('commissionConfigRepo.patchCommissionConfig', () => {
+  it('merges over the existing doc under IfMatch', async () => {
+    mockRead.mockResolvedValue({
+      resource: {
         id: 'commission-config',
-        defaultCommissionBps: 3000,
-        updatedBy: 'owner',
-      }),
-    );
+        defaultCommissionBps: 2200,
+        warnThresholdPaise: 100000,
+        blockThresholdPaise: 300000,
+        updatedBy: 'a',
+        updatedAt: 't',
+      },
+      etag: '"1"',
+    });
+    mockReplace.mockResolvedValue({});
+
+    const doc = await commissionConfigRepo.patchCommissionConfig({ defaultCommissionBps: 2500 }, 'admin-1');
+
+    expect(doc).toMatchObject({
+      defaultCommissionBps: 2500,
+      warnThresholdPaise: 100000,
+      blockThresholdPaise: 300000,
+      updatedBy: 'admin-1',
+    });
+    expect(mockReplace.mock.calls[0]![1]).toMatchObject({ accessCondition: { type: 'IfMatch', condition: '"1"' } });
   });
 
-  it('sets updatedAt to a valid ISO datetime string', async () => {
-    const mockUpsert = vi.fn().mockResolvedValue({});
-    const container = makeContainer(undefined, mockUpsert);
-    vi.mocked(getSystemContainer).mockReturnValue(
-      container as unknown as ReturnType<typeof getSystemContainer>,
-    );
+  it('rejects a patch whose merged warn >= stored block', async () => {
+    mockRead.mockResolvedValue({
+      resource: {
+        id: 'commission-config',
+        defaultCommissionBps: 2200,
+        blockThresholdPaise: 300000,
+        updatedBy: 'a',
+        updatedAt: 't',
+      },
+      etag: '"1"',
+    });
 
-    const result = await commissionConfigRepo.upsertCommissionConfig(2200, 'admin');
-    expect(() => new Date(result.updatedAt)).not.toThrow();
-    expect(new Date(result.updatedAt).toISOString()).toBe(result.updatedAt);
+    await expect(
+      commissionConfigRepo.patchCommissionConfig({ warnThresholdPaise: 300000 }, 'admin-1'),
+    ).rejects.toMatchObject({ code: 'THRESHOLD_ORDER' });
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it('creates the doc when absent', async () => {
+    mockRead.mockResolvedValue({ resource: undefined, etag: undefined });
+    mockCreate.mockResolvedValue({});
+
+    const doc = await commissionConfigRepo.patchCommissionConfig({ holdEnforcementEnabled: true }, 'admin-1');
+
+    expect(doc).toMatchObject({
+      id: 'commission-config',
+      defaultCommissionBps: 2200,
+      holdEnforcementEnabled: true,
+    });
+    expect(mockCreate).toHaveBeenCalled();
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it('retries on a 412 precondition failure and succeeds on the next attempt', async () => {
+    mockRead.mockResolvedValue({
+      resource: { id: 'commission-config', defaultCommissionBps: 2200, updatedBy: 'a', updatedAt: 't' },
+      etag: '"1"',
+    });
+    mockReplace
+      .mockRejectedValueOnce(Object.assign(new Error('etag mismatch'), { code: 412 }))
+      .mockResolvedValueOnce({});
+
+    const doc = await commissionConfigRepo.patchCommissionConfig({ defaultCommissionBps: 2600 }, 'admin-1');
+
+    expect(doc.defaultCommissionBps).toBe(2600);
+    expect(mockReplace).toHaveBeenCalledTimes(2);
+  });
+
+  it('gives up after 3 failed attempts and rethrows', async () => {
+    mockRead.mockResolvedValue({
+      resource: { id: 'commission-config', defaultCommissionBps: 2200, updatedBy: 'a', updatedAt: 't' },
+      etag: '"1"',
+    });
+    mockReplace.mockRejectedValue(Object.assign(new Error('etag mismatch'), { code: 412 }));
+
+    await expect(
+      commissionConfigRepo.patchCommissionConfig({ defaultCommissionBps: 2600 }, 'admin-1'),
+    ).rejects.toThrow('etag mismatch');
+    expect(mockReplace).toHaveBeenCalledTimes(3);
   });
 });

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import * as Sentry from '@sentry/node';
 import { appendAuditEntry } from '../cosmos/audit-log-repository.js';
-import type { AdminRole } from '../types/admin.js';
+import type { AdminRole, AuditAction } from '../types/admin.js';
 
 // Synchronous (awaited by callers) but error-absorbing: admin catalogue actions
 // must be audited in order (not fire-and-forget) so the entry is guaranteed to
@@ -10,7 +10,7 @@ import type { AdminRole } from '../types/admin.js';
 export async function catalogueAuditEntry(
   adminId: string,
   role: AdminRole,
-  action: string,
+  action: AuditAction,
   resourceType: string,
   resourceId: string,
   payload: Record<string, unknown>,
