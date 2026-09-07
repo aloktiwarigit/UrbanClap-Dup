@@ -151,7 +151,7 @@ describe('BalanceStack', () => {
         jobCount={11}
       />,
     );
-    const combined = cashCollectedPaise + creditAppliedPaise; // ₹6,243.00 — must never appear
+    // cashCollectedPaise + creditAppliedPaise = 624300 paise = ₹6,243.00 — must never appear.
     expect(screen.queryByText(/6,243\.00/)).not.toBeInTheDocument();
   });
 });

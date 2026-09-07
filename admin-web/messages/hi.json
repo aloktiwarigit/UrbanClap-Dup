@@ -483,15 +483,21 @@
     "title": "कमीशन",
     "subtitle": "नकद जॉब पर कमीशन बकाया वाले तकनीशियन।",
     "metadata": {
-      "title": "कमीशन — HomeHeroo एडमिन"
+      "title": "कमीशन — HomeHeroo एडमिन",
+      "detailTitle": "तकनीशियन कमीशन लेजर — HomeHeroo एडमिन"
     },
     "loading": "कमीशन डैशबोर्ड लोड हो रहा है…",
     "errors": {
       "loadFailed": "कमीशन डैशबोर्ड लोड नहीं हो सका।",
-      "recomputeFailed": "रीकंप्यूट कतार में नहीं जोड़ा जा सका। पुनः प्रयास करें।"
+      "recomputeFailed": "रीकंप्यूट कतार में नहीं जोड़ा जा सका। पुनः प्रयास करें।",
+      "detailLoadFailed": "इस तकनीशियन का लेजर लोड नहीं हो सका।",
+      "overrideFailed": "होल्ड ओवरराइड सहेजा नहीं जा सका। पुनः प्रयास करें।",
+      "clearOverrideFailed": "होल्ड ओवरराइड हटाया नहीं जा सका। पुनः प्रयास करें।"
     },
     "messages": {
-      "recomputeQueued": "रीकंप्यूट कतार में जोड़ा गया। शेष राशि जल्द ही अपडेट होगी।"
+      "recomputeQueued": "रीकंप्यूट कतार में जोड़ा गया। शेष राशि जल्द ही अपडेट होगी।",
+      "overrideSaved": "होल्ड ओवरराइड सहेजा गया।",
+      "overrideCleared": "होल्ड ओवरराइड हटाया गया।"
     },
     "summaryBand": {
       "outstandingLabel": "बकाया कमीशन",
@@ -530,6 +536,84 @@
     "pagination": {
       "previous": "पिछला",
       "next": "अगला"
+    },
+    "detail": {
+      "backLink": "कमीशन पर वापस जाएँ",
+      "heading": "तकनीशियन {technicianId}",
+      "loading": "तकनीशियन लेजर लोड हो रहा है…",
+      "hold": {
+        "heading": "होल्ड स्थिति",
+        "setOverride": "होल्ड ओवरराइड सेट करें",
+        "clearOverride": "ओवरराइड हटाएँ"
+      },
+      "balance": {
+        "heading": "शेष राशि",
+        "due": "नकद जॉब से देय कमीशन",
+        "repaid": "भुगतान और लागू क्रेडिट",
+        "creditAnnotation": "इसमें क्रेडिट से लागू {amount} शामिल है",
+        "settled": "माफ या निपटाया गया",
+        "total": "देय शेष राशि"
+      },
+      "cashContext": {
+        "heading": "नकद-जॉब संदर्भ",
+        "line": "दरवाज़े पर एकत्रित, {count, plural, one {# जॉब} other {# जॉब्स}}",
+        "caveat": "यह शेष राशि का हिस्सा नहीं है"
+      },
+      "events": {
+        "heading": "शेष राशि की घटनाएँ",
+        "columns": {
+          "date": "तारीख",
+          "event": "घटना",
+          "change": "परिवर्तन",
+          "balance": "शेष राशि",
+          "recordedBy": "दर्ज करने वाला"
+        },
+        "copyReference": "संदर्भ कॉपी करें",
+        "copied": "कॉपी किया गया",
+        "empty": "अभी तक कोई शेष राशि घटना नहीं है।"
+      },
+      "receivables": {
+        "heading": "प्राप्य राशियाँ",
+        "columns": {
+          "service": "सेवा",
+          "date": "तारीख",
+          "amount": "देय कमीशन",
+          "status": "स्थिति"
+        },
+        "technicianDeclared": "तकनीशियन-घोषित",
+        "statusDue": "देय",
+        "statusRemitted": "भेजा गया",
+        "statusWaived": "माफ किया गया",
+        "empty": "अभी तक कोई प्राप्य राशि नहीं है।"
+      },
+      "remittanceHistory": {
+        "heading": "भुगतान इतिहास",
+        "columns": {
+          "date": "तारीख",
+          "amount": "राशि",
+          "method": "तरीका",
+          "ref": "संदर्भ",
+          "recordedBy": "दर्ज करने वाला"
+        },
+        "empty": "अभी तक कोई भुगतान दर्ज नहीं हुआ है।"
+      },
+      "credits": {
+        "heading": "क्रेडिट",
+        "columns": {
+          "source": "स्रोत",
+          "original": "मूल",
+          "remaining": "शेष"
+        },
+        "empty": "इस खाते में कोई क्रेडिट नहीं है।"
+      },
+      "override": {
+        "dialogTitle": "होल्ड ओवरराइड सेट करें",
+        "untilLabel": "ओवरराइड कब तक",
+        "reasonLabel": "कारण",
+        "reasonRequired": "कारण आवश्यक है।",
+        "save": "ओवरराइड सहेजें",
+        "cancel": "रद्द करें"
+      }
     }
   },
   "auditLog": {

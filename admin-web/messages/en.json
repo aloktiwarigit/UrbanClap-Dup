@@ -483,15 +483,21 @@
     "title": "Commissions",
     "subtitle": "Technicians who owe commission on cash jobs.",
     "metadata": {
-      "title": "Commissions — HomeHeroo admin"
+      "title": "Commissions — HomeHeroo admin",
+      "detailTitle": "Technician commission ledger — HomeHeroo admin"
     },
     "loading": "Loading commission dashboard…",
     "errors": {
       "loadFailed": "Could not load the commission dashboard.",
-      "recomputeFailed": "Could not queue the recompute. Try again."
+      "recomputeFailed": "Could not queue the recompute. Try again.",
+      "detailLoadFailed": "Could not load this technician's ledger.",
+      "overrideFailed": "Could not save the hold override. Try again.",
+      "clearOverrideFailed": "Could not clear the hold override. Try again."
     },
     "messages": {
-      "recomputeQueued": "Recompute queued. Balances will update shortly."
+      "recomputeQueued": "Recompute queued. Balances will update shortly.",
+      "overrideSaved": "Hold override saved.",
+      "overrideCleared": "Hold override cleared."
     },
     "summaryBand": {
       "outstandingLabel": "Outstanding commission",
@@ -530,6 +536,84 @@
     "pagination": {
       "previous": "Previous",
       "next": "Next"
+    },
+    "detail": {
+      "backLink": "Back to commissions",
+      "heading": "Technician {technicianId}",
+      "loading": "Loading technician ledger…",
+      "hold": {
+        "heading": "Hold status",
+        "setOverride": "Set hold override",
+        "clearOverride": "Clear override"
+      },
+      "balance": {
+        "heading": "Balance",
+        "due": "Commission due from cash jobs",
+        "repaid": "Payments and credits applied",
+        "creditAnnotation": "includes {amount} applied from credit",
+        "settled": "Waived or settled",
+        "total": "Balance due"
+      },
+      "cashContext": {
+        "heading": "Cash-job context",
+        "line": "Collected at the door, {count, plural, one {# job} other {# jobs}}",
+        "caveat": "not part of the balance"
+      },
+      "events": {
+        "heading": "Balance events",
+        "columns": {
+          "date": "Date",
+          "event": "Event",
+          "change": "Change",
+          "balance": "Balance",
+          "recordedBy": "Recorded by"
+        },
+        "copyReference": "Copy reference",
+        "copied": "Copied",
+        "empty": "No balance events yet."
+      },
+      "receivables": {
+        "heading": "Receivables",
+        "columns": {
+          "service": "Service",
+          "date": "Date",
+          "amount": "Commission due",
+          "status": "Status"
+        },
+        "technicianDeclared": "Technician-declared",
+        "statusDue": "Due",
+        "statusRemitted": "Remitted",
+        "statusWaived": "Waived",
+        "empty": "No receivables yet."
+      },
+      "remittanceHistory": {
+        "heading": "Remittance history",
+        "columns": {
+          "date": "Date",
+          "amount": "Amount",
+          "method": "Method",
+          "ref": "Reference",
+          "recordedBy": "Recorded by"
+        },
+        "empty": "No remittances recorded yet."
+      },
+      "credits": {
+        "heading": "Credits",
+        "columns": {
+          "source": "Source",
+          "original": "Original",
+          "remaining": "Remaining"
+        },
+        "empty": "No credits on this account."
+      },
+      "override": {
+        "dialogTitle": "Set hold override",
+        "untilLabel": "Override until",
+        "reasonLabel": "Reason",
+        "reasonRequired": "A reason is required.",
+        "save": "Save override",
+        "cancel": "Cancel"
+      }
     }
   },
   "auditLog": {
