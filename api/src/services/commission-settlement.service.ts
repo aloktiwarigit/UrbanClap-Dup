@@ -15,6 +15,41 @@ export type RecordCommissionDueResult =
   | { created: false; skipped: 'NO_TECHNICIAN' | 'NOT_COMPLETED' | 'NOT_CASH' };
 
 /**
+ * Resolves what a booking's commission *would* be, reading only. Extracted so that a caller which
+ * needs to preview an amount without writing (the historical backfill's dry-run) runs exactly the
+ * same resolution and rounding as the write path — a second copy of `(amount * bps) / 10000`
+ * elsewhere in the codebase is a money bug waiting to drift.
+ */
+export async function resolveCommissionForBooking(booking: BookingDoc): Promise<{
+  bookingAmount: number;
+  bps: number;
+  commissionDue: number;
+  commissionResolvedFrom: CommissionResolvedFrom;
+  serviceName: string | undefined;
+}> {
+  const bookingAmount = booking.finalAmount ?? booking.amount;
+  const [globalBps, service, category] = await Promise.all([
+    getGlobalCommissionBps(),
+    catalogueRepo.getServiceByIdCrossPartition(booking.serviceId),
+    catalogueRepo.getCategoryById(booking.categoryId),
+  ]);
+
+  const { bps, from: commissionResolvedFrom } = resolveCommissionBps({
+    ...(service?.commissionBps !== undefined ? { serviceBps: service.commissionBps } : {}),
+    ...(category?.commissionBps !== undefined ? { categoryBps: category.commissionBps } : {}),
+    globalBps,
+  });
+
+  return {
+    bookingAmount,
+    bps,
+    commissionDue: Math.round((bookingAmount * bps) / 10000),
+    commissionResolvedFrom,
+    serviceName: booking.serviceName ?? service?.name,
+  };
+}
+
+/**
  * E21-S02 Task 8: the CASH_ON_SERVICE commission cascade, extracted verbatim from
  * trigger-booking-completed.ts's CASH branch so both the change-feed trigger (at-least-once
  * delivery) and the synchronous job-completion endpoint (Task 9) share one implementation.
@@ -50,19 +85,8 @@ export async function recordCommissionDue(booking: BookingDoc): Promise<RecordCo
     };
   }
 
-  const [globalBps, service, category] = await Promise.all([
-    getGlobalCommissionBps(),
-    catalogueRepo.getServiceByIdCrossPartition(booking.serviceId),
-    catalogueRepo.getCategoryById(booking.categoryId),
-  ]);
-
-  const { bps, from: commissionResolvedFrom } = resolveCommissionBps({
-    ...(service?.commissionBps !== undefined ? { serviceBps: service.commissionBps } : {}),
-    ...(category?.commissionBps !== undefined ? { categoryBps: category.commissionBps } : {}),
-    globalBps,
-  });
-  const commissionDue = Math.round((bookingAmount * bps) / 10000);
-  const serviceName = booking.serviceName ?? service?.name;
+  const { bps, commissionResolvedFrom, commissionDue, serviceName } =
+    await resolveCommissionForBooking(booking);
 
   const created = await commissionReceivableRepo.createDueEntry({
     bookingId,

@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-const { recordCommissionDue, resolveCommissionForBooking } = vi.hoisted(() => ({
+const { recordCommissionDue, resolveCommissionForBooking, settleCashCompletion } = vi.hoisted(() => ({
   recordCommissionDue: vi.fn(),
   resolveCommissionForBooking: vi.fn(),
+  settleCashCompletion: vi.fn(),
 }));
 const { systemAudit } = vi.hoisted(() => ({ systemAudit: vi.fn() }));
 const { getByBookingId } = vi.hoisted(() => ({ getByBookingId: vi.fn() }));
@@ -14,6 +15,7 @@ const { mockFetchNext, mockHasMoreResults } = vi.hoisted(() => ({
 vi.mock('../../src/services/commission-settlement.service.js', () => ({
   recordCommissionDue,
   resolveCommissionForBooking,
+  settleCashCompletion,
 }));
 vi.mock('../../src/services/auditLog.service.js', () => ({ systemAudit }));
 vi.mock('../../src/cosmos/commission-receivable-repository.js', () => ({
@@ -29,13 +31,21 @@ import { main } from '../../scripts/backfill-historical-receivables.js';
 
 const booking = (over: Record<string, unknown> = {}) => ({
   id: 'bk-1',
-  status: 'COMPLETED',
-  paymentMethod: 'CASH_ON_SERVICE',
-  technicianId: 'tech-1',
+  customerId: 'cust-1',
   serviceId: 'svc-1',
   categoryId: 'cat-1',
-  amount: 59900,
   slotDate: '2026-08-24',
+  slotWindow: '10:00-12:00',
+  addressText: '12 Main Road, Ayodhya',
+  addressLatLng: { lat: 26.79, lng: 82.19 },
+  status: 'COMPLETED',
+  paymentOrderId: 'order-1',
+  paymentMethod: 'CASH_ON_SERVICE',
+  paymentId: null,
+  paymentSignature: null,
+  amount: 59900,
+  technicianId: 'tech-1',
+  createdAt: '2026-08-24T10:00:00.000Z',
   ...over,
 });
 
@@ -45,10 +55,13 @@ function onePage(rows: unknown[] | undefined) {
   mockFetchNext.mockResolvedValueOnce({ resources: rows });
 }
 
+/** process.exit's signature returns never, which does not fit vi.spyOn's default generic. */
+const makeExitSpy = () => vi.spyOn(process, 'exit').mockImplementation((() => undefined) as never);
+
 describe('backfill-historical-receivables CLI', () => {
   let logSpy: ReturnType<typeof vi.spyOn>;
   let errorSpy: ReturnType<typeof vi.spyOn>;
-  let exitSpy: ReturnType<typeof vi.spyOn>;
+  let exitSpy: ReturnType<typeof makeExitSpy>;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -69,7 +82,7 @@ describe('backfill-historical-receivables CLI', () => {
     });
     logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
     errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => undefined) as never);
+    exitSpy = makeExitSpy();
   });
 
   afterEach(() => {
@@ -120,16 +133,16 @@ describe('backfill-historical-receivables CLI', () => {
     expect(payload).toMatchObject({ backfill: true });
   });
 
-  it('never fires FCM earnings pushes or job-count increments for historical jobs', async () => {
+  it('never routes through settleCashCompletion, whose side effects would be wrong for old jobs', async () => {
     onePage([booking()]);
 
     await main(['--apply']);
 
-    // settleCashCompletion is the side-effecting path; the backfill must not import or call it.
-    const src = await import('node:fs').then((fs) =>
-      fs.readFileSync('scripts/backfill-historical-receivables.ts', 'utf8'),
-    );
-    expect(src).not.toMatch(/settleCashCompletion|sendTechEarningsUpdate|incrementCompletedJobCount/);
+    // settleCashCompletion also increments completedJobCount and pushes an EARNINGS_UPDATE.
+    // Replaying those for a months-old job would double-count totals and notify the technician
+    // about ancient work, so the backfill must call recordCommissionDue directly.
+    expect(recordCommissionDue).toHaveBeenCalledTimes(1);
+    expect(settleCashCompletion).not.toHaveBeenCalled();
   });
 
   it('skips a booking that already has a receivable', async () => {
