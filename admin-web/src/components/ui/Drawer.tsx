@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import FocusLock from 'react-focus-lock';
 
 export interface DrawerProps {
@@ -17,8 +17,8 @@ export interface DrawerProps {
 /**
  * Shared slide-over recipe extracted from OrderSlideOver / ComplaintSlideOver.
  * Same contract as Dialog (see Dialog.tsx) — role="dialog", focus trap,
- * topmost-only Escape, sibling backdrop — with a right-edge slide instead of
- * a centered card.
+ * topmost-by-identity-only Escape, sibling backdrop — with a right-edge
+ * slide instead of a centered card.
  *
  * New screens only — OrderSlideOver and ComplaintSlideOver keep their
  * hand-rolled implementations in this story (E21-S03).
@@ -27,6 +27,7 @@ export function Drawer({ open, onClose, title, children, footer, side = 'right' 
   void side; // only 'right' exists today; reserved for future variants
   const titleId = useId();
   const [entered, setEntered] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) {
@@ -40,7 +41,11 @@ export function Drawer({ open, onClose, title, children, footer, side = 'right' 
     if (!open) return undefined;
     const handleKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
-      if (document.querySelectorAll('[role="dialog"]').length > 1) return;
+      // Only the topmost (last in DOM order) [role="dialog"] reacts — by
+      // identity, not by count, so a dialog nested inside this drawer still
+      // closes on its own Escape press while this drawer stays open.
+      const dialogs = document.querySelectorAll('[role="dialog"]');
+      if (dialogs[dialogs.length - 1] !== dialogRef.current) return;
       onClose();
     };
     window.addEventListener('keydown', handleKey);
@@ -54,6 +59,7 @@ export function Drawer({ open, onClose, title, children, footer, side = 'right' 
       <div aria-hidden="true" onClick={onClose} className="fixed inset-0 z-40 bg-black/30" />
       <FocusLock returnFocus>
         <div
+          ref={dialogRef}
           role="dialog"
           aria-modal="true"
           aria-labelledby={titleId}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import FocusLock from 'react-focus-lock';
 
 export interface DialogProps {
@@ -20,10 +20,11 @@ export interface DialogProps {
  * browser — do not change without checking that spec):
  *  - <FocusLock returnFocus> traps focus and restores it to the trigger.
  *  - role="dialog" aria-modal="true" aria-labelledby={id}.
- *  - Escape closes via a manual keydown listener, but only when this
- *    dialog is the topmost [role="dialog"] in the document — a nested
- *    dialog (e.g. a ConfirmModal opened from within this one) owns Escape
- *    while it is open.
+ *  - Escape closes via a manual keydown listener, but only when THIS
+ *    dialog's own DOM node is the topmost (last) [role="dialog"] in the
+ *    document — identity, not count. A nested dialog (e.g. a ConfirmModal
+ *    opened from within this one) is the last node and closes; every
+ *    dialog underneath it is not the last node and stays open.
  *  - The backdrop is a plain sibling <div aria-hidden="true"> that closes
  *    on click.
  *
@@ -34,6 +35,7 @@ export function Dialog({ open, onClose, titleId, title, children, footer }: Dial
   const generatedId = useId();
   const resolvedTitleId = titleId ?? generatedId;
   const [entered, setEntered] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) {
@@ -47,8 +49,11 @@ export function Dialog({ open, onClose, titleId, title, children, footer }: Dial
     if (!open) return undefined;
     const handleKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
-      // Don't close if a nested dialog is topmost and handling Escape itself.
-      if (document.querySelectorAll('[role="dialog"]').length > 1) return;
+      // Only the topmost (last in DOM order) [role="dialog"] reacts — by
+      // identity, not by count, so a dialog nested inside this one still
+      // closes on its own Escape press while this one stays open.
+      const dialogs = document.querySelectorAll('[role="dialog"]');
+      if (dialogs[dialogs.length - 1] !== dialogRef.current) return;
       onClose();
     };
     window.addEventListener('keydown', handleKey);
@@ -75,6 +80,7 @@ export function Dialog({ open, onClose, titleId, title, children, footer }: Dial
           by an invisible full-screen hit target.
         */}
         <div
+          ref={dialogRef}
           role="dialog"
           aria-modal="true"
           aria-labelledby={resolvedTitleId}

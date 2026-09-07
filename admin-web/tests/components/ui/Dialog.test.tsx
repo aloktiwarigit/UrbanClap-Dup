@@ -29,22 +29,29 @@ describe('Dialog', () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
-  it('does not close on Escape when a nested dialog is open above it', async () => {
-    // Mirrors the existing ConfirmModal-inside-OrderSlideOver guard: a dialog only
-    // handles Escape when it is the last [role="dialog"] in the document.
-    const onClose = vi.fn();
+  it('closes only the innermost dialog on Escape, by identity not by count', async () => {
+    // Mirrors the existing ConfirmModal-inside-OrderSlideOver guard: only the
+    // topmost (last-in-DOM-order) [role="dialog"] reacts to Escape. Both
+    // halves of the contract matter: the inner dialog (last node) must
+    // still close, and the outer dialog (not the last node) must not. A
+    // guard that merely counts [role="dialog"] nodes and bails whenever
+    // there is more than one would suppress BOTH and pass a test that only
+    // checked the outer half.
+    const onOuterClose = vi.fn();
+    const onInnerClose = vi.fn();
     render(
       <>
-        <Dialog open onClose={onClose} title="Outer">
+        <Dialog open onClose={onOuterClose} title="Outer">
           a
         </Dialog>
-        <Dialog open onClose={noop} title="Inner">
+        <Dialog open onClose={onInnerClose} title="Inner">
           b
         </Dialog>
       </>,
     );
     await userEvent.keyboard('{Escape}');
-    expect(onClose).not.toHaveBeenCalled();
+    expect(onInnerClose).toHaveBeenCalledOnce();
+    expect(onOuterClose).not.toHaveBeenCalled();
   });
 
   it('renders nothing when closed', () => {
