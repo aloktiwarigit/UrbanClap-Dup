@@ -8,9 +8,10 @@ const { recordCommissionDue, resolveCommissionForBooking, settleCashCompletion, 
 }));
 const { systemAudit } = vi.hoisted(() => ({ systemAudit: vi.fn() }));
 const { getByBookingId } = vi.hoisted(() => ({ getByBookingId: vi.fn() }));
-const { mockFetchNext, mockHasMoreResults } = vi.hoisted(() => ({
+const { mockFetchNext, mockHasMoreResults, querySpy } = vi.hoisted(() => ({
   mockFetchNext: vi.fn(),
   mockHasMoreResults: vi.fn(),
+  querySpy: vi.fn(),
 }));
 
 vi.mock('../../src/services/commission-settlement.service.js', () => ({
@@ -25,7 +26,12 @@ vi.mock('../../src/cosmos/commission-receivable-repository.js', () => ({
 }));
 vi.mock('../../src/cosmos/client.js', () => ({
   getBookingsContainer: () => ({
-    items: { query: () => ({ fetchNext: mockFetchNext, hasMoreResults: mockHasMoreResults }) },
+    items: {
+      query: (...args: unknown[]) => {
+        querySpy(...args);
+        return { fetchNext: mockFetchNext, hasMoreResults: mockHasMoreResults };
+      },
+    },
   }),
 }));
 
@@ -58,6 +64,8 @@ function onePage(rows: unknown[] | undefined) {
 }
 
 /** process.exit's signature returns never, which does not fit vi.spyOn's default generic. */
+const CUTOFF = '--completed-before=2026-09-01T00:00:00.000Z';
+
 const makeExitSpy = () => vi.spyOn(process, 'exit').mockImplementation((() => undefined) as never);
 
 describe('backfill-historical-receivables CLI', () => {
@@ -96,7 +104,7 @@ describe('backfill-historical-receivables CLI', () => {
   it('defaults to dry-run and writes nothing', async () => {
     onePage([booking()]);
 
-    await main([]);
+    await main([CUTOFF]);
 
     expect(recordCommissionDue).not.toHaveBeenCalled();
     expect(systemAudit).not.toHaveBeenCalled();
@@ -105,7 +113,7 @@ describe('backfill-historical-receivables CLI', () => {
   it('dry-run previews the commission via the shared resolver, not its own arithmetic', async () => {
     onePage([booking()]);
 
-    await main(['--dry-run']);
+    await main([CUTOFF, '--dry-run']);
 
     expect(resolveCommissionForBooking).toHaveBeenCalledTimes(1);
     expect(recordCommissionDue).not.toHaveBeenCalled();
@@ -114,7 +122,7 @@ describe('backfill-historical-receivables CLI', () => {
   it('--apply records a receivable for each eligible booking', async () => {
     onePage([booking({ id: 'bk-1' }), booking({ id: 'bk-2' })]);
 
-    await main(['--apply']);
+    await main([CUTOFF, '--apply']);
 
     expect(recordCommissionDue).toHaveBeenCalledTimes(2);
   });
@@ -125,7 +133,7 @@ describe('backfill-historical-receivables CLI', () => {
       .mockResolvedValueOnce({ created: true, commissionDue: 13178, commissionBps: 2200, commissionResolvedFrom: 'GLOBAL' })
       .mockResolvedValueOnce({ created: false, commissionDue: 13178, commissionBps: 2200, commissionResolvedFrom: 'GLOBAL' });
 
-    await main(['--apply']);
+    await main([CUTOFF, '--apply']);
 
     expect(systemAudit).toHaveBeenCalledTimes(1);
     const [action, resourceType, resourceId, payload] = systemAudit.mock.calls[0] as [string, string, string, Record<string, unknown>];
@@ -138,7 +146,7 @@ describe('backfill-historical-receivables CLI', () => {
   it('never routes through settleCashCompletion, whose side effects would be wrong for old jobs', async () => {
     onePage([booking()]);
 
-    await main(['--apply']);
+    await main([CUTOFF, '--apply']);
 
     // settleCashCompletion also increments completedJobCount and pushes an EARNINGS_UPDATE.
     // Replaying those for a months-old job would double-count totals and notify the technician
@@ -151,7 +159,7 @@ describe('backfill-historical-receivables CLI', () => {
     onePage([booking()]);
     getByBookingId.mockResolvedValue({ id: 'bk-1', commissionDue: 13178 });
 
-    await main(['--apply']);
+    await main([CUTOFF, '--apply']);
 
     expect(recordCommissionDue).not.toHaveBeenCalled();
     expect(systemAudit).not.toHaveBeenCalled();
@@ -160,7 +168,7 @@ describe('backfill-historical-receivables CLI', () => {
   it('tolerates the undefined page.resources Cosmos returns', async () => {
     onePage(undefined);
 
-    await main(['--apply']);
+    await main([CUTOFF, '--apply']);
 
     expect(recordCommissionDue).not.toHaveBeenCalled();
   });
@@ -169,7 +177,7 @@ describe('backfill-historical-receivables CLI', () => {
   it('stamps the receivable with when the job completed, not when the backfill ran', async () => {
     onePage([booking({ completedAt: '2026-05-08T09:30:00.000Z' })]);
 
-    await main(['--apply']);
+    await main([CUTOFF, '--apply']);
 
     expect(recordCommissionDue).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'bk-1' }),
@@ -180,7 +188,7 @@ describe('backfill-historical-receivables CLI', () => {
   it('falls back to the booking createdAt when completedAt is absent', async () => {
     onePage([booking({ createdAt: '2026-05-01T00:00:00.000Z' })]);
 
-    await main(['--apply']);
+    await main([CUTOFF, '--apply']);
 
     expect(recordCommissionDue).toHaveBeenCalledWith(expect.anything(), { createdAt: '2026-05-01T00:00:00.000Z' });
   });
@@ -188,7 +196,7 @@ describe('backfill-historical-receivables CLI', () => {
   it('consumes open credits and recomputes the hold once per affected technician', async () => {
     onePage([booking({ id: 'bk-1' }), booking({ id: 'bk-2' }), booking({ id: 'bk-3', technicianId: 'tech-2' })]);
 
-    await main(['--apply']);
+    await main([CUTOFF, '--apply']);
 
     expect(finalizeLedgerForTechnician).toHaveBeenCalledTimes(2);
     expect(finalizeLedgerForTechnician).toHaveBeenCalledWith('tech-1');
@@ -199,17 +207,47 @@ describe('backfill-historical-receivables CLI', () => {
     onePage([booking()]);
     getByBookingId.mockResolvedValue({ id: 'bk-1', commissionDue: 13178 });
 
-    await main(['--apply']);
+    await main([CUTOFF, '--apply']);
 
     expect(finalizeLedgerForTechnician).not.toHaveBeenCalled();
   });
 
+  // Codex review round 2, 2026-09-07 (P2): active-job.ts writes COMPLETED before calling
+  // settleCashCompletion, so a backfill without a cutoff can claim a job that is settling right
+  // now and rob it of its completedJobCount increment and earnings push.
+  it('requires an explicit --completed-before cutoff', async () => {
+    await main(['--apply']);
+
+    expect(exitSpy).toHaveBeenCalledWith(2);
+    expect(recordCommissionDue).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unparseable cutoff', async () => {
+    await main(['--completed-before=not-a-date', '--apply']);
+
+    expect(exitSpy).toHaveBeenCalledWith(2);
+    expect(recordCommissionDue).not.toHaveBeenCalled();
+  });
+
+  it('passes the cutoff to Cosmos as a bound parameter', async () => {
+    onePage([booking()]);
+
+    await main([CUTOFF, '--dry-run']);
+
+    expect(querySpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        parameters: [{ name: '@cutoff', value: '2026-09-01T00:00:00.000Z' }],
+      }),
+      expect.anything(),
+    );
+  });
+
   it('rejects unknown flags and both-mode invocations', async () => {
-    await main(['--nope']);
+    await main([CUTOFF, '--nope']);
     expect(exitSpy).toHaveBeenCalledWith(2);
 
     exitSpy.mockClear();
-    await main(['--dry-run', '--apply']);
+    await main([CUTOFF, '--dry-run', '--apply']);
     expect(exitSpy).toHaveBeenCalledWith(2);
   });
 });

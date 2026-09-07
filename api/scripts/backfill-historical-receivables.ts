@@ -30,19 +30,38 @@ import { systemAudit } from '../src/services/auditLog.service.js';
 import { BookingDocSchema } from '../src/schemas/booking.js';
 
 const KNOWN_FLAGS = new Set(['--dry-run', '--apply']);
+const CUTOFF_FLAG = '--completed-before=';
 
 // RAZORPAY bookings settle through the wallet-ledger path and must never get a cash receivable.
 // Legacy docs may omit paymentMethod entirely; those default to cash, matching recordCommissionDue.
+//
+// The @cutoff bound is not cosmetic (Codex review, 2026-09-07): active-job.ts writes
+// status: 'COMPLETED' and only *then* calls settleCashCompletion. A backfill running inside that
+// window would create the receivable first, so the live path would see `created: false` and skip
+// the side effects that belong to a current job — the technician would silently lose a
+// completedJobCount increment and an EARNINGS_UPDATE push. Only ever backfill jobs old enough
+// that their settlement has certainly already been attempted.
 const QUERY =
-  "SELECT * FROM c WHERE c.status = 'COMPLETED' AND (NOT IS_DEFINED(c.paymentMethod) OR c.paymentMethod != 'RAZORPAY')";
+  "SELECT * FROM c WHERE c.status = 'COMPLETED' AND (NOT IS_DEFINED(c.paymentMethod) OR c.paymentMethod != 'RAZORPAY') AND ((IS_DEFINED(c.completedAt) AND c.completedAt < @cutoff) OR (NOT IS_DEFINED(c.completedAt) AND c.createdAt < @cutoff))";
 
 const rupees = (paise: number): string => `Rs ${(paise / 100).toFixed(2)}`;
 
 export async function main(argvArgs: string[]): Promise<void> {
-  const unknown = argvArgs.filter((a) => !KNOWN_FLAGS.has(a));
+  const cutoffArg = argvArgs.find((a) => a.startsWith(CUTOFF_FLAG));
+  const unknown = argvArgs.filter((a) => !KNOWN_FLAGS.has(a) && !a.startsWith(CUTOFF_FLAG));
   if (unknown.length > 0) {
     console.error(`Unknown flag(s): ${unknown.join(', ')}`);
-    console.error('Usage: backfill-historical-receivables.ts [--dry-run|--apply]');
+    console.error('Usage: backfill-historical-receivables.ts [--dry-run|--apply] --completed-before=<ISO>');
+    process.exit(2);
+    return;
+  }
+
+  // Fail closed: an operator must state the cutoff, rather than inherit a default that silently
+  // swallows a job completed thirty seconds ago.
+  const cutoff = cutoffArg?.slice(CUTOFF_FLAG.length);
+  if (!cutoff || Number.isNaN(Date.parse(cutoff))) {
+    console.error('--completed-before=<ISO timestamp> is required (e.g. --completed-before=2026-09-01T00:00:00.000Z).');
+    console.error('Only bookings completed strictly before it are eligible, so a job settling right now is never claimed.');
     process.exit(2);
     return;
   }
@@ -54,10 +73,13 @@ export async function main(argvArgs: string[]): Promise<void> {
     return;
   }
 
-  console.log(`historical commission-receivable backfill — mode=${apply ? 'APPLY' : 'DRY-RUN'}`);
+  console.log(`historical commission-receivable backfill — mode=${apply ? 'APPLY' : 'DRY-RUN'} cutoff=${cutoff}`);
   console.log('');
 
-  const iterator = getBookingsContainer().items.query({ query: QUERY }, { maxItemCount: 100 });
+  const iterator = getBookingsContainer().items.query(
+    { query: QUERY, parameters: [{ name: '@cutoff', value: cutoff }] },
+    { maxItemCount: 100 },
+  );
   const bookings: unknown[] = [];
   while (iterator.hasMoreResults()) {
     const page = await iterator.fetchNext();
