@@ -22,6 +22,7 @@ import { argv } from 'node:process';
 import { getBookingsContainer } from '../src/cosmos/client.js';
 import { commissionReceivableRepo } from '../src/cosmos/commission-receivable-repository.js';
 import {
+  finalizeLedgerForTechnician,
   recordCommissionDue,
   resolveCommissionForBooking,
 } from '../src/services/commission-settlement.service.js';
@@ -64,6 +65,9 @@ export async function main(argvArgs: string[]): Promise<void> {
     bookings.push(...(page.resources ?? []));
   }
 
+  // Technicians who gained at least one row, so their credits can be consumed and their hold
+  // recomputed once at the end rather than per row.
+  const touched = new Set<string>();
   let created = 0;
   let alreadyPresent = 0;
   let unparseable = 0;
@@ -103,7 +107,10 @@ export async function main(argvArgs: string[]): Promise<void> {
       continue;
     }
 
-    const result = await recordCommissionDue(booking);
+    // Stamp the row with when the debt was actually incurred, not when this script ran:
+    // createdAt drives oldest-first remittance allocation and the hold's oldestDueAt.
+    const incurredAt = booking.completedAt ?? booking.createdAt;
+    const result = await recordCommissionDue(booking, { createdAt: incurredAt });
     if ('skipped' in result) {
       skipped += 1;
       console.log(`  SKIP (${result.skipped}) ${booking.id}`);
@@ -116,7 +123,10 @@ export async function main(argvArgs: string[]): Promise<void> {
     }
 
     created += 1;
-    console.log(`  ADDED ${booking.id}  ${rupees(result.commissionDue)}  bps=${result.commissionBps}`);
+    touched.add(booking.technicianId);
+    console.log(
+      `  ADDED ${booking.id}  ${rupees(result.commissionDue)}  bps=${result.commissionBps}  dated ${incurredAt}`,
+    );
     await systemAudit('COMMISSION_DUE_RECORDED', 'booking', booking.id, {
       technicianId: booking.technicianId,
       bookingAmount: preview.bookingAmount,
@@ -128,6 +138,15 @@ export async function main(argvArgs: string[]): Promise<void> {
     });
   }
 
+  // A technician may already hold open CREDIT docs (an overpaid remittance recorded before this
+  // backfill ran). New DUE rows must consume them, or the dashboard overstates what is owed.
+  // finalizeLedgerForTechnician runs consumePendingCredits and then recomputes the hold; it never
+  // throws.
+  for (const technicianId of touched) {
+    await finalizeLedgerForTechnician(technicianId);
+    console.log(`  FINALIZED ${technicianId} (credits consumed, hold recomputed)`);
+  }
+
   console.log('');
   console.log(
     `scanned=${bookings.length} ${apply ? 'created' : 'wouldCreate'}=${apply ? created : bookings.length - alreadyPresent - unparseable - skipped} ` +
@@ -137,7 +156,7 @@ export async function main(argvArgs: string[]): Promise<void> {
   console.log('');
   console.log(
     apply
-      ? 'Apply complete. Run backfill-commission-holds.ts --apply next to compute the holds.'
+      ? 'Apply complete. Holds were recomputed for every affected technician; run backfill-commission-holds.ts --apply if you want a full-roster sweep as well.'
       : 'Dry-run complete — no writes made. Re-run with --apply to record the rows above.',
   );
 }

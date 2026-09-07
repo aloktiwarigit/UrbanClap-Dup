@@ -59,7 +59,9 @@ export async function resolveCommissionForBooking(booking: BookingDoc): Promise<
  * would have computed anyway, so the caller can always finalize the ledger (consume credits,
  * recompute hold) regardless of whether this particular delivery created the row.
  */
-export async function recordCommissionDue(booking: BookingDoc): Promise<RecordCommissionDueResult> {
+export async function recordCommissionDue(booking: BookingDoc,
+  opts?: { createdAt?: string },
+): Promise<RecordCommissionDueResult> {
   if (booking.status !== 'COMPLETED') return { created: false, skipped: 'NOT_COMPLETED' };
 
   const technicianId = booking.technicianId;
@@ -103,6 +105,7 @@ export async function recordCommissionDue(booking: BookingDoc): Promise<RecordCo
     ...(serviceName !== undefined ? { serviceName } : {}),
     slotDate: booking.slotDate,
     ...(booking.collectionMethod !== undefined ? { collectionMethod: booking.collectionMethod } : {}),
+    ...(opts?.createdAt !== undefined ? { createdAt: opts.createdAt } : {}),
   });
 
   if (!created) {

@@ -37,7 +37,7 @@ export const commissionReceivableRepo = {
         commissionDue: input.commissionDue,
         commissionResolvedFrom: input.commissionResolvedFrom,
         remittanceStatus: 'DUE',
-        createdAt: new Date().toISOString(),
+        createdAt: input.createdAt ?? new Date().toISOString(),
         ...(input.cashCollectedAmount !== undefined
           ? { cashCollectedAmount: input.cashCollectedAmount }
           : {}),

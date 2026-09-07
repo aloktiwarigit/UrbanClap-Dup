@@ -77,6 +77,14 @@ export type CommissionReceivableCreateInput = {
   serviceName?: string;
   slotDate?: string;
   collectionMethod?: CollectionMethod;
+  /**
+   * Overrides the row's createdAt. Only the historical backfill sets it, so a receivable
+   * reconstructed for a job completed months ago carries the date the debt was actually
+   * incurred. createdAt drives oldest-first remittance allocation and the hold's oldestDueAt,
+   * so stamping backfilled rows with the backfill run date would both mis-order future
+   * allocations and understate how overdue the debt is on the admin dashboard.
+   */
+  createdAt?: string;
 };
 
 /** Per-technician roll-up for the admin commission-collection dashboard. */

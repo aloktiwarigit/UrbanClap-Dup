@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-const { recordCommissionDue, resolveCommissionForBooking, settleCashCompletion } = vi.hoisted(() => ({
+const { recordCommissionDue, resolveCommissionForBooking, settleCashCompletion, finalizeLedgerForTechnician } = vi.hoisted(() => ({
   recordCommissionDue: vi.fn(),
   resolveCommissionForBooking: vi.fn(),
   settleCashCompletion: vi.fn(),
+  finalizeLedgerForTechnician: vi.fn(),
 }));
 const { systemAudit } = vi.hoisted(() => ({ systemAudit: vi.fn() }));
 const { getByBookingId } = vi.hoisted(() => ({ getByBookingId: vi.fn() }));
@@ -16,6 +17,7 @@ vi.mock('../../src/services/commission-settlement.service.js', () => ({
   recordCommissionDue,
   resolveCommissionForBooking,
   settleCashCompletion,
+  finalizeLedgerForTechnician,
 }));
 vi.mock('../../src/services/auditLog.service.js', () => ({ systemAudit }));
 vi.mock('../../src/cosmos/commission-receivable-repository.js', () => ({
@@ -161,6 +163,45 @@ describe('backfill-historical-receivables CLI', () => {
     await main(['--apply']);
 
     expect(recordCommissionDue).not.toHaveBeenCalled();
+  });
+
+  // Codex review, 2026-09-07 (both P2, money-ledger correctness).
+  it('stamps the receivable with when the job completed, not when the backfill ran', async () => {
+    onePage([booking({ completedAt: '2026-05-08T09:30:00.000Z' })]);
+
+    await main(['--apply']);
+
+    expect(recordCommissionDue).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'bk-1' }),
+      { createdAt: '2026-05-08T09:30:00.000Z' },
+    );
+  });
+
+  it('falls back to the booking createdAt when completedAt is absent', async () => {
+    onePage([booking({ createdAt: '2026-05-01T00:00:00.000Z' })]);
+
+    await main(['--apply']);
+
+    expect(recordCommissionDue).toHaveBeenCalledWith(expect.anything(), { createdAt: '2026-05-01T00:00:00.000Z' });
+  });
+
+  it('consumes open credits and recomputes the hold once per affected technician', async () => {
+    onePage([booking({ id: 'bk-1' }), booking({ id: 'bk-2' }), booking({ id: 'bk-3', technicianId: 'tech-2' })]);
+
+    await main(['--apply']);
+
+    expect(finalizeLedgerForTechnician).toHaveBeenCalledTimes(2);
+    expect(finalizeLedgerForTechnician).toHaveBeenCalledWith('tech-1');
+    expect(finalizeLedgerForTechnician).toHaveBeenCalledWith('tech-2');
+  });
+
+  it('does not finalize a ledger when nothing was created', async () => {
+    onePage([booking()]);
+    getByBookingId.mockResolvedValue({ id: 'bk-1', commissionDue: 13178 });
+
+    await main(['--apply']);
+
+    expect(finalizeLedgerForTechnician).not.toHaveBeenCalled();
   });
 
   it('rejects unknown flags and both-mode invocations', async () => {
