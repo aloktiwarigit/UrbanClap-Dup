@@ -497,7 +497,11 @@
       "outstandingLabel": "बकाया कमीशन",
       "cachedTotal": "कैश्ड कुल राशि",
       "technicianCount": "{count, plural, one {# तकनीशियन} other {# तकनीशियन}}",
+      "technicianCountPartial": "{count, plural, one {इस पेज पर # तकनीशियन} other {इस पेज पर # तकनीशियन}}",
       "oldest": "सबसे पुराना {date}",
+      "oldestPartial": "इस पेज पर सबसे पुराना {date}",
+      "asOf": "अद्यतन: {date}",
+      "asOfPartial": "अद्यतन: {date} (इस पेज पर)",
       "reconciled": "सभी शेष राशियाँ समाधानित हैं",
       "unreconciled": "{count, plural, one {# तकनीशियन की शेष राशि असमाधानित है} other {# तकनीशियनों की शेष राशियाँ असमाधानित हैं}} — नीचे दिए गए आंकड़े पुराने हो सकते हैं।",
       "recompute": "रीकंप्यूट करें"

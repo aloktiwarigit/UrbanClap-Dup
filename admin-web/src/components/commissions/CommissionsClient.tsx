@@ -98,16 +98,29 @@ export function CommissionsClient({ initialData }: CommissionsClientProps) {
 
   const rows = data?.technicians ?? [];
 
-  // No top-level "oldest due" field on the dashboard response — derived client-side from
-  // whichever rows are currently loaded. On a paginated view this is the oldest due date among
-  // the rows fetched so far, not necessarily the true global oldest across every page; the
-  // server sorts by outstanding amount, not by due date, so a later page could in principle
-  // surface an older one. Acceptable at pilot scale (roster small enough that pagination is rare)
-  // and stated here rather than silently assumed.
+  // True whenever the rows currently loaded are not the whole roster: either more pages exist
+  // (`data.continuationToken` set) or we've already paged forward past page 1 (`continuationStack`
+  // non-empty — the last page of a multi-page roster has no `continuationToken` of its own, but
+  // its loaded rows still exclude every earlier page). `totalOutstanding` and
+  // `unreconciledTechnicianCount` are always roster-wide (server-computed over the full set before
+  // any sort/slice/filter) regardless of this flag — only the page-derived figures below need it.
+  const isPartial = data?.continuationToken !== undefined || continuationStack.length > 0;
+
+  // Neither "oldest due" nor "as of" has a top-level field on the dashboard response — both are
+  // derived client-side from whichever rows are currently loaded (oldest `oldestDueAt`, earliest
+  // `evaluatedAt`, respectively). When `isPartial` is true these are page-scoped, not
+  // roster-wide, and `SummaryBand` labels them accordingly rather than presenting a partial figure
+  // as if it covered every technician.
   const oldestDueAt = rows.reduce<string | undefined>((oldest, row) => {
     if (row.oldestDueAt === undefined) return oldest;
     if (oldest === undefined) return row.oldestDueAt;
     return new Date(row.oldestDueAt).getTime() < new Date(oldest).getTime() ? row.oldestDueAt : oldest;
+  }, undefined);
+  const asOf = rows.reduce<string | undefined>((earliest, row) => {
+    if (earliest === undefined) return row.evaluatedAt;
+    return new Date(row.evaluatedAt).getTime() < new Date(earliest).getTime()
+      ? row.evaluatedAt
+      : earliest;
   }, undefined);
 
   return (
@@ -140,6 +153,8 @@ export function CommissionsClient({ initialData }: CommissionsClientProps) {
           technicianCount={rows.length}
           unreconciledTechnicianCount={data.unreconciledTechnicianCount}
           {...(oldestDueAt !== undefined ? { oldestDueAt } : {})}
+          {...(asOf !== undefined ? { asOf } : {})}
+          isPartial={isPartial}
           onRecompute={() => void handleRecompute()}
           canRecompute={canRecompute}
           recomputing={recomputing}

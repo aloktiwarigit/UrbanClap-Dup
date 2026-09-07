@@ -497,7 +497,11 @@
       "outstandingLabel": "Outstanding commission",
       "cachedTotal": "Cached total",
       "technicianCount": "{count, plural, one {# technician} other {# technicians}}",
+      "technicianCountPartial": "{count, plural, one {# technician on this page} other {# technicians on this page}}",
       "oldest": "oldest {date}",
+      "oldestPartial": "oldest on this page {date}",
+      "asOf": "as of {date}",
+      "asOfPartial": "as of {date} (this page)",
       "reconciled": "All balances reconciled",
       "unreconciled": "{count, plural, one {# technician has} other {# technicians have}} unreconciled balances — figures below may be out of date.",
       "recompute": "Recompute"
