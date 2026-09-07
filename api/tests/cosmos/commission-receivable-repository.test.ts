@@ -291,6 +291,41 @@ describe('sumDueGroupedByTechnician', () => {
     expect(result).toEqual([]);
     expect(mockFetchNext).not.toHaveBeenCalled();
   });
+
+  // Regression (prod, 2026-09-07): the mocks above model an idealised SDK. Real Cosmos returns
+  // `resources: undefined` on the pages of an aggregate GROUP BY query — `hasMoreResults()` stays
+  // true and `fetchNext()` yields a page with no `resources` array at all. Spreading that threw
+  // `TypeError: page.resources is not iterable`, taking down the admin commission dashboard and
+  // `sweepAllHolds({ scope: 'FULL' })` in production. Verified against the live prod container.
+  it('tolerates the undefined resources Cosmos returns on aggregate GROUP BY pages', async () => {
+    mockHasMoreResults
+      .mockReturnValueOnce(true)
+      .mockReturnValueOnce(true)
+      .mockReturnValueOnce(false);
+    mockFetchNext
+      .mockResolvedValueOnce({ resources: undefined })
+      .mockResolvedValueOnce({ resources: undefined });
+
+    const result = await commissionReceivableRepo.sumDueGroupedByTechnician();
+
+    expect(result).toEqual([]);
+    expect(mockFetchNext).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps rows from populated pages when an earlier page has undefined resources', async () => {
+    const rows = [{ technicianId: 'tech-1', outstandingPaise: 5000, dueCount: 2, oldestDueAt: '2026-05-01T00:00:00.000Z' }];
+    mockHasMoreResults
+      .mockReturnValueOnce(true)
+      .mockReturnValueOnce(true)
+      .mockReturnValueOnce(false);
+    mockFetchNext
+      .mockResolvedValueOnce({ resources: undefined })
+      .mockResolvedValueOnce({ resources: rows });
+
+    const result = await commissionReceivableRepo.sumDueGroupedByTechnician();
+
+    expect(result).toEqual(rows);
+  });
 });
 
 describe('getOpenCredits', () => {

@@ -59,7 +59,7 @@ export async function queryAuditLog(
     );
 
   const page = await iterator.fetchNext();
-  const entries = page.resources.map((r) => AuditLogEntrySchema.parse(r));
+  const entries = (page.resources ?? []).map((r) => AuditLogEntrySchema.parse(r));
   const result: { entries: AuditLogEntry[]; continuationToken?: string } = { entries };
   if (page.continuationToken !== undefined) {
     result.continuationToken = page.continuationToken;

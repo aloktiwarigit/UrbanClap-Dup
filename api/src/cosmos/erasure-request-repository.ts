@@ -118,5 +118,5 @@ export async function listErasureRequests(
     maxItemCount: pageSize,
   });
   const page = await iterator.fetchNext();
-  return page.resources.map((r) => ErasureRequestDocSchema.parse(r));
+  return (page.resources ?? []).map((r) => ErasureRequestDocSchema.parse(r));
 }

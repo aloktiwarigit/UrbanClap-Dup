@@ -230,9 +230,13 @@ export const commissionReceivableRepo = {
       dueCount: number;
       oldestDueAt: string;
     }> = [];
+    // `page.resources` is undefined — not [] — on the pages of an aggregate GROUP BY query,
+    // while hasMoreResults() stays true. Spreading it unguarded threw
+    // "TypeError: page.resources is not iterable" against the real container, which took out
+    // the admin commission dashboard and sweepAllHolds({ scope: 'FULL' }). Guard every page.
     while (iterator.hasMoreResults()) {
       const page = await iterator.fetchNext();
-      groups.push(...page.resources);
+      groups.push(...(page.resources ?? []));
     }
     return groups;
   },
