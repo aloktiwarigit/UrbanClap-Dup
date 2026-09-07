@@ -618,3 +618,48 @@ describe('patchPaymentProfile', () => {
     await expect(patchPaymentProfile('t1', { upiVpa: 'x@upi', upiUpdatedAt: 'x' })).rejects.toMatchObject({ code: 500 });
   });
 });
+
+describe('undefined page.resources (real Cosmos aggregate/empty-page behaviour)', () => {
+  // Regression (prod, 2026-09-07): Cosmos can hand back a page whose `resources` is undefined
+  // rather than an empty array. Every hold query below feeds the admin commission dashboard or
+  // the E21-S04 reconciler, so an unguarded `.map`/spread turns into a 500 on the owner's console.
+  const withPages = (pages: unknown[]) => {
+    const mockHasMoreResults = vi.fn();
+    pages.forEach(() => mockHasMoreResults.mockReturnValueOnce(true));
+    mockHasMoreResults.mockReturnValue(false);
+    const mockFetchNext = vi.fn();
+    pages.forEach((pg) => mockFetchNext.mockResolvedValueOnce(pg));
+    const mockQuery = vi.fn().mockReturnValue({ fetchNext: mockFetchNext, hasMoreResults: mockHasMoreResults });
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({ items: { query: mockQuery } }) }),
+    });
+    return { mockFetchNext };
+  };
+
+  it('listTechniciansWithHold returns no items when the page has undefined resources', async () => {
+    withPages([{ resources: undefined, continuationToken: undefined }]);
+
+    const result = await listTechniciansWithHold();
+
+    expect(result.items).toEqual([]);
+  });
+
+  it('listAllTechniciansWithHold skips undefined pages and keeps populated ones', async () => {
+    withPages([
+      { resources: undefined },
+      { resources: [{ id: 't1', displayName: 'A', commissionHold: { outstandingPaise: 100, dueCount: 1, state: 'WARN', evaluatedAt: 'x' } }] },
+    ]);
+
+    const result = await listAllTechniciansWithHold();
+
+    expect(result.map((r) => r.id)).toEqual(['t1']);
+  });
+
+  it('listTechniciansWithExpiredOverride skips undefined pages and keeps populated ones', async () => {
+    withPages([{ resources: undefined }, { resources: [{ id: 't2' }] }]);
+
+    const result = await listTechniciansWithExpiredOverride('2026-09-05T00:00:00.000Z');
+
+    expect(result).toEqual(['t2']);
+  });
+});
