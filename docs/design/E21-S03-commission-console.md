@@ -92,14 +92,26 @@ belong in one composed graphic. They belong in different blocks entirely:
 ```
  Balance
    Commission due from cash jobs          ₹1,842.58
-   Repayments recorded                    − ₹449.12
-   Credits and waivers applied            −   ₹0.00
+   Payments and credits applied           − ₹449.12      (includes ₹0.00 from credit)
+   Waived or settled                      −   ₹0.00
    ───────────────────────────────────────────────
    Balance due                              ₹1,393.46
 
  Cash-job context
    Collected at the door, 11 jobs         ₹6,193.00      (not part of the balance)
 ```
+
+**Revised after implementation review (2026-09-07).** An earlier draft made "credits" its own
+subtraction line. That was wrong twice over: applied credits are already inside the server's
+`remittedAmount`, so subtracting them again double-counts; and the credits that actually exist today
+(overpayments) are written with a remittance source, so a dedicated credit line would read ₹0.00
+forever while the events ledger below showed the same money. Credit is therefore an annotation on
+the payments line, not a line of its own.
+
+The third line absorbs both waived remainders and settled-row residue, and is **signed** — a legacy
+row settled for more than it owed makes it negative. `balancePaise` is computed as the server's own
+expression (`Σ over DUE rows of max(0, due − remitted)`) rather than by subtracting these lines, so
+the headline figure reconciles to the server by identity rather than by arithmetic that could drift.
 
 An accounting stack cannot be mis-added, because every line already carries its own sign and the
 total is stated. The parenthetical on the cash line is doing real work and stays.
