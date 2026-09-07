@@ -588,7 +588,7 @@ export async function listTechniciansWithHold(continuationToken?: string): Promi
     { maxItemCount: 50, ...(continuationToken ? { continuationToken } : {}) },
   );
   const page = await iterator.fetchNext();
-  const items = page.resources.map(toHoldItem).sort((a, b) => b.commissionHold.outstandingPaise - a.commissionHold.outstandingPaise);
+  const items = (page.resources ?? []).map(toHoldItem).sort((a, b) => b.commissionHold.outstandingPaise - a.commissionHold.outstandingPaise);
   return { items, ...(page.continuationToken ? { continuationToken: page.continuationToken } : {}) };
 }
 
@@ -606,7 +606,7 @@ export async function listAllTechniciansWithHold(): Promise<
   const items: Array<{ id: string; name?: string; commissionHold: CommissionHold }> = [];
   while (iterator.hasMoreResults()) {
     const page = await iterator.fetchNext();
-    items.push(...page.resources.map(toHoldItem));
+    items.push(...(page.resources ?? []).map(toHoldItem));
   }
   return items;
 }
@@ -630,7 +630,7 @@ export async function listTechniciansWithExpiredOverride(nowIso: string): Promis
   const ids: string[] = [];
   while (iterator.hasMoreResults()) {
     const page = await iterator.fetchNext();
-    ids.push(...page.resources.map((r) => r.id));
+    ids.push(...(page.resources ?? []).map((r) => r.id));
   }
   return ids;
 }
