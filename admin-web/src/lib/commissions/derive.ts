@@ -20,7 +20,7 @@ import type { CommissionDashboardRow, CommissionLedgerDetail } from '@/api/commi
 export interface BalanceStack {
   commissionDuePaise: number;
   repaidPaise: number;
-  waivedPaise: number;
+  settledPaise: number;
   balancePaise: number;
   // Informational only — never subtracted here. `remittedAmount` on each
   // receivable already folds in every non-waiver allocation, credit
@@ -59,9 +59,20 @@ const THRESHOLD_IMPACT_SAMPLE_SIZE = 5;
 
 /**
  * The accounting stack a technician's ledger detail resolves to. Built to
- * reconcile to the server's own truth by construction — for every
- * receivable regardless of status (DUE, REMITTED, or WAIVED), this
- * identity holds:
+ * reconcile to the server's own truth by construction. The server computes
+ * each receivable's own outstanding as:
+ *
+ *   outstandingPaise = remittanceStatus === 'DUE'
+ *     ? Math.max(0, commissionDue - (remittedAmount ?? 0))
+ *     : 0
+ *
+ * — note it gates on `=== 'DUE'`, not `!== 'WAIVED'`: a REMITTED row is
+ * also defined to have zero outstanding, even if `commissionDue -
+ * remittedAmount` isn't exactly zero (reachable on real data — the retired
+ * E21-S01 remit endpoint stored the admin-entered amount verbatim and only
+ * rejected amounts *below* the due, so a rounded overpayment like
+ * `due 13478 / remitted 13500 / status REMITTED` is a real shape). This
+ * function's `balancePaise` matches that sum exactly:
  *
  *   balancePaise === Σ receivables[].outstandingPaise
  *
@@ -69,12 +80,25 @@ const THRESHOLD_IMPACT_SAMPLE_SIZE = 5;
  * `repaidPaise` sums `remittedAmount ?? 0` — the server's own aggregate of
  * every non-waiver allocation against that receivable (cash and incentive
  * alike; `mergeAllocation` excludes only WAIVER allocations from this sum).
- * `waivedPaise` separately sums, for receivables the server marked WAIVED,
- * whatever was still outstanding at the moment of waiver
- * (`commissionDue - (remittedAmount ?? 0)`) — this line is required
- * because a waived receivable's `remittedAmount` does NOT include the
- * waiver itself, so without it a forgiven balance would still read as
- * owed. `balancePaise` is `commissionDuePaise - repaidPaise - waivedPaise`.
+ * `settledPaise` sums, for every receivable whose status is NOT `'DUE'`
+ * (REMITTED and WAIVED alike), whatever residue is left in
+ * `commissionDue - (remittedAmount ?? 0)` — both a waived row's forgiven
+ * remainder and an over/under-settled REMITTED row's rounding residue,
+ * because the server treats both the same way: zero outstanding,
+ * unconditionally, once a row leaves `'DUE'`. `commissionDuePaise -
+ * repaidPaise - settledPaise` collapses algebraically to
+ * `Σ_{DUE rows} (commissionDue - remittedAmount)` — the server's own
+ * expression, restricted to `DUE` rows.
+ *
+ * `balancePaise` itself is computed directly as that same expression
+ * — `Σ_{DUE rows} Math.max(0, commissionDue - (remittedAmount ?? 0))` —
+ * rather than via the subtraction above, so the `Math.max(0, …)` clamp
+ * applies per row exactly as the server applies it. The two derivations
+ * agree whenever no `DUE` row has `remittedAmount` exceeding
+ * `commissionDue`; computing `balancePaise` directly means a pathological
+ * DUE row (a partial-remittance data-entry error) can't push the balance
+ * negative even though the un-clamped subtraction would still be `due -
+ * repaid - settled` in every other respect.
  *
  * `creditAppliedPaise` is carried through as an informational field only
  * (see its doc comment) — never subtracted here, to avoid double-counting
@@ -86,11 +110,19 @@ const THRESHOLD_IMPACT_SAMPLE_SIZE = 5;
 export function buildBalanceStack(detail: CommissionLedgerDetail): BalanceStack {
   const commissionDuePaise = detail.receivables.reduce((sum, r) => sum + r.commissionDue, 0);
   const repaidPaise = detail.receivables.reduce((sum, r) => sum + (r.remittedAmount ?? 0), 0);
-  const waivedPaise = detail.receivables
-    .filter((r) => r.remittanceStatus === 'WAIVED')
+  const settledPaise = detail.receivables
+    .filter((r) => r.remittanceStatus !== 'DUE')
     .reduce((sum, r) => sum + (r.commissionDue - (r.remittedAmount ?? 0)), 0);
-  const balancePaise = commissionDuePaise - repaidPaise - waivedPaise;
-  return { commissionDuePaise, repaidPaise, waivedPaise, balancePaise, creditAppliedPaise: detail.creditAppliedPaise };
+  const balancePaise = detail.receivables
+    .filter((r) => r.remittanceStatus === 'DUE')
+    .reduce((sum, r) => sum + Math.max(0, r.commissionDue - (r.remittedAmount ?? 0)), 0);
+  return {
+    commissionDuePaise,
+    repaidPaise,
+    settledPaise,
+    balancePaise,
+    creditAppliedPaise: detail.creditAppliedPaise,
+  };
 }
 
 /**
@@ -120,7 +152,26 @@ export function buildBalanceStack(detail: CommissionLedgerDetail): BalanceStack 
  * `credits` is not sorted by the server at all. Relying on input-array
  * order for the tie-break would let the running balance's intermediate
  * values (though never its final total) flicker between renders. Sorting
- * by `id` instead ties the order to something that never changes.
+ * by `id` instead ties the order to something that never changes. An `at`
+ * that fails to parse (`NaN` from `new Date(...)`) sorts after every
+ * parseable timestamp rather than comparing as equal to everything — the
+ * default `NaN` comparator result would otherwise silently fall back to
+ * push order for that event, undermining the id-based tie-break above.
+ *
+ * KNOWN LIMITATION: this function's running-balance total will diverge
+ * from `buildBalanceStack`'s `balancePaise` for a technician whose
+ * `receivables[]` include a row with `remittedAmount` set but with no
+ * corresponding document in `remittances[]` or `credits[]` — e.g. a
+ * legacy/backfilled receivable. `buildBalanceStack` reads `remittedAmount`
+ * directly, but this function can only build a REMITTANCE or CREDIT event
+ * from an actual remittance/credit *document*; it deliberately does not
+ * synthesise an event to make the trail's total agree with the stack's
+ * total, since inventing a ledger row nobody recorded is worse than the
+ * two numbers disagreeing honestly. As of 2026-09-07 this is unreachable
+ * in production (the `commission_receivables` container is new and every
+ * backfilled row has `remittedAmount` absent) but callers should not rely
+ * on that staying true — do not assume `buildBalanceEvents(d).at(-1)
+ * ?.balancePaise === buildBalanceStack(d).balancePaise` for arbitrary `d`.
  */
 export function buildBalanceEvents(detail: CommissionLedgerDetail): BalanceEvent[] {
   const dueEvents: BalanceEvent[] = detail.receivables.map((r) => ({
@@ -192,8 +243,22 @@ export function buildBalanceEvents(detail: CommissionLedgerDetail): BalanceEvent
 
   const events = [...dueEvents, ...waiverEvents, ...remittanceEvents, ...creditEvents];
   events.sort((a, b) => {
-    const byTime = new Date(a.at).getTime() - new Date(b.at).getTime();
-    return byTime !== 0 ? byTime : a.id.localeCompare(b.id);
+    const aTime = new Date(a.at).getTime();
+    const bTime = new Date(b.at).getTime();
+    const aValid = !Number.isNaN(aTime);
+    const bValid = !Number.isNaN(bTime);
+    if (aValid && bValid) {
+      const byTime = aTime - bTime;
+      return byTime !== 0 ? byTime : a.id.localeCompare(b.id);
+    }
+    // Fail closed rather than returning NaN (which every sort engine
+    // treats as "equal", silently reintroducing the push-order dependence
+    // the id tie-break above exists to remove): an event with an
+    // unparseable `at` always sorts after every event with a valid one.
+    if (aValid !== bValid) {
+      return aValid ? -1 : 1;
+    }
+    return a.id.localeCompare(b.id);
   });
 
   let runningBalance = 0;

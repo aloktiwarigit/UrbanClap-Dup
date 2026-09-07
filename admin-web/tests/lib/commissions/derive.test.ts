@@ -62,6 +62,16 @@ const detail = {
 // include the waiver itself, so a stack that only subtracts `repaidPaise`
 // would show this technician as still owing the waived row's full
 // commissionDue even though the server's own `outstandingPaise` is 0 for it.
+//
+// Row rA's 4000 remitted is deliberately split across a real remittance
+// (2500, via `remA`) and an INCENTIVE-source credit consumption (1500, via
+// `credit-inc-1`), with `creditAppliedPaise: 1500` on the detail — this is
+// the C2 regression guard (fix round 2 review): both fixtures in round 1
+// had `creditAppliedPaise: 0` and `credits: []`, so a reintroduced
+// `- creditAppliedPaise` in `buildBalanceStack` would still have passed
+// every test. With a genuine non-zero `creditAppliedPaise` here, that
+// regression would pull `balancePaise` away from `Σ outstandingPaise` and
+// the reconciliation test below would catch it.
 const reconcileDetail = {
   technicianId: 't2',
   hold: null,
@@ -74,6 +84,10 @@ const reconcileDetail = {
       remittanceStatus: 'DUE',
       createdAt: '2026-01-01T00:00:00.000Z',
       outstandingPaise: 6000,
+      allocations: [
+        { id: 'alloc-a1', source: 'REMITTANCE', refId: 'remA', paise: 2500, appliedAt: '2026-01-01T01:00:00.000Z', byId: 'admin-1' },
+        { id: 'alloc-a2', source: 'INCENTIVE', refId: 'credit-inc-1', paise: 1500, appliedAt: '2026-01-01T00:30:00.000Z', byId: 'admin-3' },
+      ],
     },
     {
       id: 'rB',
@@ -100,10 +114,10 @@ const reconcileDetail = {
   remittances: [
     {
       id: 'remA',
-      amountPaise: 4000,
+      amountPaise: 2500,
       method: 'UPI',
       ref: 'ref-a',
-      allocations: [{ bookingId: 'rA', paise: 4000 }],
+      allocations: [{ bookingId: 'rA', paise: 2500 }],
       creditCreatedPaise: 0,
       recordedByAdminId: 'admin-1',
       createdAt: '2026-01-01T01:00:00.000Z',
@@ -129,17 +143,53 @@ const reconcileDetail = {
       createdAt: '2026-01-03T01:00:00.000Z',
     },
   ],
+  credits: [
+    {
+      id: 'credit-inc-1',
+      source: 'INCENTIVE',
+      refId: 'incentive-run-9',
+      originalPaise: 1500,
+      remainingPaise: 0,
+      consumedBy: [{ bookingId: 'rA', paise: 1500, appliedAt: '2026-01-01T00:30:00.000Z' }],
+      createdAt: '2025-12-28T00:00:00.000Z',
+    },
+  ],
+  cashCollectedPaise: 9500,
+  creditAppliedPaise: 1500,
+} as unknown as CommissionLedgerDetail;
+
+// A REMITTED row can carry rounding residue: the retired E21-S01 remit
+// endpoint stored the admin-entered amount verbatim and only rejected
+// amounts below the due, so a technician who paid a rounded ₹135.00
+// against a ₹134.78 due settles as `remitted 13500 / status REMITTED`.
+// The server's outstandingPaise is 0 regardless — it gates on `=== 'DUE'`,
+// not on the arithmetic residue. This is the C3 regression fixture.
+const overSettledDetail = {
+  technicianId: 't3',
+  hold: null,
+  receivables: [
+    {
+      id: 'rD',
+      bookingId: 'rD',
+      commissionDue: 13478,
+      remittedAmount: 13500,
+      remittanceStatus: 'REMITTED',
+      createdAt: '2026-02-01T00:00:00.000Z',
+      outstandingPaise: 0,
+    },
+  ],
+  remittances: [],
   credits: [],
-  cashCollectedPaise: 11000,
+  cashCollectedPaise: 13500,
   creditAppliedPaise: 0,
 } as unknown as CommissionLedgerDetail;
 
 describe('buildBalanceStack', () => {
-  it('balance stack states commission due, what was repaid, what was waived, and the balance', () => {
+  it('balance stack states commission due, what was repaid, what was settled, and the balance', () => {
     expect(buildBalanceStack(detail)).toEqual({
       commissionDuePaise: 26956,
       repaidPaise: 13478,
-      waivedPaise: 0,
+      settledPaise: 0,
       balancePaise: 13478,
       creditAppliedPaise: 0,
     });
@@ -151,15 +201,26 @@ describe('buildBalanceStack', () => {
     // legitimately *equals* cashCollectedPaise by coincidence, and such a
     // check would misfire on correct code. A perturbation test is immune
     // to that — it proves the value is never read, not merely that it
-    // doesn't happen to match a line today.
+    // doesn't happen to match a line today. Perturbed twice — once to a
+    // large value, once to zero — so neither a straight pass-through nor a
+    // clamp/predicate read of cashCollectedPaise could slip past unnoticed.
     expect(buildBalanceStack({ ...detail, cashCollectedPaise: 999_999_999 })).toEqual(
       buildBalanceStack(detail),
     );
+    expect(buildBalanceStack({ ...detail, cashCollectedPaise: 0 })).toEqual(buildBalanceStack(detail));
   });
 
-  it('reconciles to the server truth across DUE, REMITTED, and WAIVED rows (regression: a waived row must not read as still owed)', () => {
+  it('reconciles to the server truth across DUE, REMITTED, and WAIVED rows, with a non-zero creditAppliedPaise in play (regression: a waived row must not read as still owed, and creditAppliedPaise must not be double-subtracted)', () => {
     expect(buildBalanceStack(reconcileDetail).balancePaise).toBe(
       reconcileDetail.receivables.reduce((sum, r) => sum + r.outstandingPaise, 0),
+    );
+  });
+
+  it('a REMITTED row with rounding residue (remitted > due) reads as fully settled, not still owed (regression: the server gates on state === "DUE", not state !== "WAIVED")', () => {
+    const stack = buildBalanceStack(overSettledDetail);
+    expect(stack.balancePaise).toBe(0);
+    expect(stack.balancePaise).toBe(
+      overSettledDetail.receivables.reduce((sum, r) => sum + r.outstandingPaise, 0),
     );
   });
 });
@@ -180,7 +241,15 @@ describe('buildBalanceEvents', () => {
     expect(events[2]).toMatchObject({ ref: 'upi-1', actorId: 'admin-1' });
   });
 
-  it('the last balance event matches the balance stack total, including a waived row', () => {
+  it('the last balance event matches the balance stack total when remittances[] and credits[] fully account for remittedAmount (including a waived row and a credit-consumption event)', () => {
+    // This equality is NOT a general invariant — see the KNOWN LIMITATION
+    // comment on buildBalanceEvents. It holds here specifically because
+    // every paise of every receivable's remittedAmount in this fixture is
+    // backed by an actual remittance or credit document. A legacy
+    // receivable with remittedAmount set but no corresponding document
+    // (e.g. a pre-ledger backfill) would make the events trail's total
+    // diverge from the stack's total — deliberately: this module does not
+    // synthesise events to force the two to agree.
     const events = buildBalanceEvents(reconcileDetail);
     expect(events.at(-1)?.balancePaise).toBe(buildBalanceStack(reconcileDetail).balancePaise);
   });
@@ -206,6 +275,10 @@ describe('isStale', () => {
     expect(isStale({ staleAfter: '2026-09-07T12:00:00.000Z' }, new Date('2026-09-07T12:01:00.000Z'))).toBe(
       true,
     );
+  });
+
+  it('fails closed on an unparseable staleAfter — a corrupt row reads as stale, not fresh', () => {
+    expect(isStale({ staleAfter: 'not-a-date' }, new Date('2026-09-07T12:00:00.000Z'))).toBe(true);
   });
 });
 
