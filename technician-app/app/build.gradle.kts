@@ -101,7 +101,79 @@ val mapsApiKey =
         ?: localProperty("MAPS_API_KEY")
         ?: ""
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Observability and feature-flag keys.
+//
+// These resolve the same way as MAPS_API_KEY and the signing values: environment
+// variable first, then local.properties. They used to read the environment only, so a
+// release built from a shell without them exported silently baked in "" — and every
+// consumer treats a blank key as "feature switched off" and returns quietly. That is
+// how customer-app shipped to Play with Sentry, PostHog and GrowthBook all inert.
+//
+// verifyReleaseObservabilityKeys (below) now fails a release build that would repeat it.
+// ─────────────────────────────────────────────────────────────────────────────
+val sentryDsn = envOrLocalProperty("SENTRY_DSN") ?: ""
+val postHogApiKey = envOrLocalProperty("POSTHOG_API_KEY") ?: ""
+val growthBookClientKey = envOrLocalProperty("GROWTHBOOK_CLIENT_KEY") ?: ""
+
 val releaseSigning = loadReleaseSigning()
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Release gate: a blank observability key must never reach Play again.
+//
+// Every consumer of these keys treats blank as "switched off" and returns without a
+// word — SentryInitializer returns on a blank DSN, PostHogAnalyticsFacade returns on a
+// blank API key, GrowthBook fetches nothing and every flag falls to its default. That
+// silence is the whole problem, so the build says it out loud instead.
+//
+// Set them per app in local.properties (not committed) or export them before building:
+//   SENTRY_DSN=https://<key>@<org>.ingest.sentry.io/<project>
+//   POSTHOG_API_KEY=phc_<key>
+//   GROWTHBOOK_CLIENT_KEY=sdk-<key>
+//
+// To ship without one on purpose, set ALLOW_BLANK_OBSERVABILITY_KEYS=true. That is an
+// explicit, per-build acknowledgement and still prints a warning — the point is that
+// nobody discovers it months later from an empty dashboard.
+// ─────────────────────────────────────────────────────────────────────────────
+val blankReleaseObservabilityKeys =
+    mapOf(
+        "SENTRY_DSN" to sentryDsn,
+        "POSTHOG_API_KEY" to postHogApiKey,
+        "GROWTHBOOK_CLIENT_KEY" to growthBookClientKey,
+    ).filterValues { it.isBlank() }
+        .keys
+        .sorted()
+
+val allowBlankObservabilityKeys =
+    envOrLocalProperty("ALLOW_BLANK_OBSERVABILITY_KEYS")?.toBooleanStrictOrNull() ?: false
+
+val verifyReleaseObservabilityKeys =
+    tasks.register("verifyReleaseObservabilityKeys") {
+        group = "verification"
+        description = "Fails a release build whose observability keys would be baked in blank."
+        // Captured at configuration time so the task body closes over plain data.
+        val missing = blankReleaseObservabilityKeys
+        val allowed = allowBlankObservabilityKeys
+        doLast {
+            if (missing.isEmpty()) return@doLast
+            val detail =
+                buildString {
+                    appendLine("Release build would bake in blank keys: ${missing.joinToString(", ")}.")
+                    appendLine("Each one silently disables its feature at runtime — no crash, no log.")
+                    appendLine("Set them in local.properties or the environment, or acknowledge with")
+                    appendLine("ALLOW_BLANK_OBSERVABILITY_KEYS=true to ship without them on purpose.")
+                }
+            if (allowed) {
+                logger.warn("WARNING: $detail")
+            } else {
+                throw GradleException(detail)
+            }
+        }
+    }
+
+tasks.matching { it.name == "assembleRelease" || it.name == "bundleRelease" }.configureEach {
+    dependsOn(verifyReleaseObservabilityKeys)
+}
 
 plugins {
     alias(libs.plugins.android.application)
@@ -147,7 +219,7 @@ android {
         buildConfigField(
             "String",
             "SENTRY_DSN",
-            "\"${System.getenv("SENTRY_DSN") ?: ""}\"",
+            buildConfigString(sentryDsn),
         )
         buildConfigField(
             "String",
@@ -172,12 +244,12 @@ android {
         buildConfigField(
             "String",
             "GROWTHBOOK_CLIENT_KEY",
-            "\"${System.getenv("GROWTHBOOK_CLIENT_KEY") ?: ""}\"",
+            buildConfigString(growthBookClientKey),
         )
         buildConfigField(
             "String",
             "POSTHOG_API_KEY",
-            "\"${System.getenv("POSTHOG_API_KEY") ?: ""}\"",
+            buildConfigString(postHogApiKey),
         )
         buildConfigField(
             "String",
