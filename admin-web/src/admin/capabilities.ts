@@ -20,7 +20,9 @@ export type Capability =
   | 'adminUsers.manage'
   | 'compliance.manage'
   | 'technicians.manage'
-  | 'customers.manage';
+  | 'customers.manage'
+  | 'finance.settleCommission'
+  | 'settings.manage';
 
 export const ALL_CAPABILITIES = [
   'liveOps.read',
@@ -36,6 +38,8 @@ export const ALL_CAPABILITIES = [
   'compliance.manage',
   'technicians.manage',
   'customers.manage',
+  'finance.settleCommission',
+  'settings.manage',
 ] as const satisfies readonly Capability[];
 
 export const ROLE_CAPABILITIES: Record<AdminRole, readonly Capability[]> = {
@@ -50,7 +54,7 @@ export const ROLE_CAPABILITIES: Record<AdminRole, readonly Capability[]> = {
     'technicians.manage',
     'customers.manage',
   ],
-  finance: ['finance.read'],
+  finance: ['finance.read', 'finance.settleCommission'],
   'support-agent': [],
 };
 
@@ -72,6 +76,8 @@ export const ADMIN_NAV_ITEMS = [
   { label: 'Compliance',  href: '/compliance',    icon: 'scale',                  capability: 'compliance.manage' },
   { label: 'Technicians', href: '/technicians',   icon: 'wrench',                 capability: 'technicians.manage' },
   { label: 'Customers',   href: '/customers',     icon: 'users-2',                capability: 'customers.manage' },
+  { label: 'Commissions', href: '/finance/commissions', icon: 'receipt-indian-rupee', capability: 'finance.settleCommission' },
+  { label: 'Settings',    href: '/settings/commission', icon: 'sliders-horizontal',   capability: 'settings.manage' },
 ] as const satisfies readonly AdminNavItem[];
 
 /**
@@ -79,7 +85,7 @@ export const ADMIN_NAV_ITEMS = [
  * (capability + route guard intact). Use this to declutter without losing
  * access — e.g., audit log is reached via deep links from other surfaces.
  */
-export const PRIMARY_NAV_HIDDEN = new Set<string>(['/audit-log']);
+export const PRIMARY_NAV_HIDDEN = new Set<string>();
 
 interface RouteCapability {
   prefix: string;
@@ -91,6 +97,11 @@ export const ADMIN_ROUTE_CAPABILITIES = [
   { prefix: '/dashboard', capability: 'liveOps.read' },
   { prefix: '/orders', capability: 'orders.read' },
   { prefix: '/catalogue', capability: 'catalogue.manage' },
+  // '/finance/commissions' is more specific than '/finance' and must be
+  // matched first — capabilityForPath resolves by first-match prefix scan,
+  // not by specificity, so listing the general '/finance' prefix first
+  // would let finance.read wrongly authorize the commission console.
+  { prefix: '/finance/commissions', capability: 'finance.settleCommission' },
   { prefix: '/finance', capability: 'finance.read' },
   { prefix: '/complaints', capability: 'complaints.manage' },
   { prefix: '/audit-log', capability: 'audit.read' },
@@ -98,6 +109,7 @@ export const ADMIN_ROUTE_CAPABILITIES = [
   { prefix: '/compliance', capability: 'compliance.manage' },
   { prefix: '/technicians', capability: 'technicians.manage' },
   { prefix: '/customers',   capability: 'customers.manage' },
+  { prefix: '/settings/commission', capability: 'settings.manage' },
 ] as const satisfies readonly RouteCapability[];
 
 export function isAdminRole(value: unknown): value is AdminRole {
