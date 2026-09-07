@@ -1,1 +1,1 @@
-{"timestamp":"2026-09-07T10:46:42Z","commit":"4294a0f48e29a29b8614805188b6d403cc23b70a","reviewer":"codex","summary":"guard undefined page.resources on Cosmos aggregate/drain pages — no actionable correctness issues"}
+{"timestamp":"2026-09-07T11:27:28Z","commit":"6b42683f2b07e73633e09e271bbbda2ba8bbcb87","reviewer":"codex","summary":"historical receivable backfill — clean on round 4; rounds 1-3 raised 4 money-ledger P2s (createdAt provenance, credit consumption, live-settlement race, non-ISO cutoff), all fixed"}
