@@ -615,6 +615,40 @@
         "save": "Save override",
         "cancel": "Cancel"
       }
+    },
+    "remittance": {
+      "title": "Record payment",
+      "fields": {
+        "amountLabel": "Amount (₹)",
+        "methodLabel": "Method",
+        "methodUpi": "UPI",
+        "methodCash": "Cash deposit",
+        "refLabel": "Reference",
+        "noteLabel": "Note (optional)"
+      },
+      "preview": {
+        "label": "Preview. The server recalculates when you record this.",
+        "empty": "No amount entered yet."
+      },
+      "actual": {
+        "label": "Recorded allocation"
+      },
+      "actions": {
+        "cancel": "Cancel",
+        "submit": "Record payment"
+      },
+      "errors": {
+        "invalidAmount": "Enter an amount greater than ₹0.",
+        "refRequired": "A reference is required.",
+        "recordFailed": "Could not record this payment. Try again.",
+        "idempotencyMismatch": "That reference was already used for a different amount. Check the amount and reference, then try again."
+      },
+      "outcomes": {
+        "success": "Payment recorded",
+        "replayed": "Already recorded. This is the original receipt, not a second payment.",
+        "recomputePending": "Recorded. The balance will catch up shortly.",
+        "allocationMismatch": "Allocated differently than previewed. Another settlement landed first. Preview showed {previewAmount} across {previewCount, plural, one {# job} other {# jobs}}; recorded {actualAmount} across {actualCount, plural, one {# job} other {# jobs}}."
+      }
     }
   },
   "auditLog": {
