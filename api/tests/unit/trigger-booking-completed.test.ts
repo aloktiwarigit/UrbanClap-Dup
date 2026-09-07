@@ -49,13 +49,12 @@ beforeEach(() => {
   vi.resetAllMocks();
 
   // CASH path defaults
-  vi.mocked(settlementSvc.recordCommissionDue).mockResolvedValue({
+  vi.mocked(settlementSvc.settleCashCompletion).mockResolvedValue({
     created: true,
     commissionDue: 11000,
     commissionBps: 2200,
     commissionResolvedFrom: 'GLOBAL',
   });
-  vi.mocked(settlementSvc.finalizeLedgerForTechnician).mockResolvedValue(undefined);
   vi.mocked(configSvc.getGlobalCommissionBps).mockResolvedValue(2200);
   vi.mocked(configSvc.resolveCommissionBps).mockReturnValue({ bps: 2200, from: 'GLOBAL' });
   vi.mocked(catalogueRepo.getServiceByIdCrossPartition).mockResolvedValue(null);
@@ -86,28 +85,29 @@ beforeEach(() => {
 describe('settleBooking — common guards', () => {
   it('skips non-COMPLETED status', async () => {
     await settleBooking({ ...cashBooking, status: 'IN_PROGRESS' }, mockCtx);
-    expect(settlementSvc.recordCommissionDue).not.toHaveBeenCalled();
+    expect(settlementSvc.settleCashCompletion).not.toHaveBeenCalled();
     expect(walletLedgerRepo.createPendingEntry).not.toHaveBeenCalled();
   });
 
   it('skips malformed documents silently', async () => {
     await settleBooking({ invalid: true }, mockCtx);
-    expect(settlementSvc.recordCommissionDue).not.toHaveBeenCalled();
+    expect(settlementSvc.settleCashCompletion).not.toHaveBeenCalled();
   });
 
   it('skips COMPLETED booking with no technicianId', async () => {
     await settleBooking({ ...cashBooking, technicianId: undefined }, mockCtx);
-    expect(settlementSvc.recordCommissionDue).not.toHaveBeenCalled();
-    expect(settlementSvc.finalizeLedgerForTechnician).not.toHaveBeenCalled();
+    expect(settlementSvc.settleCashCompletion).not.toHaveBeenCalled();
   });
 });
 
 describe('settleBooking — CASH_ON_SERVICE path (pilot)', () => {
-  it('calls recordCommissionDue with the parsed booking', async () => {
+  it('calls settleCashCompletion once with the parsed booking', async () => {
     await settleBooking(cashBooking, mockCtx);
 
-    expect(settlementSvc.recordCommissionDue).toHaveBeenCalledWith(
+    expect(settlementSvc.settleCashCompletion).toHaveBeenCalledTimes(1);
+    expect(settlementSvc.settleCashCompletion).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'booking-abc', technicianId: 'tech-1' }),
+      expect.objectContaining({ log: expect.any(Function) }),
     );
   });
 
@@ -117,98 +117,28 @@ describe('settleBooking — CASH_ON_SERVICE path (pilot)', () => {
     expect(walletLedgerRepo.createPendingEntry).not.toHaveBeenCalled();
   });
 
-  it('audits COMMISSION_DUE_RECORDED on success', async () => {
+  it('does NOT audit/increment/send FCM itself — those side effects now live inside settleCashCompletion', async () => {
     await settleBooking(cashBooking, mockCtx);
 
-    const auditCall = vi.mocked(auditRepo.appendAuditEntry).mock.calls.find(
-      ([entry]) => entry.action === 'COMMISSION_DUE_RECORDED',
-    );
-    expect(auditCall).toBeDefined();
-    expect(auditCall?.[0].payload).toMatchObject({
-      technicianId: 'tech-1',
-      bookingAmount: 50000,
-      commissionBps: 2200,
-      commissionDue: 11000,
-      commissionResolvedFrom: 'GLOBAL',
-    });
-  });
-
-  it('increments completedJobCount and sends FCM earnings update on success', async () => {
-    await settleBooking(cashBooking, mockCtx);
-    expect(techRepo.incrementCompletedJobCount).toHaveBeenCalledWith('tech-1');
-    expect(fcmService.sendTechEarningsUpdate).toHaveBeenCalledWith(
-      'tech-1',
-      expect.objectContaining({ bookingId: 'booking-abc', commissionDue: 11000 }),
-    );
+    expect(auditRepo.appendAuditEntry).not.toHaveBeenCalled();
+    expect(techRepo.incrementCompletedJobCount).not.toHaveBeenCalled();
+    expect(fcmService.sendTechEarningsUpdate).not.toHaveBeenCalled();
   });
 
   it('treats undefined paymentMethod as CASH_ON_SERVICE', async () => {
     const noMethod = { ...cashBooking, paymentMethod: undefined };
     await settleBooking(noMethod, mockCtx);
 
-    expect(settlementSvc.recordCommissionDue).toHaveBeenCalled();
+    expect(settlementSvc.settleCashCompletion).toHaveBeenCalled();
     expect(walletLedgerRepo.createPendingEntry).not.toHaveBeenCalled();
   });
 
-  describe('at-least-once delivery / finalize-on-every-delivery', () => {
-    it('first delivery (created:true): audits, increments job count, sends FCM, and finalizes', async () => {
-      vi.mocked(settlementSvc.recordCommissionDue).mockResolvedValue({
-        created: true,
-        commissionDue: 11000,
-        commissionBps: 2200,
-        commissionResolvedFrom: 'GLOBAL',
-      });
-
-      await settleBooking(cashBooking, mockCtx);
-
-      const dueCalls = vi.mocked(auditRepo.appendAuditEntry).mock.calls.filter(
-        ([e]) => e.action === 'COMMISSION_DUE_RECORDED',
-      );
-      expect(dueCalls).toHaveLength(1);
-      expect(techRepo.incrementCompletedJobCount).toHaveBeenCalledWith('tech-1');
-      expect(fcmService.sendTechEarningsUpdate).toHaveBeenCalledTimes(1);
-      expect(settlementSvc.finalizeLedgerForTechnician).toHaveBeenCalledWith('tech-1');
-    });
-
-    it('duplicate delivery (created:false, no skip): does NOT audit/increment/FCM, but still finalizes', async () => {
-      vi.mocked(settlementSvc.recordCommissionDue).mockResolvedValue({
-        created: false,
-        commissionDue: 11000,
-        commissionBps: 2200,
-        commissionResolvedFrom: 'GLOBAL',
-      });
-
-      await settleBooking(cashBooking, mockCtx);
-
-      const dueCalls = vi.mocked(auditRepo.appendAuditEntry).mock.calls.filter(
-        ([e]) => e.action === 'COMMISSION_DUE_RECORDED',
-      );
-      expect(dueCalls).toHaveLength(0);
-      expect(techRepo.incrementCompletedJobCount).not.toHaveBeenCalled();
-      expect(fcmService.sendTechEarningsUpdate).not.toHaveBeenCalled();
-      expect(settlementSvc.finalizeLedgerForTechnician).toHaveBeenCalledWith('tech-1');
-    });
-
-    it('when recordCommissionDue reports skipped, does nothing further (no audit, no finalize)', async () => {
-      vi.mocked(settlementSvc.recordCommissionDue).mockResolvedValue({
-        created: false,
-        skipped: 'NO_TECHNICIAN',
-      });
-
-      await settleBooking(cashBooking, mockCtx);
-
-      expect(auditRepo.appendAuditEntry).not.toHaveBeenCalled();
-      expect(settlementSvc.finalizeLedgerForTechnician).not.toHaveBeenCalled();
-    });
-  });
-
   describe('P1 (Codex review): money-critical settlement failures must propagate, not be swallowed', () => {
-    it('settleBooking rejects when recordCommissionDue rejects', async () => {
+    it('settleBooking rejects when settleCashCompletion rejects', async () => {
       const err = new Error('getGlobalCommissionBps unavailable');
-      vi.mocked(settlementSvc.recordCommissionDue).mockRejectedValue(err);
+      vi.mocked(settlementSvc.settleCashCompletion).mockRejectedValue(err);
 
       await expect(settleBooking(cashBooking, mockCtx)).rejects.toThrow(err);
-      expect(settlementSvc.finalizeLedgerForTechnician).not.toHaveBeenCalled();
     });
   });
 });
@@ -216,7 +146,7 @@ describe('settleBooking — CASH_ON_SERVICE path (pilot)', () => {
 describe('handleBookingCompletedBatch (registered change-feed handler)', () => {
   it('rethrows after Sentry-capturing and logging a failing document, so the lease is not checkpointed', async () => {
     const err = new Error('getGlobalCommissionBps unavailable');
-    vi.mocked(settlementSvc.recordCommissionDue).mockRejectedValue(err);
+    vi.mocked(settlementSvc.settleCashCompletion).mockRejectedValue(err);
 
     await expect(handleBookingCompletedBatch([cashBooking], mockCtx)).rejects.toThrow(err);
 
@@ -230,7 +160,7 @@ describe('handleBookingCompletedBatch (registered change-feed handler)', () => {
     ).resolves.toBeUndefined();
 
     expect(Sentry.captureException).not.toHaveBeenCalled();
-    expect(settlementSvc.recordCommissionDue).not.toHaveBeenCalled();
+    expect(settlementSvc.settleCashCompletion).not.toHaveBeenCalled();
   });
 });
 
@@ -274,7 +204,7 @@ describe('settleBooking — RAZORPAY path (guarded, dead in cash pilot)', () => 
   it('does NOT create commission receivable — uses wallet ledger instead', async () => {
     await settleBooking(razorpayBooking, mockCtx);
 
-    expect(settlementSvc.recordCommissionDue).not.toHaveBeenCalled();
+    expect(settlementSvc.settleCashCompletion).not.toHaveBeenCalled();
     expect(walletLedgerRepo.createPendingEntry).toHaveBeenCalled();
   });
 

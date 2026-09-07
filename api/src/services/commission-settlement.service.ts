@@ -3,13 +3,16 @@ import type { BookingDoc } from '../schemas/booking.js';
 import type { CommissionResolvedFrom } from '../schemas/commission-config.js';
 import { catalogueRepo } from '../cosmos/catalogue-repository.js';
 import { commissionReceivableRepo } from '../cosmos/commission-receivable-repository.js';
+import { incrementCompletedJobCount } from '../cosmos/technician-repository.js';
 import { getGlobalCommissionBps, resolveCommissionBps } from './commission-config.service.js';
 import { consumePendingCredits } from './commission-allocator.service.js';
 import { recomputeCommissionHold } from './commission-hold.service.js';
+import { sendTechEarningsUpdate } from './fcm.service.js';
+import { systemAudit } from './auditLog.service.js';
 
 export type RecordCommissionDueResult =
   | { created: boolean; commissionDue: number; commissionBps: number; commissionResolvedFrom: CommissionResolvedFrom }
-  | { created: false; skipped: 'NO_TECHNICIAN' | 'NOT_COMPLETED' };
+  | { created: false; skipped: 'NO_TECHNICIAN' | 'NOT_COMPLETED' | 'NOT_CASH' };
 
 /**
  * E21-S02 Task 8: the CASH_ON_SERVICE commission cascade, extracted verbatim from
@@ -26,6 +29,13 @@ export async function recordCommissionDue(booking: BookingDoc): Promise<RecordCo
 
   const technicianId = booking.technicianId;
   if (!technicianId) return { created: false, skipped: 'NO_TECHNICIAN' };
+
+  // E21-S02 Codex P1 fix: RAZORPAY bookings settle through the wallet-ledger path
+  // (trigger-booking-completed.ts's RAZORPAY branch); this cascade must never record a
+  // cash-style commission receivable or recompute the hold for them.
+  if ((booking.paymentMethod ?? 'CASH_ON_SERVICE') === 'RAZORPAY') {
+    return { created: false, skipped: 'NOT_CASH' };
+  }
 
   const { id: bookingId } = booking;
   const bookingAmount = booking.finalAmount ?? booking.amount;
@@ -110,4 +120,51 @@ export async function finalizeLedgerForTechnician(technicianId: string): Promise
   } catch (err: unknown) {
     Sentry.captureException(err);
   }
+}
+
+/**
+ * E21-S02 Codex P1 fix (branch review): side effects (COMMISSION_DUE_RECORDED audit,
+ * completedJobCount increment, FCM earnings update) belong to whichever caller actually
+ * *creates* the commission receivable row — not to every caller that happens to invoke
+ * recordCommissionDue. Both the change-feed trigger (at-least-once delivery) and the
+ * synchronous active-job COMPLETED transition (Task 9) call this instead of calling
+ * recordCommissionDue directly, so exactly one of them fires the side effects for a given
+ * booking regardless of which delivery wins the race to create the row.
+ *
+ * RAZORPAY bookings are guarded inside recordCommissionDue itself (`skipped: 'NOT_CASH'`):
+ * this function returns immediately for them without touching the ledger.
+ */
+export async function settleCashCompletion(
+  booking: BookingDoc,
+  ctx?: { log?: (s: string) => void },
+): Promise<RecordCommissionDueResult> {
+  const r = await recordCommissionDue(booking);
+  if ('skipped' in r) return r;
+
+  const technicianId = booking.technicianId!;
+  const bookingAmount = booking.finalAmount ?? booking.amount;
+
+  if (r.created) {
+    await systemAudit('COMMISSION_DUE_RECORDED', 'booking', booking.id, {
+      technicianId,
+      bookingAmount,
+      commissionBps: r.commissionBps,
+      commissionDue: r.commissionDue,
+      commissionResolvedFrom: r.commissionResolvedFrom,
+    });
+
+    try {
+      await Promise.all([
+        incrementCompletedJobCount(technicianId),
+        sendTechEarningsUpdate(technicianId, { bookingId: booking.id, commissionDue: r.commissionDue }),
+      ]);
+    } catch (err: unknown) {
+      Sentry.captureException(err);
+    }
+  } else {
+    ctx?.log?.(`settleCashCompletion: receivable already recorded for ${booking.id} — side effects skipped`);
+  }
+
+  await finalizeLedgerForTechnician(technicianId);
+  return r;
 }

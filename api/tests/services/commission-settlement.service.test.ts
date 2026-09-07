@@ -2,17 +2,27 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../src/cosmos/commission-receivable-repository.js');
 vi.mock('../../src/cosmos/catalogue-repository.js');
+vi.mock('../../src/cosmos/technician-repository.js');
 vi.mock('../../src/services/commission-config.service.js');
 vi.mock('../../src/services/commission-allocator.service.js');
 vi.mock('../../src/services/commission-hold.service.js');
+vi.mock('../../src/services/fcm.service.js');
+vi.mock('../../src/services/auditLog.service.js');
 vi.mock('@sentry/node', () => ({ captureException: vi.fn() }));
 
-import { recordCommissionDue, finalizeLedgerForTechnician } from '../../src/services/commission-settlement.service.js';
+import {
+  recordCommissionDue,
+  finalizeLedgerForTechnician,
+  settleCashCompletion,
+} from '../../src/services/commission-settlement.service.js';
 import { commissionReceivableRepo } from '../../src/cosmos/commission-receivable-repository.js';
 import { catalogueRepo } from '../../src/cosmos/catalogue-repository.js';
+import { incrementCompletedJobCount } from '../../src/cosmos/technician-repository.js';
 import * as configSvc from '../../src/services/commission-config.service.js';
 import { consumePendingCredits } from '../../src/services/commission-allocator.service.js';
 import { recomputeCommissionHold } from '../../src/services/commission-hold.service.js';
+import { sendTechEarningsUpdate } from '../../src/services/fcm.service.js';
+import { systemAudit } from '../../src/services/auditLog.service.js';
 import * as Sentry from '@sentry/node';
 import type { BookingDoc } from '../../src/schemas/booking.js';
 
@@ -47,6 +57,10 @@ beforeEach(() => {
 
   vi.mocked(consumePendingCredits).mockResolvedValue({ consumedPaise: 0 });
   vi.mocked(recomputeCommissionHold).mockResolvedValue({ hold: null, status: 'MISSING' });
+
+  vi.mocked(incrementCompletedJobCount).mockResolvedValue(undefined);
+  vi.mocked(sendTechEarningsUpdate).mockResolvedValue(undefined);
+  vi.mocked(systemAudit).mockResolvedValue(undefined);
 });
 
 describe('recordCommissionDue — cascade precedence (moved from trigger test)', () => {
@@ -182,6 +196,15 @@ describe('recordCommissionDue — guards', () => {
     expect(r).toEqual({ created: false, skipped: 'NO_TECHNICIAN' });
     expect(commissionReceivableRepo.getByBookingId).not.toHaveBeenCalled();
   });
+
+  it('returns skipped NOT_CASH for a RAZORPAY booking, without touching the receivable repo', async () => {
+    const r = await recordCommissionDue({ ...cashBooking, paymentMethod: 'RAZORPAY' });
+
+    expect(r).toEqual({ created: false, skipped: 'NOT_CASH' });
+    expect(commissionReceivableRepo.getByBookingId).not.toHaveBeenCalled();
+    expect(commissionReceivableRepo.createDueEntry).not.toHaveBeenCalled();
+    expect(configSvc.getGlobalCommissionBps).not.toHaveBeenCalled();
+  });
 });
 
 describe('recordCommissionDue — existing-row and 409 paths', () => {
@@ -289,5 +312,113 @@ describe('finalizeLedgerForTechnician', () => {
 
     await expect(finalizeLedgerForTechnician('tech-1')).resolves.toBeUndefined();
     expect(Sentry.captureException).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('settleCashCompletion (E21-S02 Codex P1 fix)', () => {
+  it('on created:true — audits COMMISSION_DUE_RECORDED once with the payload, increments job count and sends FCM once, and finalizes', async () => {
+    const r = await settleCashCompletion(cashBooking);
+
+    expect(r).toEqual({ created: true, commissionDue: 11000, commissionBps: 2200, commissionResolvedFrom: 'GLOBAL' });
+    expect(systemAudit).toHaveBeenCalledTimes(1);
+    expect(systemAudit).toHaveBeenCalledWith('COMMISSION_DUE_RECORDED', 'booking', 'booking-abc', {
+      technicianId: 'tech-1',
+      bookingAmount: 50000,
+      commissionBps: 2200,
+      commissionDue: 11000,
+      commissionResolvedFrom: 'GLOBAL',
+    });
+    expect(incrementCompletedJobCount).toHaveBeenCalledTimes(1);
+    expect(incrementCompletedJobCount).toHaveBeenCalledWith('tech-1');
+    expect(sendTechEarningsUpdate).toHaveBeenCalledTimes(1);
+    expect(sendTechEarningsUpdate).toHaveBeenCalledWith('tech-1', { bookingId: 'booking-abc', commissionDue: 11000 });
+    expect(consumePendingCredits).toHaveBeenCalledWith('tech-1');
+    expect(recomputeCommissionHold).toHaveBeenCalledWith('tech-1');
+  });
+
+  it('on created:false — does not audit/increment/send FCM, but still finalizes the ledger', async () => {
+    vi.mocked(commissionReceivableRepo.getByBookingId).mockResolvedValue({
+      id: 'booking-abc',
+      bookingId: 'booking-abc',
+      technicianId: 'tech-1',
+      partitionKey: 'tech-1',
+      serviceId: 'svc-1',
+      categoryId: 'cat-1',
+      bookingAmount: 50000,
+      commissionBps: 2200,
+      commissionDue: 11000,
+      commissionResolvedFrom: 'GLOBAL',
+      remittanceStatus: 'DUE',
+      createdAt: '2026-04-24T10:00:00.000Z',
+    });
+
+    const log = vi.fn();
+    const r = await settleCashCompletion(cashBooking, { log });
+
+    expect(r).toEqual({ created: false, commissionDue: 11000, commissionBps: 2200, commissionResolvedFrom: 'GLOBAL' });
+    expect(systemAudit).not.toHaveBeenCalled();
+    expect(incrementCompletedJobCount).not.toHaveBeenCalled();
+    expect(sendTechEarningsUpdate).not.toHaveBeenCalled();
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('booking-abc'));
+    expect(consumePendingCredits).toHaveBeenCalledWith('tech-1');
+    expect(recomputeCommissionHold).toHaveBeenCalledWith('tech-1');
+  });
+
+  it('on skipped (e.g. RAZORPAY/NOT_CASH) — calls nothing and does not finalize', async () => {
+    const r = await settleCashCompletion({ ...cashBooking, paymentMethod: 'RAZORPAY' });
+
+    expect(r).toEqual({ created: false, skipped: 'NOT_CASH' });
+    expect(systemAudit).not.toHaveBeenCalled();
+    expect(incrementCompletedJobCount).not.toHaveBeenCalled();
+    expect(sendTechEarningsUpdate).not.toHaveBeenCalled();
+    expect(consumePendingCredits).not.toHaveBeenCalled();
+    expect(recomputeCommissionHold).not.toHaveBeenCalled();
+  });
+
+  it('propagates a throwing recordCommissionDue (createDueEntry throws)', async () => {
+    const err = new Error('cosmos boom');
+    vi.mocked(commissionReceivableRepo.createDueEntry).mockRejectedValue(err);
+
+    await expect(settleCashCompletion(cashBooking)).rejects.toThrow(err);
+    expect(consumePendingCredits).not.toHaveBeenCalled();
+  });
+
+  it('Sentry-captures a throwing incrementCompletedJobCount and still finalizes the ledger', async () => {
+    const err = new Error('increment boom');
+    vi.mocked(incrementCompletedJobCount).mockRejectedValue(err);
+
+    await expect(settleCashCompletion(cashBooking)).resolves.toMatchObject({ created: true });
+
+    expect(Sentry.captureException).toHaveBeenCalledWith(err);
+    expect(consumePendingCredits).toHaveBeenCalledWith('tech-1');
+    expect(recomputeCommissionHold).toHaveBeenCalledWith('tech-1');
+  });
+
+  it('exactly-once property: calling twice for the same booking fires side effects exactly once, finalizes twice', async () => {
+    // First call creates the row.
+    await settleCashCompletion(cashBooking);
+
+    // Second call: the receivable now exists, so recordCommissionDue reports created:false.
+    vi.mocked(commissionReceivableRepo.getByBookingId).mockResolvedValue({
+      id: 'booking-abc',
+      bookingId: 'booking-abc',
+      technicianId: 'tech-1',
+      partitionKey: 'tech-1',
+      serviceId: 'svc-1',
+      categoryId: 'cat-1',
+      bookingAmount: 50000,
+      commissionBps: 2200,
+      commissionDue: 11000,
+      commissionResolvedFrom: 'GLOBAL',
+      remittanceStatus: 'DUE',
+      createdAt: '2026-04-24T10:00:00.000Z',
+    });
+    await settleCashCompletion(cashBooking);
+
+    expect(systemAudit).toHaveBeenCalledTimes(1);
+    expect(incrementCompletedJobCount).toHaveBeenCalledTimes(1);
+    expect(sendTechEarningsUpdate).toHaveBeenCalledTimes(1);
+    expect(consumePendingCredits).toHaveBeenCalledTimes(2);
+    expect(recomputeCommissionHold).toHaveBeenCalledTimes(2);
   });
 });

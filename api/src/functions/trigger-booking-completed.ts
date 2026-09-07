@@ -13,7 +13,7 @@ import { calculateCommission } from '../services/commission.service.js';
 import { getGlobalCommissionBps, resolveCommissionBps } from '../services/commission-config.service.js';
 import { RazorpayRouteService } from '../services/razorpayRoute.service.js';
 import { sendTechEarningsUpdate } from '../services/fcm.service.js';
-import { recordCommissionDue, finalizeLedgerForTechnician } from '../services/commission-settlement.service.js';
+import { settleCashCompletion } from '../services/commission-settlement.service.js';
 import type { AuditAction } from '../types/admin.js';
 
 const DB_NAME = process.env['COSMOS_DATABASE'] ?? 'homeservices';
@@ -54,37 +54,13 @@ export async function settleBooking(bookingRaw: unknown, ctx: InvocationContext)
 
   // ── CASH_ON_SERVICE path (pilot default) ────────────────────────────────────
   // Technician already holds the cash; platform records a commission receivable.
-  // No money transfer to technician.
+  // No money transfer to technician. Side effects (audit, job-count increment, FCM) live in
+  // settleCashCompletion so this trigger and the synchronous active-job COMPLETED transition
+  // (Task 9) share exactly-once semantics regardless of which one wins the race to create the
+  // receivable row. A throwing recordCommissionDue (inside settleCashCompletion) propagates —
+  // see handleBookingCompletedBatch below for why that must not be swallowed.
   if (paymentMethod !== 'RAZORPAY') {
-    const r = await recordCommissionDue(booking);
-    if ('skipped' in r) return;
-
-    if (r.created) {
-      try {
-        await systemAuditEntry('COMMISSION_DUE_RECORDED', bookingId, {
-          technicianId,
-          bookingAmount,
-          commissionBps: r.commissionBps,
-          commissionDue: r.commissionDue,
-          commissionResolvedFrom: r.commissionResolvedFrom,
-        });
-      } catch (auditErr: unknown) {
-        Sentry.captureException(auditErr);
-      }
-
-      try {
-        await Promise.all([
-          incrementCompletedJobCount(technicianId),
-          sendTechEarningsUpdate(technicianId, { bookingId, commissionDue: r.commissionDue }),
-        ]);
-      } catch (err: unknown) {
-        Sentry.captureException(err);
-      }
-    } else {
-      ctx.log(`settleBooking: receivable already recorded for ${bookingId} — finalizing only`);
-    }
-
-    await finalizeLedgerForTechnician(technicianId);
+    await settleCashCompletion(booking, { log: (s) => ctx.log(s) });
     return;
   }
 

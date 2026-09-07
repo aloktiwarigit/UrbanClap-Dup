@@ -8,7 +8,7 @@ import { bookingEventRepo } from '../cosmos/booking-event-repository.js';
 import { catalogueRepo } from '../cosmos/catalogue-repository.js';
 import { haversine } from '../cosmos/geo.js';
 import { sendBookingStatusUpdatePush, sendLocationUpdatePush } from '../services/fcm.service.js';
-import { recordCommissionDue, finalizeLedgerForTechnician } from '../services/commission-settlement.service.js';
+import { settleCashCompletion } from '../services/commission-settlement.service.js';
 import { auditLog } from '../services/auditLog.service.js';
 import type { BookingDoc as _BookingDoc } from '../schemas/booking.js';
 import { CollectionMethodSchema } from '../schemas/commission-receivable.js';
@@ -151,8 +151,10 @@ export const transitionStatusHandler: HttpHandler = async (req, ctx: InvocationC
 
   if (body.targetStatus === 'COMPLETED') {
     try {
-      await recordCommissionDue(updated);
-      await finalizeLedgerForTechnician(uid);
+      // E21-S02 Codex P1 fix: settleCashCompletion internally guards RAZORPAY bookings
+      // (skipped: 'NOT_CASH') and only fires side effects for whichever caller actually
+      // creates the receivable — see commission-settlement.service.ts.
+      await settleCashCompletion(updated, { log: (s) => ctx.log(s) });
     } catch (e: unknown) {
       // The change-feed trigger is the at-least-once catch-up; never fail the transition here.
       Sentry.captureException(e);
