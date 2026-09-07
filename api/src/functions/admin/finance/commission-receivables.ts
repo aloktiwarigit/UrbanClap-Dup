@@ -79,6 +79,24 @@ export const adminCommissionReceivablesDashboardHandler: AdminHttpHandler = asyn
     }
     const unreconciledTechnicianCount = unreconciled.size;
 
+    // Dashboard-wide, page-independent total: computed over the FULL set before any sort/slice/
+    // filter, so it never changes across pages and never omits an off-page balance. One
+    // contribution per technician — the cached hold is preferred (it's the same source the rows
+    // display); a technician present only in the DUE aggregate (hold write hasn't landed yet)
+    // falls back to that aggregate so it isn't silently dropped from the headline figure.
+    const totalOutstanding = (() => {
+      const seen = new Set<string>();
+      let total = 0;
+      for (const t of allWithHold) {
+        seen.add(t.id);
+        total += t.commissionHold.outstandingPaise;
+      }
+      for (const g of dueGroups) {
+        if (!seen.has(g.technicianId)) total += g.outstandingPaise;
+      }
+      return total;
+    })();
+
     const sorted = [...allWithHold].sort(
       (a, b) => b.commissionHold.outstandingPaise - a.commissionHold.outstandingPaise,
     );
@@ -106,7 +124,6 @@ export const adminCommissionReceivablesDashboardHandler: AdminHttpHandler = asyn
       staleAfter: new Date(new Date(t.commissionHold.evaluatedAt).getTime() + HOLD_STALE_AFTER_MS).toISOString(),
       ...(t.commissionHold.override !== undefined ? { override: t.commissionHold.override } : {}),
     }));
-    const totalOutstanding = technicians.reduce((acc, t) => acc + t.outstandingPaise, 0);
 
     return {
       status: 200,
@@ -141,8 +158,12 @@ export const adminCommissionReceivablesPerTechHandler: AdminHttpHandler = async 
       readCommissionHold(technicianId),
     ]);
 
+    // Only a DUE row carries real outstanding balance — same guard as the technician-facing
+    // view (commission-view.service.ts): WAIVED allocations are deliberately excluded from
+    // remittedAmount, so a WAIVED row's outstandingOf() reads its full commissionDue as still
+    // owed unless gated here; a REMITTED row is settled and must also read 0.
     const receivablesOut = receivables
-      .map((r) => ({ ...r, outstandingPaise: outstandingOf(r) }))
+      .map((r) => ({ ...r, outstandingPaise: r.remittanceStatus === 'DUE' ? outstandingOf(r) : 0 }))
       .sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0));
     const remittancesOut = [...remittances].sort((a, b) =>
       a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0,

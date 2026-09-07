@@ -149,6 +149,52 @@ describe('adminCommissionReceivablesDashboardHandler', () => {
     expect(body2.continuationToken).toBeUndefined();
   });
 
+  it('totalOutstanding is page-independent: identical on page 1 and page 2, and equals the sum over all 60', async () => {
+    const roster = Array.from({ length: 60 }, (_, i) => ({
+      id: `tech-${String(i).padStart(3, '0')}`,
+      commissionHold: {
+        outstandingPaise: (i + 1) * 100,
+        dueCount: 1,
+        state: 'WARN' as const,
+        evaluatedAt: '2026-09-01T00:00:00.000Z',
+      },
+    }));
+    const expectedTotal = roster.reduce((sum, t) => sum + t.commissionHold.outstandingPaise, 0);
+    vi.mocked(techRepo.listAllTechniciansWithHold).mockResolvedValue(roster);
+    vi.mocked(commissionReceivableRepo.sumDueGroupedByTechnician).mockResolvedValue([]);
+    vi.mocked(techRepo.getTechniciansByIds).mockResolvedValue([]);
+
+    const page1 = (await adminCommissionReceivablesDashboardHandler(getReq(), {} as never, ctx)) as HttpResponseInit;
+    const body1 = page1.jsonBody as { totalOutstanding: number; continuationToken?: string };
+    expect(body1.totalOutstanding).toBe(expectedTotal);
+    expect(expectedTotal).toBe(183000); // sum(100..6000 step 100) = 100 * (60*61/2)
+
+    const page2 = (await adminCommissionReceivablesDashboardHandler(
+      getReq(`http://localhost/api/v1/admin/finance/commission-receivables?continuationToken=${body1.continuationToken}`),
+      {} as never,
+      ctx,
+    )) as HttpResponseInit;
+    const body2 = page2.jsonBody as { totalOutstanding: number };
+    expect(body2.totalOutstanding).toBe(expectedTotal);
+  });
+
+  it('totalOutstanding: a DUE group with no hold contributes its DUE amount; a technician in both contributes only its hold value', async () => {
+    const holdOnly = { outstandingPaise: 5000, dueCount: 1, state: 'WARN' as const, evaluatedAt: '2026-09-01T00:00:00.000Z' };
+    vi.mocked(techRepo.listAllTechniciansWithHold).mockResolvedValue([
+      { id: 'tech-1', commissionHold: holdOnly }, // present in both -> hold value (5000) only, not +7000
+    ]);
+    vi.mocked(commissionReceivableRepo.sumDueGroupedByTechnician).mockResolvedValue([
+      { technicianId: 'tech-1', outstandingPaise: 7000, dueCount: 2, oldestDueAt: '2026-08-01T00:00:00.000Z' },
+      { technicianId: 'tech-2', outstandingPaise: 3000, dueCount: 1, oldestDueAt: '2026-08-15T00:00:00.000Z' }, // no hold at all -> falls back to DUE
+    ]);
+    vi.mocked(techRepo.getTechniciansByIds).mockResolvedValue([]);
+
+    const res = (await adminCommissionReceivablesDashboardHandler(getReq(), {} as never, ctx)) as HttpResponseInit;
+
+    const body = res.jsonBody as { totalOutstanding: number };
+    expect(body.totalOutstanding).toBe(8000); // 5000 (hold, tech-1) + 3000 (DUE fallback, tech-2) — NOT 5000+7000+3000
+  });
+
   it('returns 400 INVALID_CONTINUATION_TOKEN for a malformed token', async () => {
     const res = (await adminCommissionReceivablesDashboardHandler(
       getReq('http://localhost/api/v1/admin/finance/commission-receivables?continuationToken=not-a-valid-token!!!'),
@@ -237,6 +283,58 @@ describe('adminCommissionReceivablesPerTechHandler', () => {
     expect(body.receivables.find((r) => r.id === 'booking-2')!.outstandingPaise).toBe(0);
     expect(body.cashCollectedPaise).toBe(7000); // Σ remittances.amountPaise only
     expect(body.creditAppliedPaise).toBe(4000); // Σ INCENTIVE allocations only, never REMITTANCE
+  });
+
+  it('gates per-receivable outstandingPaise on remittanceStatus === DUE: WAIVED and REMITTED read 0, a partially remitted DUE row reads commissionDue - remittedAmount', async () => {
+    const receivableWaived = {
+      ...receivableDue,
+      id: 'booking-3', bookingId: 'booking-3', remittanceStatus: 'WAIVED' as const,
+      // WAIVER allocations are deliberately excluded from remittedAmount, so remittedAmount stays
+      // 0 even though the debt was forgiven — outstandingOf() alone would read the full
+      // commissionDue as still owed.
+      remittedAmount: 0,
+      createdAt: '2026-07-01T00:00:00.000Z',
+      allocations: [
+        { id: 'waiver-1:booking-3', source: 'WAIVER' as const, refId: 'waiver-1', paise: 11000, appliedAt: '2026-07-01T00:00:00.000Z', byId: 'admin-1' },
+      ],
+    };
+    const receivablePartial = {
+      ...receivableDue,
+      id: 'booking-4', bookingId: 'booking-4', remittanceStatus: 'DUE' as const,
+      commissionDue: 11000, remittedAmount: 4000,
+      createdAt: '2026-07-15T00:00:00.000Z',
+    };
+    vi.mocked(commissionReceivableRepo.listLedger).mockResolvedValue({
+      receivables: [receivableDue, receivableWithIncentive, receivableWaived, receivablePartial],
+      remittances: [remittance],
+      credits: [],
+    });
+    vi.mocked(techRepo.readCommissionHold).mockResolvedValue({ hold, exists: true });
+
+    const res = (await adminCommissionReceivablesPerTechHandler(
+      makeTechReq('tech-1'),
+      {} as never,
+      ctx,
+    )) as HttpResponseInit;
+
+    expect(res.status).toBe(200);
+    const body = res.jsonBody as {
+      receivables: Array<{ id: string; outstandingPaise: number; commissionDue: number; remittedAmount?: number }>;
+      cashCollectedPaise: number;
+      creditAppliedPaise: number;
+    };
+    const byId = (id: string) => body.receivables.find((r) => r.id === id)!;
+    expect(byId('booking-3').outstandingPaise).toBe(0); // WAIVED -> 0, not full commissionDue
+    expect(byId('booking-2').outstandingPaise).toBe(0); // REMITTED -> 0
+    expect(byId('booking-4').outstandingPaise).toBe(7000); // partial DUE -> commissionDue - remittedAmount
+    expect(byId('booking-1').outstandingPaise).toBe(11000); // untouched DUE row unaffected
+    // other fields on the gated rows are unchanged
+    expect(byId('booking-3').commissionDue).toBe(11000);
+    expect(byId('booking-4').commissionDue).toBe(11000);
+    expect(byId('booking-4').remittedAmount).toBe(4000);
+    // cash/credit aggregates are untouched by the outstandingPaise gate
+    expect(body.cashCollectedPaise).toBe(7000);
+    expect(body.creditAppliedPaise).toBe(4000);
   });
 
   it('returns 400 when technicianId param missing', async () => {
