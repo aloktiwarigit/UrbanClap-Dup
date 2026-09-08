@@ -20,6 +20,7 @@ import { BalanceStack } from './BalanceStack';
 import { BalanceEvents } from './BalanceEvents';
 import { HoldOverrideDialog } from './HoldOverrideDialog';
 import { HoldChip } from './HoldChip';
+import { RemittanceDrawer } from './RemittanceDrawer';
 
 export interface TechnicianLedgerClientProps {
   technicianId: string;
@@ -46,6 +47,10 @@ export function TechnicianLedgerClient({
   const locale = useLocale();
   const { auth } = useAdminAuth();
   const canManageHold = hasCapability(auth?.role, 'settings.manage');
+  // Integration gap fix round 2: this is the only capability check gating the one control in the
+  // console that moves real money — the roll-up's recompute button is gated the same way
+  // (CommissionsClient.tsx), so this mirrors an existing pattern rather than inventing one.
+  const canRecordRemittance = hasCapability(auth?.role, 'finance.settleCommission');
   const { toast, show, dismiss } = useToast();
 
   const [detail, setDetail] = useState<CommissionLedgerDetail | null>(initialDetail ?? null);
@@ -55,6 +60,7 @@ export function TechnicianLedgerClient({
   const [configError, setConfigError] = useState<string | null>(null);
   const [overrideDialogOpen, setOverrideDialogOpen] = useState(false);
   const [overrideSubmitting, setOverrideSubmitting] = useState(false);
+  const [remittanceDrawerOpen, setRemittanceDrawerOpen] = useState(false);
 
   // Fetched independently of `loadConfig` below (fix round 1): this is the page the owner opens
   // at 11pm with a technician on the phone, and only the one "why is this technician on hold"
@@ -126,6 +132,16 @@ export function TechnicianLedgerClient({
     } catch {
       show(t('errors.clearOverrideFailed'), 'error');
     }
+  }
+
+  // Integration gap fix round 2: RemittanceDrawer never closes itself on success (by design — see
+  // its own doc comment) so the operator can read the recorded/mismatch/credit outcome before
+  // dismissing it themselves. This only refreshes the ledger underneath so the balance, receivable
+  // statuses, and remittance history are current the moment they do.
+  function handleRemittanceRecorded() {
+    void refreshDetail().catch(() => {
+      show(t('errors.detailLoadFailed'), 'error');
+    });
   }
 
   return (
@@ -215,12 +231,23 @@ export function TechnicianLedgerClient({
           <BalanceEvents events={buildBalanceEvents(detail)} />
 
           <section aria-labelledby="receivables-heading">
-            <h2
-              id="receivables-heading"
-              className="text-[length:var(--text-lg)] font-semibold text-[var(--color-text)] mb-[var(--space-3)]"
-            >
-              {t('detail.receivables.heading')}
-            </h2>
+            <div className="flex items-center justify-between gap-[var(--space-3)] mb-[var(--space-3)]">
+              <h2
+                id="receivables-heading"
+                className="text-[length:var(--text-lg)] font-semibold text-[var(--color-text)]"
+              >
+                {t('detail.receivables.heading')}
+              </h2>
+              {canRecordRemittance && (
+                <button
+                  type="button"
+                  onClick={() => setRemittanceDrawerOpen(true)}
+                  className="px-3 py-1 text-sm rounded border border-[var(--color-border)] text-[var(--color-text)]"
+                >
+                  {t('detail.receivables.recordPayment')}
+                </button>
+              )}
+            </div>
             {detail.receivables.length === 0 ? (
               <p className="text-sm text-[var(--color-text-muted)]">{t('detail.receivables.empty')}</p>
             ) : (
@@ -369,6 +396,14 @@ export function TechnicianLedgerClient({
         onClose={() => setOverrideDialogOpen(false)}
         onSubmit={(params) => void handleSaveOverride(params)}
         submitting={overrideSubmitting}
+      />
+
+      <RemittanceDrawer
+        open={remittanceDrawerOpen}
+        technicianId={technicianId}
+        receivables={detail?.receivables ?? []}
+        onClose={() => setRemittanceDrawerOpen(false)}
+        onRecorded={handleRemittanceRecorded}
       />
     </div>
   );

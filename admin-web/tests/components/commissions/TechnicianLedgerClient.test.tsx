@@ -1,8 +1,12 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { TechnicianLedgerClient } from '../../../src/components/commissions/TechnicianLedgerClient';
-import type { CommissionLedgerDetail, CommissionConfig } from '../../../src/api/commissions';
+import type {
+  CommissionLedgerDetail,
+  CommissionConfig,
+  RecordRemittanceResponse,
+} from '../../../src/api/commissions';
 
 // task-7 brief + design doc §4. This is the page the owner opens at 11pm when a technician
 // phones disputing a balance — it must state the hold reason in money terms, mark
@@ -48,6 +52,7 @@ vi.mock('next-intl', () => ({
       'detail.events.copied': 'Copied',
       'detail.events.empty': 'No balance events yet.',
       'detail.receivables.heading': 'Receivables',
+      'detail.receivables.recordPayment': 'Record payment',
       'detail.receivables.columns.service': 'Service',
       'detail.receivables.columns.date': 'Date',
       'detail.receivables.columns.amount': 'Commission due',
@@ -75,6 +80,20 @@ vi.mock('next-intl', () => ({
       'detail.override.reasonRequired': 'A reason is required.',
       'detail.override.save': 'Save override',
       'detail.override.cancel': 'Cancel',
+      // RemittanceDrawer is always mounted alongside this screen (integration gap fix round 2) —
+      // only the keys its own tests actually exercise are needed here.
+      'remittance.title': 'Record payment',
+      'remittance.fields.amountLabel': 'Amount (₹)',
+      'remittance.fields.methodLabel': 'Method',
+      'remittance.fields.methodUpi': 'UPI',
+      'remittance.fields.methodCash': 'Cash deposit',
+      'remittance.fields.refLabel': 'Reference',
+      'remittance.fields.noteLabel': 'Note (optional)',
+      'remittance.preview.label': 'Preview. The server recalculates when you record this.',
+      'remittance.preview.empty': 'No amount entered yet.',
+      'remittance.actions.cancel': 'Cancel',
+      'remittance.actions.submit': 'Record payment',
+      'remittance.outcomes.success': 'Payment recorded',
     };
     const template = dictionary[key] ?? `[${key}]`;
     if (!params) return template;
@@ -91,17 +110,22 @@ const {
   fetchCommissionConfig,
   setHoldOverride,
   clearHoldOverride,
+  recordRemittance,
 } = vi.hoisted(() => ({
   fetchTechnicianLedger: vi.fn(),
   fetchCommissionConfig: vi.fn(),
   setHoldOverride: vi.fn(),
   clearHoldOverride: vi.fn(),
+  // RemittanceDrawer (integration gap fix round 2) imports this directly from the same module —
+  // it is always mounted alongside this screen, so it must be mocked here too.
+  recordRemittance: vi.fn(),
 }));
 vi.mock('@/api/commissions', () => ({
   fetchTechnicianLedger,
   fetchCommissionConfig,
   setHoldOverride,
   clearHoldOverride,
+  recordRemittance,
 }));
 
 let mockRole: string | null = 'super-admin';
@@ -200,6 +224,12 @@ beforeEach(() => {
   fetchCommissionConfig.mockReset();
   setHoldOverride.mockReset();
   clearHoldOverride.mockReset();
+  recordRemittance.mockReset();
+  try {
+    window.localStorage.clear();
+  } catch {
+    // not available in every test environment configuration — harmless to skip
+  }
 });
 
 describe('TechnicianLedgerClient', () => {
@@ -383,5 +413,69 @@ describe('TechnicianLedgerClient', () => {
     // No page-level error for a config-only failure.
     expect(screen.queryByText("Could not load this technician's ledger.")).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  // Integration gap fix round 2: RemittanceDrawer previously had zero callers anywhere in the
+  // codebase — dead code, with several fix-round-2 findings latent until it was actually wired up.
+  // It is gated on the same capability as the roll-up's recompute button (finance.settleCommission).
+  it('hides the record-payment action for a role without finance.settleCommission', () => {
+    mockRole = 'ops';
+    render(
+      <TechnicianLedgerClient technicianId="t1" initialDetail={detail({})} initialConfig={config({})} />,
+    );
+    expect(screen.queryByRole('button', { name: 'Record payment' })).not.toBeInTheDocument();
+  });
+
+  it('shows the record-payment action for a role with finance.settleCommission', () => {
+    mockRole = 'finance';
+    render(
+      <TechnicianLedgerClient technicianId="t1" initialDetail={detail({})} initialConfig={config({})} />,
+    );
+    expect(screen.getByRole('button', { name: 'Record payment' })).toBeInTheDocument();
+  });
+
+  it('opens the remittance drawer and refreshes the ledger after recording a payment', async () => {
+    const user = userEvent.setup();
+    const response: RecordRemittanceResponse = {
+      remittance: {
+        id: 'rem:k1',
+        docType: 'REMITTANCE',
+        technicianId: 't1',
+        partitionKey: 't1',
+        amountPaise: 13478,
+        method: 'UPI',
+        ref: 'upi-2',
+        allocations: [{ bookingId: 'b1', paise: 13478 }],
+        creditCreatedPaise: 0,
+        recordedByAdminId: 'admin-1',
+        idempotencyKey: 'k2',
+        createdAt: '2026-09-07T11:00:00.000Z',
+      },
+      allocations: [{ bookingId: 'b1', paise: 13478 }],
+      creditCreatedPaise: 0,
+      hold: { outstandingPaise: 0, dueCount: 0, state: 'CLEAR', evaluatedAt: '2026-09-07T11:00:00.000Z' },
+      holdRecomputePending: false,
+      replayed: false,
+    };
+    recordRemittance.mockResolvedValue(response);
+    fetchTechnicianLedger.mockResolvedValue(
+      detail({ receivables: [], hold: null, cashCollectedPaise: 619300 }),
+    );
+
+    render(
+      <TechnicianLedgerClient technicianId="t1" initialDetail={detail({})} initialConfig={config({})} />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Record payment' }));
+    const dialog = screen.getByRole('dialog');
+    await user.type(within(dialog).getByLabelText(/amount/i), '134.78');
+    await user.type(within(dialog).getByLabelText(/reference/i), 'upi-2');
+    await user.click(within(dialog).getByRole('button', { name: 'Record payment' }));
+
+    await waitFor(() => expect(recordRemittance).toHaveBeenCalledTimes(1));
+    // `initialDetail` was supplied, so the mount effect never calls this — the only call is the
+    // post-record refresh, proving `onRecorded` actually triggers it.
+    await waitFor(() => expect(fetchTechnicianLedger).toHaveBeenCalledTimes(1));
+    expect(fetchTechnicianLedger).toHaveBeenCalledWith('t1');
   });
 });

@@ -575,6 +575,7 @@
       },
       "receivables": {
         "heading": "Receivables",
+        "recordPayment": "Record payment",
         "columns": {
           "service": "Service",
           "date": "Date",
@@ -637,13 +638,18 @@
       },
       "actions": {
         "cancel": "Cancel",
-        "submit": "Record payment"
+        "submit": "Record payment",
+        "discardPending": "This is a different payment. Discard the pending attempt."
+      },
+      "warnings": {
+        "discardRisk": "If that earlier attempt did land, discarding it and recording this payment will charge the technician twice."
       },
       "errors": {
         "invalidAmount": "Enter an amount greater than ₹0, with at most 2 decimal places.",
         "refRequired": "A reference is required.",
         "recordFailed": "Could not confirm this payment was recorded. Check the technician's ledger before trying again.",
-        "idempotencyMismatch": "That reference was already used for a different amount. Check the amount and reference, then try again."
+        "timeout": "This is taking longer than expected. The payment may or may not have gone through — check the technician's ledger before trying again.",
+        "idempotencyMismatch": "A previous attempt for this technician has not been confirmed: {amount} via {method}, reference {ref}."
       },
       "outcomes": {
         "success": "Payment recorded",

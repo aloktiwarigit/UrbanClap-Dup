@@ -1,14 +1,18 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { RemittanceDrawer } from '../../../src/components/commissions/RemittanceDrawer';
 import type { CommissionLedgerDetail, RecordRemittanceResponse } from '../../../src/api/commissions';
 
-// task-8 brief + design doc §5, fix round 1. This is the one place in the commission console that
-// moves real money: the idempotency key must survive retries of the same attempt AND survive the
-// drawer being closed and reopened after an ambiguous failure (fix round 1, C1/C2), the drawer
+// task-8 brief + design doc §5, fix rounds 1-2. This is the one place in the commission console
+// that moves real money: the idempotency key must survive retries of the same attempt AND survive
+// the drawer being closed and reopened after an ambiguous failure (fix round 1, C1/C2), the drawer
 // must not be closeable mid-flight, and the client-computed allocation preview must never be
 // presented as truth — the server recomputes it authoritatively and this drawer must say so
 // explicitly, persistently, when the two disagree, rather than swapping the numbers in silently.
+// Fix round 2 adds: the abandoned key must not become a wedge that blocks every later payment
+// (N1), the pending record moved to localStorage so two tabs cannot double-record (N3), a bounded
+// watchdog so a hung request cannot strand the drawer closed forever (N2), and the persistent
+// disclosures must actually be persistent, not just textually present somewhere on the page (M2).
 
 vi.mock('next-intl', () => ({
   useTranslations: () => (key: string, params?: Record<string, string | number>) => {
@@ -27,12 +31,17 @@ vi.mock('next-intl', () => ({
       'remittance.actual.creditCreated': 'Credit created: {amount}.',
       'remittance.actions.cancel': 'Cancel',
       'remittance.actions.submit': 'Record payment',
+      'remittance.actions.discardPending': 'This is a different payment. Discard the pending attempt.',
+      'remittance.warnings.discardRisk':
+        'If that earlier attempt did land, discarding it and recording this payment will charge the technician twice.',
       'remittance.errors.invalidAmount': 'Enter an amount greater than ₹0, with at most 2 decimal places.',
       'remittance.errors.refRequired': 'A reference is required.',
       'remittance.errors.recordFailed':
         "Could not confirm this payment was recorded. Check the technician's ledger before trying again.",
+      'remittance.errors.timeout':
+        'This is taking longer than expected. The payment may or may not have gone through — check the technician\'s ledger before trying again.',
       'remittance.errors.idempotencyMismatch':
-        'That reference was already used for a different amount. Check the amount and reference, then try again.',
+        'A previous attempt for this technician has not been confirmed: {amount} via {method}, reference {ref}.',
       'remittance.outcomes.success': 'Payment recorded',
       'remittance.outcomes.replayed': 'Already recorded. This is the original receipt, not a second payment.',
       'remittance.outcomes.recomputePending': 'Recorded. The balance will catch up shortly.',
@@ -151,6 +160,14 @@ function twoCalls<T>(calls: T[]): [T, T] {
   return [first, second];
 }
 
+function threeCalls<T>(calls: T[]): [T, T, T] {
+  const [first, second, third] = calls;
+  if (first === undefined || second === undefined || third === undefined) {
+    throw new Error(`expected exactly three recorded calls, got ${calls.length}`);
+  }
+  return [first, second, third];
+}
+
 async function fillAndSubmit(amount = '200', ref = 'ref-1') {
   fireEvent.change(screen.getByLabelText(/amount/i), { target: { value: amount } });
   fireEvent.change(screen.getByLabelText(/reference/i), { target: { value: ref } });
@@ -160,7 +177,8 @@ async function fillAndSubmit(amount = '200', ref = 'ref-1') {
 
 beforeEach(() => {
   recordRemittance.mockReset();
-  window.sessionStorage.clear();
+  // Fix round 2 (N3): the pending record moved from sessionStorage to localStorage.
+  window.localStorage.clear();
 });
 
 describe('RemittanceDrawer', () => {
@@ -220,7 +238,7 @@ describe('RemittanceDrawer', () => {
 
   // Fix round 1, C2: the brief tied the key's lifetime to the drawer opening, which meant closing
   // after an ambiguous failure and reopening minted a fresh key — a real double charge. The key
-  // is now scoped to the technician (sessionStorage) and is deleted only on success.
+  // is scoped to the technician (localStorage, fix round 2 N3) and is deleted only on success.
   it('reuses the same idempotency key after closing and reopening following a failed attempt', async () => {
     recordRemittance.mockRejectedValueOnce(Object.assign(new Error('net'), { status: 503 }));
     recordRemittance.mockResolvedValueOnce(okResponse());
@@ -320,13 +338,18 @@ describe('RemittanceDrawer', () => {
     expect(recordRemittance).not.toHaveBeenCalled();
   });
 
+  // Fix round 2, M2: scoped to the persistent `allocation-disclosures` container, not just
+  // `findByText` anywhere on the page — a regression back to rendering this via the auto-dismissing
+  // toast would still pass a bare `findByText` assertion (the toast renders the same string), but
+  // this container only exists in the non-toast, persistent implementation.
   it('reports a replayed receipt as the original, not a second payment', async () => {
     recordRemittance.mockResolvedValue(okResponse({ replayed: true }));
     render(
       <RemittanceDrawer open technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
     );
     await fillAndSubmit();
-    expect(await screen.findByText(/original receipt, not a second payment/i)).toBeInTheDocument();
+    const disclosures = await screen.findByTestId('allocation-disclosures');
+    expect(within(disclosures).getByText(/original receipt, not a second payment/i)).toBeInTheDocument();
   });
 
   it('says the balance will catch up when the hold recompute is pending', async () => {
@@ -338,15 +361,40 @@ describe('RemittanceDrawer', () => {
     expect(await screen.findByRole('status')).toHaveTextContent(/catch up shortly/i);
   });
 
-  it('explains an idempotency mismatch as a reference-reuse problem', async () => {
-    recordRemittance.mockRejectedValue(
+  // Fix round 2, N1: the abandoned-key wedge. A first attempt fails ambiguously (response lost),
+  // leaving its key AND fingerprint (₹200 via UPI, ref-1) durably pending. A second, genuinely
+  // different attempt (₹50, ref-2) reuses that same key (per C2 — it is never swapped just because
+  // the inputs changed) and the server correctly 409s it as a fingerprint mismatch. The drawer must
+  // report the FIRST attempt's fingerprint — not blame ref-2, which was never used for anything —
+  // and must offer a way out: discarding frees the slot so the next submission mints a fresh key.
+  it('on an idempotency mismatch, reports the pending attempt that actually owns the key and lets the operator discard it', async () => {
+    recordRemittance.mockRejectedValueOnce(Object.assign(new Error('net'), { status: 503 }));
+    recordRemittance.mockRejectedValueOnce(
       Object.assign(new Error(), { status: 409, body: { code: 'IDEMPOTENCY_MISMATCH' } }),
     );
     render(
       <RemittanceDrawer open technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
     );
-    await fillAndSubmit();
-    expect(await screen.findByRole('alert')).toHaveTextContent(/already used for a different amount/i);
+    await fillAndSubmit('200', 'ref-1');
+    await fillAndSubmit('50', 'ref-2');
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('₹200.00');
+    expect(alert).toHaveTextContent('ref-1');
+    expect(alert).not.toHaveTextContent('ref-2');
+
+    recordRemittance.mockResolvedValueOnce(okResponse());
+    fireEvent.click(screen.getByRole('button', { name: /discard the pending attempt/i }));
+    fireEvent.click(screen.getByRole('button', { name: /record payment/i }));
+
+    await waitFor(() => expect(recordRemittance).toHaveBeenCalledTimes(3));
+    const [firstCall, secondCall, thirdCall] = threeCalls(
+      recordRemittance.mock.calls as [{ idempotencyKey: string }][],
+    );
+    // The mismatched retry (call 2) reused call 1's key exactly, per C2.
+    expect(secondCall[0].idempotencyKey).toBe(firstCall[0].idempotencyKey);
+    // Discarding is the only thing that mints a new one.
+    expect(thirdCall[0].idempotencyKey).not.toBe(firstCall[0].idempotencyKey);
   });
 
   it('tells the operator when the server allocated differently than previewed', async () => {
@@ -356,7 +404,8 @@ describe('RemittanceDrawer', () => {
       <RemittanceDrawer open technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
     );
     await fillAndSubmit();
-    expect(await screen.findByText(/Allocated differently than previewed/i)).toBeInTheDocument();
+    const disclosures = await screen.findByTestId('allocation-disclosures');
+    expect(within(disclosures).getByText(/Allocated differently than previewed/i)).toBeInTheDocument();
   });
 
   // Fix round 1, I2: a re-split with the same total and job count must not quote two identical
@@ -374,7 +423,8 @@ describe('RemittanceDrawer', () => {
       <RemittanceDrawer open technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
     );
     await fillAndSubmit();
-    const note = await screen.findByText(/Allocated differently than previewed/i);
+    const disclosures = await screen.findByTestId('allocation-disclosures');
+    const note = within(disclosures).getByText(/Allocated differently than previewed/i);
     expect(note).toHaveTextContent('Older job');
     expect(note).toHaveTextContent('Newer job');
     expect(note).not.toHaveTextContent(/across 2 jobs; recorded/i);
@@ -389,8 +439,9 @@ describe('RemittanceDrawer', () => {
       <RemittanceDrawer open technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
     );
     await fillAndSubmit();
-    expect(await screen.findByText(/original receipt, not a second payment/i)).toBeInTheDocument();
-    expect(screen.getByText(/Allocated differently than previewed/i)).toBeInTheDocument();
+    const disclosures = await screen.findByTestId('allocation-disclosures');
+    expect(within(disclosures).getByText(/original receipt, not a second payment/i)).toBeInTheDocument();
+    expect(within(disclosures).getByText(/Allocated differently than previewed/i)).toBeInTheDocument();
   });
 
   // Fix round 1, I3: an overpayment silently becoming a credit is a money bug in the UI layer.
@@ -400,7 +451,8 @@ describe('RemittanceDrawer', () => {
       <RemittanceDrawer open technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
     );
     await fillAndSubmit();
-    expect(await screen.findByText(/Credit created/i)).toHaveTextContent('₹5,000.00');
+    const disclosures = await screen.findByTestId('allocation-disclosures');
+    expect(within(disclosures).getByText(/Credit created/i)).toHaveTextContent('₹5,000.00');
   });
 
   // Fix round 1, I1: a second, distinct payment must not keep showing the first payment's
@@ -416,5 +468,37 @@ describe('RemittanceDrawer', () => {
     fireEvent.change(screen.getByLabelText(/amount/i), { target: { value: '50' } });
     expect(screen.getByText('Preview. The server recalculates when you record this.')).toBeInTheDocument();
     expect(screen.queryByText('Recorded allocation')).not.toBeInTheDocument();
+  });
+
+  // Fix round 2, N2: a request that never settles must not strand the operator with a
+  // permanently-unclosable drawer (Cancel disabled, backdrop/×/Escape all no-ops per C1, inside a
+  // focus lock). The bounded client-side watchdog must release `submitting` on its own.
+  it('re-enables the drawer after a bounded wait when the request never settles', async () => {
+    vi.useFakeTimers();
+    try {
+      recordRemittance.mockImplementation(() => new Promise<never>(() => {}));
+      const onClose = vi.fn();
+      render(
+        <RemittanceDrawer open technicianId="t1" receivables={dueRows} onClose={onClose} onRecorded={noop} />,
+      );
+      fireEvent.change(screen.getByLabelText(/amount/i), { target: { value: '200' } });
+      fireEvent.change(screen.getByLabelText(/reference/i), { target: { value: 'ref-1' } });
+      fireEvent.click(screen.getByRole('button', { name: /record payment/i }));
+
+      // Let the submit handler run up to its awaited call before the request is (deliberately)
+      // left hanging.
+      await Promise.resolve();
+      expect(screen.getByRole('button', { name: /cancel/i })).toBeDisabled();
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(20_000);
+      });
+
+      expect(screen.getByRole('button', { name: /cancel/i })).not.toBeDisabled();
+      fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
+      expect(onClose).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -43,6 +43,23 @@ function isWellFormedRupeeAmount(raw: string): boolean {
   return AMOUNT_PATTERN.test(raw.trim());
 }
 
+// Fix round 2 (N2): rural/low-connectivity networks (the Ayodhya/UP pivot) can leave this request
+// hanging well past what an operator will wait. Without a bound, `submitting` never clears and the
+// drawer — deliberately unclosable mid-flight per C1 — becomes unclosable *forever*, with no
+// escape but a page reload. 20s is generous but bounded. This is a client-side watchdog
+// (`Promise.race`, not `AbortSignal`) deliberately: it re-enables the drawer regardless of whether
+// the underlying request ever settles, and it is exercisable with fake timers in tests, which a
+// real network abort is not.
+const REQUEST_TIMEOUT_MS = 20_000;
+
+function timeoutAfter(ms: number): Promise<never> {
+  return new Promise((_, reject) => {
+    window.setTimeout(() => {
+      reject(Object.assign(new Error('RemittanceDrawer: record request timed out'), { isTimeout: true }));
+    }, ms);
+  });
+}
+
 /**
  * The client-side allocation preview (design doc §5): purely for display, computed
  * oldest-due-first over the DUE receivables handed to this drawer. Never sent to the server and
@@ -102,6 +119,14 @@ function isIdempotencyMismatch(err: unknown): boolean {
   return isRecord(body) && body.code === 'IDEMPOTENCY_MISMATCH';
 }
 
+function isTimeoutError(err: unknown): boolean {
+  return isRecord(err) && err.isTimeout === true;
+}
+
+function methodLabel(method: 'UPI' | 'CASH_DEPOSIT', t: ReturnType<typeof useTranslations>): string {
+  return method === 'UPI' ? t('remittance.fields.methodUpi') : t('remittance.fields.methodCash');
+}
+
 function allocationLabel(bookingId: string, receivables: RemittanceReceivable[]): string {
   return receivables.find((r) => r.bookingId === bookingId)?.serviceName ?? bookingId;
 }
@@ -147,63 +172,116 @@ function describeAllocationMismatch(
   });
 }
 
-function pendingKeyStorageName(technicianId: string): string {
-  return `commissions.remittance.pendingIdempotencyKey.${technicianId}`;
+interface PendingAttempt {
+  key: string;
+  amountPaise: number;
+  method: 'UPI' | 'CASH_DEPOSIT';
+  ref: string;
+}
+
+function pendingAttemptStorageName(technicianId: string): string {
+  return `commissions.remittance.pendingAttempt.${technicianId}`;
+}
+
+function mintKey(): string {
+  return crypto.randomUUID();
 }
 
 /**
- * Fix round 1 (C1/C2): the pending idempotency key is scoped to the *technician*, not to the
- * drawer's open/close lifecycle, and persisted in `sessionStorage` rather than only a ref — a ref
- * is lost on unmount and can never survive a page reload. On open, an existing pending key for
- * this technician is reused; one is minted (and persisted immediately) only when none exists.
- * This is what makes close-and-reopen after an ambiguous failure safe: the same key survives the
- * round trip, so a retry after "closing to start clean" still dedupes against the first attempt
- * instead of becoming a second real payment.
+ * Fix round 1 (C1/C2) + fix round 2 (N1/N3). The pending idempotency key is scoped to the
+ * *technician*, not to the drawer's open/close lifecycle, and persisted in `localStorage` — not
+ * `sessionStorage` (fix round 2, N3): `sessionStorage` is per browsing *context* (per tab), so two
+ * tabs open on the same technician would each mint their own key and could both succeed, producing
+ * two real remittances. `localStorage` is shared across every tab for this origin, which is the
+ * only thing that actually prevents that. This makes the pending record slightly longer-lived than
+ * a tab close would have made it, but that wedge is now escapable (see `clearPendingAttempt`,
+ * called from the operator's explicit "discard" action) — an unresolvable cross-tab double charge
+ * is not.
+ *
+ * `PendingAttempt` carries the fingerprint the key was minted for (`amountPaise`, `method`, `ref`),
+ * not just the key itself (fix round 2, N1). Without it, a 409 `IDEMPOTENCY_MISMATCH` had nothing
+ * true to say — the old copy blamed whatever reference the operator had *just* typed, which had
+ * never been used for anything. The fingerprint lets the drawer instead describe the *actual*
+ * unconfirmed attempt (amount/method/reference) that key was minted for.
  */
-function loadOrMintPendingKey(technicianId: string): string {
+function loadPendingAttempt(technicianId: string): PendingAttempt | null {
   try {
-    const existing = window.sessionStorage.getItem(pendingKeyStorageName(technicianId));
-    if (existing !== null) return existing;
+    const raw = window.localStorage.getItem(pendingAttemptStorageName(technicianId));
+    if (raw === null) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      isRecord(parsed) &&
+      typeof parsed.key === 'string' &&
+      typeof parsed.amountPaise === 'number' &&
+      (parsed.method === 'UPI' || parsed.method === 'CASH_DEPOSIT') &&
+      typeof parsed.ref === 'string'
+    ) {
+      return { key: parsed.key, amountPaise: parsed.amountPaise, method: parsed.method, ref: parsed.ref };
+    }
+    return null;
   } catch {
-    // sessionStorage unavailable (privacy mode, embedded webview) — fall through to an
-    // in-memory-only key; the ref still protects retries within this page load.
+    // localStorage unavailable (privacy mode, embedded webview), or a malformed/legacy entry —
+    // either way, treat it as "no pending attempt" rather than throwing. The ref-held key still
+    // protects retries within this page load even when storage cannot be read at all.
+    return null;
   }
-  const minted = crypto.randomUUID();
+}
+
+/**
+ * Only called once per key — the first time it is actually sent to the server (see the
+ * write-if-absent check at the call site in `handleSubmit`). A key already pending keeps its
+ * *original* fingerprint even if the operator changes the amount/ref before retrying with the same
+ * key; overwriting it would erase the one thing a later mismatch message needs to say.
+ */
+function savePendingAttempt(technicianId: string, attempt: PendingAttempt): void {
   try {
-    window.sessionStorage.setItem(pendingKeyStorageName(technicianId), minted);
+    window.localStorage.setItem(pendingAttemptStorageName(technicianId), JSON.stringify(attempt));
   } catch {
     // best-effort persistence only
   }
-  return minted;
 }
 
-function clearPendingKey(technicianId: string): void {
+function clearPendingAttempt(technicianId: string): void {
   try {
-    window.sessionStorage.removeItem(pendingKeyStorageName(technicianId));
+    window.localStorage.removeItem(pendingAttemptStorageName(technicianId));
   } catch {
     // best-effort
   }
 }
 
 /**
- * The remittance drawer (design doc §5, task-8 brief, fix round 1) — the one place in the
+ * The remittance drawer (design doc §5, task-8 brief, fix rounds 1-2) — the one place in the
  * commission console that moves real money. Invariants this file exists to protect:
  *
- * 1. The idempotency key is keyed to the *technician* (see `loadOrMintPendingKey` above), not to
- *    the drawer's open/close lifecycle. It survives retries of the same attempt, survives the
- *    drawer being closed and reopened after an ambiguous failure, and survives a page reload. It
- *    is deleted only after a *successful* record — a genuinely abandoned attempt keeps its key
- *    until that technician's next successful payment, which is the safe direction: a replay
- *    returns the original receipt instead of charging again.
- * 2. The drawer cannot be closed (backdrop, ×, Escape, or Cancel) while a request is in flight —
+ * 1. The idempotency key is keyed to the *technician* (see `loadPendingAttempt` above), not to the
+ *    drawer's open/close lifecycle, and shared across tabs via `localStorage` (fix round 2, N3 —
+ *    `sessionStorage` is per-tab and cannot stop two tabs from both recording a real payment). It
+ *    survives retries of the same attempt, survives the drawer being closed and reopened after an
+ *    ambiguous failure, and survives a page reload. It is deleted only after a *successful* record
+ *    — a genuinely abandoned attempt keeps its key until that technician's next successful
+ *    payment, which is the safe direction: a replay returns the original receipt instead of
+ *    charging again.
+ * 2. That safety has a cost the drawer must not let become a dead end (fix round 2, N1): an
+ *    abandoned key otherwise blocks *every* later distinct payment for that technician with an
+ *    inscrutable 409, forever. The key is never silently swapped just because the operator's
+ *    current input looks different — that would defeat (1). Instead, a 409 `IDEMPOTENCY_MISMATCH`
+ *    surfaces the *actual* unconfirmed attempt (amount/method/reference, from the fingerprint
+ *    persisted alongside the key) and offers an explicit, risk-labelled "discard the pending
+ *    attempt" action that clears it so the next submission can mint a fresh one.
+ * 3. The drawer cannot be closed (backdrop, ×, Escape, or Cancel) while a request is in flight —
  *    a mid-flight close would let the promise resolve into a state the operator never sees,
- *    inviting a "did it go through? let me try again" double payment.
- * 3. The allocation preview is computed locally, oldest-due-first, for display only. It is
+ *    inviting a "did it go through? let me try again" double payment. Symmetrically (fix round 2,
+ *    N2), the request itself cannot hang forever and hold the drawer hostage: a bounded
+ *    client-side watchdog (`REQUEST_TIMEOUT_MS`) always releases `submitting` back to the
+ *    operator, without touching the pending key.
+ * 4. The allocation preview is computed locally, oldest-due-first, for display only. It is
  *    rendered behind a dashed left rule in `--color-text-faint` under a plain label. On success it
  *    is replaced in place by the server's actual `allocations` at full strength; if the two
  *    disagree, or the record was a replay, or an overpayment created a credit, that is disclosed
- *    persistently inline (not a five-second toast) — never a silent swap.
- * 4. Money crosses the rupee/paise boundary exactly once, via `rupeesToPaise` — never hand-parsed,
+ *    persistently inline (not a five-second toast, and — fix round 2, M1 — inside a single
+ *    always-mounted `aria-live` container so assistive tech actually announces it) — never a
+ *    silent swap.
+ * 5. Money crosses the rupee/paise boundary exactly once, via `rupeesToPaise` — never hand-parsed,
  *    never a float, and rejected client-side if it carries more than 2 decimal places.
  */
 export function RemittanceDrawer({
@@ -229,20 +307,28 @@ export function RemittanceDrawer({
   const [validationError, setValidationError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [outcome, setOutcome] = useState<RemittanceOutcome | null>(null);
+  // Fix round 2 (N1): populated only from a live 409 IDEMPOTENCY_MISMATCH response — the fingerprint
+  // of the *actual* unconfirmed attempt that owns the currently-pending key, so the drawer can say
+  // what is true instead of blaming whatever the operator just typed.
+  const [conflict, setConflict] = useState<PendingAttempt | null>(null);
 
   // Never regenerated on retry — only reloaded/minted per technician when the drawer opens (see
-  // `loadOrMintPendingKey`), and cleared only after a successful record.
+  // `loadPendingAttempt`), and cleared only after a successful record or an explicit discard.
   const idempotencyKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
-    idempotencyKeyRef.current = loadOrMintPendingKey(technicianId);
+    // Fix round 2 (N1): reuse an existing pending key verbatim when one exists; mint fresh only
+    // when none does. Never minted based on any comparison with the current inputs — see the
+    // class doc comment, point 2.
+    idempotencyKeyRef.current = loadPendingAttempt(technicianId)?.key ?? mintKey();
     setAmount('');
     setMethod('UPI');
     setRef('');
     setNote('');
     setValidationError(null);
     setOutcome(null);
+    setConflict(null);
     dismiss();
     // `dismiss` is a stable useCallback (see useToast) — this effect intentionally reacts to
     // `open`/`technicianId` only, so it fires once per drawer-open transition, not on every
@@ -306,10 +392,24 @@ export function RemittanceDrawer({
       return;
     }
     setValidationError(null);
+    setConflict(null);
 
-    const idempotencyKey = idempotencyKeyRef.current ?? loadOrMintPendingKey(technicianId);
+    // Fix round 2 (N1): whatever key is currently pending for this technician is what gets sent —
+    // never minted or swapped based on what the operator typed. Silently minting a new key here
+    // because the inputs look different would restore the exact double-charge risk C2 exists to
+    // prevent, if the earlier attempt this key belongs to actually landed. A genuine mismatch is
+    // surfaced by the server's 409 below and resolved only by the operator's explicit discard.
+    const idempotencyKey = idempotencyKeyRef.current ?? mintKey();
     idempotencyKeyRef.current = idempotencyKey;
     const previewAtSubmit = previewAllocations;
+
+    // Persisted only the first time this key is actually sent (write-if-absent): if this key is
+    // already the pending one, its original fingerprint is left untouched even though the operator
+    // may have changed the amount/ref since — overwriting it would erase the one thing a later
+    // mismatch message needs to report accurately.
+    if (loadPendingAttempt(technicianId)?.key !== idempotencyKey) {
+      savePendingAttempt(technicianId, { key: idempotencyKey, amountPaise: paise, method, ref: trimmedRef });
+    }
 
     setSubmitting(true);
     let response: RecordRemittanceResponse;
@@ -325,11 +425,27 @@ export function RemittanceDrawer({
       // Narrowed to just the awaited call (fix round 1, I5): everything below this point is
       // "the payment already happened" territory and must never be reinterpreted as a failure —
       // including by a parent callback that throws.
-      response = await recordRemittance(params);
+      //
+      // Raced against a bounded watchdog (fix round 2, N2) rather than left to hang indefinitely —
+      // see `REQUEST_TIMEOUT_MS`. The underlying call is given its own no-op `.catch` so that, if
+      // it loses the race and later rejects on its own, that rejection does not surface as an
+      // unhandled promise rejection.
+      const attempt = recordRemittance(params);
+      attempt.catch(() => {});
+      response = await Promise.race([attempt, timeoutAfter(REQUEST_TIMEOUT_MS)]);
     } catch (err) {
       setSubmitting(false);
       if (isIdempotencyMismatch(err)) {
-        show(t('remittance.errors.idempotencyMismatch'), 'error');
+        // Fix round 2 (N1): say what is actually true — the fingerprint of the unconfirmed attempt
+        // that owns this key — rather than the old copy's false claim about the reference just
+        // typed. Rendered persistently below with an explicit, risk-labelled discard action; never
+        // a toast (it auto-dismisses, and this needs to stay actionable). Any toast left over from
+        // an earlier attempt on this same key (e.g. the ambiguous failure that left it pending) is
+        // dismissed so it does not sit stale next to this new, more specific disclosure.
+        dismiss();
+        setConflict(loadPendingAttempt(technicianId));
+      } else if (isTimeoutError(err)) {
+        show(t('remittance.errors.timeout'), 'error');
       } else {
         // Fix round 1 (Minor): an ambiguous failure (timeout, 5xx, dropped connection) does not
         // mean the payment didn't land — only that this client never saw the response. Assert
@@ -341,7 +457,7 @@ export function RemittanceDrawer({
     setSubmitting(false);
 
     // Success. The key is retired now, unconditionally, before anything else runs.
-    clearPendingKey(technicianId);
+    clearPendingAttempt(technicianId);
     idempotencyKeyRef.current = null;
 
     const mismatchMessage = allocationsDiffer(previewAtSubmit, response.allocations)
@@ -374,6 +490,17 @@ export function RemittanceDrawer({
       // throwing here is a bug in the caller, not a failed payment. Never let it surface as one.
       console.error('RemittanceDrawer: onRecorded threw after a successful record', err);
     }
+  }
+
+  // Fix round 2 (N1): the operator's explicit escape hatch from the abandoned-key wedge. Discarding
+  // does not resubmit anything — it only frees the technician's pending slot so the *next*
+  // "Record payment" click mints a fresh key and treats the current inputs as a genuinely new
+  // payment. The risk (double-charging if the discarded attempt did land) is named in the copy
+  // shown alongside this action, not hidden behind a neutral label.
+  function handleDiscardPending() {
+    clearPendingAttempt(technicianId);
+    idempotencyKeyRef.current = null;
+    setConflict(null);
   }
 
   const displayedAllocations = outcome?.allocations ?? previewAllocations;
@@ -463,6 +590,31 @@ export function RemittanceDrawer({
           </p>
         )}
 
+        {conflict !== null && (
+          <div
+            role="alert"
+            className="space-y-[var(--space-2)] rounded border border-[var(--color-danger)] bg-[var(--color-surface-raised)] p-[var(--space-3)]"
+          >
+            <p className="text-xs text-[var(--color-danger)]">
+              {t('remittance.errors.idempotencyMismatch', {
+                amount: formatINR(conflict.amountPaise, locale),
+                method: methodLabel(conflict.method, t),
+                ref: conflict.ref,
+              })}
+            </p>
+            <p className="text-xs text-[var(--color-text-muted)]">
+              {t('remittance.warnings.discardRisk')}
+            </p>
+            <button
+              type="button"
+              onClick={handleDiscardPending}
+              className="text-xs font-medium text-[var(--color-danger)] underline"
+            >
+              {t('remittance.actions.discardPending')}
+            </button>
+          </div>
+        )}
+
         <div
           data-testid={isActual ? undefined : 'allocation-preview'}
           className={
@@ -486,28 +638,32 @@ export function RemittanceDrawer({
               ))}
             </ul>
           )}
-          {!isActual && previewRemainderPaise > 0 && (
-            <p className="mt-[var(--space-1)] text-xs" aria-live="polite">
-              {t('remittance.preview.unallocated', { amount: formatINR(previewRemainderPaise, locale) })}
-            </p>
-          )}
-          {isActual && outcome.replayed && (
-            <p className="mt-[var(--space-1)] text-xs" aria-live="polite">
-              {t('remittance.outcomes.replayed')}
-            </p>
-          )}
-          {isActual && outcome.mismatchMessage !== null && (
-            <p className="mt-[var(--space-1)] text-xs" aria-live="polite">
-              {outcome.mismatchMessage}
-            </p>
-          )}
-          {isActual && outcome.creditCreatedPaise > 0 && (
-            <p className="mt-[var(--space-1)] text-xs" aria-live="polite">
-              {t('remittance.actual.creditCreated', {
-                amount: formatINR(outcome.creditCreatedPaise, locale),
-              })}
-            </p>
-          )}
+          {/*
+            Fix round 2 (M1): a single container, always mounted alongside this block (not one
+            `aria-live` region per disclosure, mounted only when its content appears) — most
+            assistive tech does not announce a live region's initial content when the region and
+            its content are inserted in the same update. Keeping the container present from the
+            first render and only ever changing its children is what makes the mutation
+            announceable.
+          */}
+          <div data-testid="allocation-disclosures" aria-live="polite" className="mt-[var(--space-1)] space-y-[var(--space-1)]">
+            {!isActual && previewRemainderPaise > 0 && (
+              <p className="text-xs">
+                {t('remittance.preview.unallocated', { amount: formatINR(previewRemainderPaise, locale) })}
+              </p>
+            )}
+            {isActual && outcome.replayed && <p className="text-xs">{t('remittance.outcomes.replayed')}</p>}
+            {isActual && outcome.mismatchMessage !== null && (
+              <p className="text-xs">{outcome.mismatchMessage}</p>
+            )}
+            {isActual && outcome.creditCreatedPaise > 0 && (
+              <p className="text-xs">
+                {t('remittance.actual.creditCreated', {
+                  amount: formatINR(outcome.creditCreatedPaise, locale),
+                })}
+              </p>
+            )}
+          </div>
         </div>
       </div>
     </Drawer>
