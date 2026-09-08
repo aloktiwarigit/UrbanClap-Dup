@@ -308,9 +308,13 @@ function clearPendingAttempt(technicianId: string): void {
  *    surfaces the *actual* unconfirmed attempt (amount/method/reference, from the fingerprint
  *    persisted alongside the key — falling back to a generic disclosure, never silence, when that
  *    fingerprint cannot be read) and offers an explicit, risk-labelled "discard the pending
- *    attempt" action that clears it so the next submission can mint a fresh one. Fix round 3: the
- *    same disclosure is also shown proactively when the drawer opens onto an already-fingerprinted
- *    pending attempt — a stale wedge should not require a failed round trip to discover.
+ *    attempt" action that clears it so the next submission can mint a fresh one. Fix round 3: a
+ *    stale wedge should not require a failed round trip to discover, so it is also disclosed
+ *    proactively at drawer-open. Fix round 4: those are two *different* banners, not one reused
+ *    twice — a polite `--color-warn` statement of fact with no discard action (variant A, whose
+ *    content mirrors storage and therefore survives an unrelated failed submit) versus the red,
+ *    assertive 409 result that carries the discard action (variant B). Discard is scoped to the
+ *    409 on purpose: see the render block for why offering it any earlier is the dangerous move.
  * 3. The drawer cannot be closed (backdrop, ×, Escape, or Cancel) while a request is in flight —
  *    a mid-flight close would let the promise resolve into a state the operator never sees,
  *    inviting a "did it go through? let me try again" double payment. Symmetrically (fix round 2,
@@ -350,11 +354,18 @@ export function RemittanceDrawer({
   const [validationError, setValidationError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [outcome, setOutcome] = useState<RemittanceOutcome | null>(null);
-  // Fix round 2 (N1) + fix round 3: the fingerprint of an unconfirmed pending attempt, shown
-  // persistently — populated either from a live 409 IDEMPOTENCY_MISMATCH response, or (fix round 3,
-  // Important) proactively when the drawer opens onto an already-fingerprinted pending attempt, so
-  // a stale wedge doesn't require a failed round trip to discover.
+  // Fix round 2 (N1): the fingerprint of the unconfirmed pending attempt named by a *live* 409
+  // IDEMPOTENCY_MISMATCH response. This is variant B of the disclosure (see the render block): a
+  // failure result, red, assertive, and the only place the discard action is offered.
   const [conflict, setConflict] = useState<PendingAttemptFingerprint | null>(null);
+  // Fix round 4: variant A — the *proactive* disclosure of an already-fingerprinted pending attempt
+  // for this technician. Round 3 introduced this behaviour but reused the 409 banner wholesale,
+  // which made a statement of fact shout like a failure and put the discard action on screen at the
+  // one moment it is guaranteed to be the wrong move (see the render block and design §5). Kept as
+  // a mirror of *storage*, not as a result of the last submission: it is re-derived from
+  // `loadPendingAttempt` on open and after every settled submit, never blanket-cleared at the top
+  // of `handleSubmit` the way the 409-derived flags are — a 503 does not change what is wedged.
+  const [pendingDisclosure, setPendingDisclosure] = useState<PendingAttemptFingerprint | null>(null);
   // Fix round 3 (Important): a 409 occurred but the pending record could not be read (storage
   // unavailable, or — theoretically — present with no fingerprint yet). `conflict` alone cannot
   // distinguish "no conflict" from "a conflict we can't describe", and rendering nothing on a money
@@ -364,6 +375,15 @@ export function RemittanceDrawer({
   // Never regenerated on retry — only reloaded/minted per technician when the drawer opens (see
   // `loadPendingAttempt`), and cleared only after a successful record or an explicit discard.
   const idempotencyKeyRef = useRef<string | null>(null);
+
+  // Fix round 4: the single place variant A is computed — always straight from storage, never from
+  // a remembered submission outcome. Called on open and after every settled submit (success,
+  // ambiguous failure, timeout, 409) so the banner tracks what is actually wedged rather than
+  // whatever the last request happened to do.
+  function refreshPendingDisclosure() {
+    const stored = loadPendingAttempt(technicianId);
+    setPendingDisclosure(stored !== null && hasFingerprint(stored) ? stored : null);
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -375,17 +395,18 @@ export function RemittanceDrawer({
     const existing = loadPendingAttempt(technicianId);
     if (existing !== null) {
       idempotencyKeyRef.current = existing.key;
-      // Fix round 3 (Important): proactive disclosure. If this pending attempt already has a
-      // fingerprint (someone — this tab or another — actually submitted it before it went
-      // unconfirmed), say so now rather than waiting for a 409 that may never come if the operator
-      // simply types a brand-new, non-colliding reference.
-      setConflict(hasFingerprint(existing) ? existing : null);
     } else {
       const minted = mintKey();
       idempotencyKeyRef.current = minted;
       savePendingAttempt(technicianId, { key: minted, amountPaise: null, method: null, ref: null });
-      setConflict(null);
     }
+    // Fix round 3 (Important), reshaped in round 4: proactive disclosure. If this pending attempt
+    // already has a fingerprint (someone — this tab or another — actually submitted it before it
+    // went unconfirmed), say so now rather than waiting for a 409 that may never come if the
+    // operator simply types a brand-new, non-colliding reference. A record with no fingerprint yet
+    // (a bare reservation nobody has attempted) discloses nothing — there is nothing to disclose.
+    setPendingDisclosure(existing !== null && hasFingerprint(existing) ? existing : null);
+    setConflict(null);
     setConflictUnreadable(false);
     setAmount('');
     setMethod('UPI');
@@ -456,6 +477,12 @@ export function RemittanceDrawer({
       return;
     }
     setValidationError(null);
+    // Only the 409-derived flags are cleared here: they describe the *result of the last
+    // submission*, so a new submission invalidates them. `pendingDisclosure` deliberately is not —
+    // it describes what is in storage, and a failed submit (a 503, a timeout) changes nothing about
+    // that. Round 3 cleared both here, so opening onto a wedge and then hitting any error made the
+    // disclosure vanish while the wedge itself was untouched. It is re-derived from storage on every
+    // settled outcome below instead.
     setConflict(null);
     setConflictUnreadable(false);
 
@@ -536,6 +563,11 @@ export function RemittanceDrawer({
         // less than "could not record".
         show(t('remittance.errors.recordFailed'), 'error');
       }
+      // Fix round 4: re-derive variant A from storage on every failed outcome. Nothing here has
+      // touched the pending record, so a pre-existing wedge must still be disclosed afterwards —
+      // and an ambiguous failure that just wrote this attempt's own fingerprint is itself now a
+      // wedge worth naming, with the safe move (retry under the same key) spelled out.
+      refreshPendingDisclosure();
       return;
     } finally {
       // Fix round 3 (Minor): the watchdog timer used to always fire, even when the real request won
@@ -547,6 +579,8 @@ export function RemittanceDrawer({
     // Success. The key is retired now, unconditionally, before anything else runs.
     clearPendingAttempt(technicianId);
     idempotencyKeyRef.current = null;
+    // Storage no longer holds a pending attempt, so variant A has nothing left to describe.
+    setPendingDisclosure(null);
 
     const mismatchMessage = allocationsDiffer(previewAtSubmit, response.allocations)
       ? describeAllocationMismatch(previewAtSubmit, response.allocations, receivables, locale, t)
@@ -595,6 +629,8 @@ export function RemittanceDrawer({
     idempotencyKeyRef.current = null;
     setConflict(null);
     setConflictUnreadable(false);
+    // Storage is now empty for this technician; variant A must not outlive the record it mirrors.
+    setPendingDisclosure(null);
   }
 
   const displayedAllocations = outcome?.allocations ?? previewAllocations;
@@ -685,11 +721,50 @@ export function RemittanceDrawer({
         )}
 
         {/*
-          Fix round 3: this banner now has two triggers, not one — a live 409 (`conflict` or
-          `conflictUnreadable`) or, proactively, opening onto an already-fingerprinted pending
-          attempt (`conflict` set directly by the open effect, no submission required). Either way
-          the operator sees a message and a discard action; `conflictUnreadable` covers the case
-          where a mismatch is known to have happened but nothing is left to quote — never silence.
+          Variant A — the proactive disclosure (fix round 4, splitting what round 3 had merged into
+          the 409 banner below). Three deliberate differences from variant B:
+
+          1. `role="status"` (polite), not `role="alert"`. Opening a drawer is not an event entitled
+             to interrupt a screen reader mid-sentence. It also keeps this off the assertive channel
+             the validation error owns — the same reasoning as the comment in `SummaryBand.tsx`
+             about not stacking simultaneous live regions on one screen.
+          2. `--color-warn`, not the danger palette. This is a fact about state, not a failure; the
+             operator has done nothing wrong by opening a drawer onto someone else's stale wedge.
+          3. **No discard action.** At drawer-open, discard is the only control on this surface that
+             can produce a real double charge: if the operator is about to record the same payment
+             this key belongs to, submitting under it replays and returns the original receipt (and
+             clears the pending record as a side effect); if it is a genuinely different payment,
+             they get the 409 and the escape hatch appears *there*, having proven it is needed.
+             Offering it before either is established puts the most dangerous control on screen at
+             the one moment it is guaranteed to be wrong. Design §5 scopes discard to the 409.
+
+          Suppressed while variant B is showing — a live 409 names the same pending attempt with
+          more authority, and two banners about one record is noise.
+        */}
+        {conflict === null && !conflictUnreadable && pendingDisclosure !== null && (
+          <div
+            role="status"
+            className="space-y-[var(--space-2)] rounded border border-[var(--color-warn)] bg-[var(--color-surface-raised)] p-[var(--space-3)]"
+          >
+            <p className="text-xs text-[var(--color-warn)]">
+              {t('remittance.warnings.pendingAttempt', {
+                amount: formatINR(pendingDisclosure.amountPaise, locale),
+                method: methodLabel(pendingDisclosure.method, t),
+                ref: pendingDisclosure.ref,
+              })}
+            </p>
+            <p className="text-xs text-[var(--color-text-muted)]">
+              {t('remittance.warnings.pendingAttemptSafeMove')}
+            </p>
+          </div>
+        )}
+
+        {/*
+          Variant B — the live 409 IDEMPOTENCY_MISMATCH (fix round 2, N1). Red, assertive, and the
+          one place the discard action is offered: by this point the server has proven the pending
+          attempt is a *different* payment from the one being recorded, so freeing the slot is the
+          only way forward. `conflictUnreadable` covers a mismatch that is known to have happened
+          but has nothing left to quote (storage unreadable) — never silence.
         */}
         {(conflict !== null || conflictUnreadable) && (
           <div

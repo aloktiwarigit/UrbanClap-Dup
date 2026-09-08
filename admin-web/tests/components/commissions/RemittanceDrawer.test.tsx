@@ -34,6 +34,10 @@ vi.mock('next-intl', () => ({
       'remittance.actions.discardPending': 'This is a different payment. Discard the pending attempt.',
       'remittance.warnings.discardRisk':
         'If that earlier attempt did land, discarding it and recording this payment will charge the technician twice.',
+      'remittance.warnings.pendingAttempt':
+        'An earlier attempt for this technician has not been confirmed: {amount} via {method}, reference {ref}.',
+      'remittance.warnings.pendingAttemptSafeMove':
+        'If this is that same payment, record it again — you will get the original receipt back, not a second charge.',
       'remittance.errors.invalidAmount': 'Enter an amount greater than ₹0, with at most 2 decimal places.',
       'remittance.errors.refRequired': 'A reference is required.',
       'remittance.errors.recordFailed':
@@ -398,6 +402,14 @@ describe('RemittanceDrawer', () => {
     expect(alert).toHaveTextContent('₹200.00');
     expect(alert).toHaveTextContent('ref-1');
     expect(alert).not.toHaveTextContent('ref-2');
+    // Fix round 4: variant B is unchanged — still assertive, still red, and still the one and only
+    // place the discard action lives, because the server has now proven this is a different
+    // payment. The proactive variant is suppressed while it shows: one record, one banner.
+    expect(
+      within(alert).getByRole('button', { name: /discard the pending attempt/i }),
+    ).toBeInTheDocument();
+    expect(within(alert).getByText(/will charge the technician twice/i)).toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
 
     recordRemittance.mockResolvedValueOnce(okResponse());
     fireEvent.click(screen.getByRole('button', { name: /discard the pending attempt/i }));
@@ -502,7 +514,14 @@ describe('RemittanceDrawer', () => {
   // ambiguous failure, possibly from a different admin on a shared machine, since localStorage
   // entries carry no TTL) must disclose it immediately — not wait for a 409 that may never come if
   // the operator simply types a non-colliding amount/reference this time.
-  it('proactively discloses a stale pending attempt when the drawer opens onto one', async () => {
+  //
+  // Fix round 4: that disclosure is its OWN variant, not the 409 banner reused. It is polite
+  // (`role="status"` — opening a drawer must not interrupt a screen reader), it is a statement of
+  // fact rather than a failure, it tells the operator the safe move, and — the load-bearing part —
+  // it carries NO discard action. At open, discard is the only control here that can produce a real
+  // double charge: recording the same payment again replays safely, and a genuinely different one
+  // earns a 409, which is where the escape hatch belongs (design §5).
+  it('proactively discloses a stale pending attempt as a polite status, with no discard action', async () => {
     recordRemittance.mockRejectedValueOnce(Object.assign(new Error('net'), { status: 503 }));
     const { rerender } = render(
       <RemittanceDrawer open technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
@@ -517,10 +536,79 @@ describe('RemittanceDrawer', () => {
     rerender(
       <RemittanceDrawer open technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
     );
-    const alert = screen.getByRole('alert');
-    expect(alert).toHaveTextContent('₹200.00');
-    expect(alert).toHaveTextContent('ref-1');
-    expect(screen.getByRole('button', { name: /discard the pending attempt/i })).toBeInTheDocument();
+    const status = screen.getByRole('status');
+    expect(status).toHaveTextContent('₹200.00');
+    expect(status).toHaveTextContent('ref-1');
+    // It names the safe move, not just the fact.
+    expect(status).toHaveTextContent(/record it again — you will get the original receipt back/i);
+    // Not the assertive channel, and not the danger palette.
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    // The one thing that must not be reachable here.
+    expect(
+      screen.queryByRole('button', { name: /discard the pending attempt/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  // Fix round 4: variant A mirrors *storage*, variant B is a *result of the last submission*.
+  // Round 3 cleared both at the top of `handleSubmit`, so opening onto a wedge and then hitting an
+  // unrelated 503 made the disclosure vanish while the wedge it described was completely untouched.
+  it('keeps the proactive disclosure after a non-409 failed submit, which leaves the pending record untouched', async () => {
+    recordRemittance.mockRejectedValueOnce(Object.assign(new Error('net'), { status: 503 }));
+    const { rerender } = render(
+      <RemittanceDrawer open technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
+    );
+    await fillAndSubmit('200', 'ref-1');
+    rerender(
+      <RemittanceDrawer open={false} technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
+    );
+    rerender(
+      <RemittanceDrawer open technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
+    );
+    expect(screen.getByRole('status')).toHaveTextContent('ref-1');
+
+    // A second, different payment attempt that fails ambiguously — a 503, not a 409, so nothing
+    // about the pending record changed.
+    recordRemittance.mockRejectedValueOnce(Object.assign(new Error('net'), { status: 503 }));
+    await fillAndSubmit('50', 'ref-2');
+    await waitFor(() => expect(recordRemittance).toHaveBeenCalledTimes(2));
+    // The failure toast proves the catch path ran to completion, so this is not just a stale render.
+    await screen.findByText(/could not confirm this payment was recorded/i);
+
+    const disclosure = screen.getAllByRole('status').find((el) => el.textContent?.includes('ref-1'));
+    expect(disclosure).toBeDefined();
+    // Still the original wedge's fingerprint, not the just-typed inputs.
+    expect(disclosure).toHaveTextContent('₹200.00');
+    // Storage agrees: the wedge is exactly as it was.
+    expect(readPendingAttempt('t1')?.ref).toBe('ref-1');
+  });
+
+  // Fix round 4: `SummaryBand.tsx` carries an explicit precedent against two simultaneous live
+  // regions on this screen (screen readers announce both at once). With variant A downgraded to
+  // `role="status"`, the validation error is the only assertive region — which is the whole point
+  // of the split, since a wedge plus a first-interaction typo is an ordinary session, not an edge.
+  it('does not stack two assertive live regions when a validation error fires under the proactive disclosure', async () => {
+    recordRemittance.mockRejectedValueOnce(Object.assign(new Error('net'), { status: 503 }));
+    const { rerender } = render(
+      <RemittanceDrawer open technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
+    );
+    await fillAndSubmit('200', 'ref-1');
+    rerender(
+      <RemittanceDrawer open={false} technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
+    );
+    rerender(
+      <RemittanceDrawer open technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
+    );
+    expect(screen.getByRole('status')).toHaveTextContent('ref-1');
+
+    // Submit with a blank amount — the drawer resets its fields on open, so this is the very first
+    // interaction of a normal session on a wedged technician.
+    fireEvent.click(screen.getByRole('button', { name: /record payment/i }));
+
+    expect(recordRemittance).toHaveBeenCalledTimes(1);
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+    expect(screen.getByRole('alert')).toHaveTextContent(/enter an amount greater than ₹0/i);
+    // And the disclosure is still there — a typo does not resolve a wedge.
+    expect(screen.getByRole('status')).toHaveTextContent('ref-1');
   });
 
   it('tells the operator when the server allocated differently than previewed', async () => {

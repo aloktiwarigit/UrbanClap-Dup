@@ -642,7 +642,9 @@
         "discardPending": "This is a different payment. Discard the pending attempt."
       },
       "warnings": {
-        "discardRisk": "If that earlier attempt did land, discarding it and recording this payment will charge the technician twice."
+        "discardRisk": "If that earlier attempt did land, discarding it and recording this payment will charge the technician twice.",
+        "pendingAttempt": "An earlier attempt for this technician has not been confirmed: {amount} via {method}, reference {ref}.",
+        "pendingAttemptSafeMove": "If this is that same payment, record it again — you will get the original receipt back, not a second charge."
       },
       "errors": {
         "invalidAmount": "Enter an amount greater than ₹0, with at most 2 decimal places.",
