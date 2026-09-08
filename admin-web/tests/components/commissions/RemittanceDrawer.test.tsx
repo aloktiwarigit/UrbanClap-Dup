@@ -42,6 +42,8 @@ vi.mock('next-intl', () => ({
         'This is taking longer than expected. The payment may or may not have gone through — check the technician\'s ledger before trying again.',
       'remittance.errors.idempotencyMismatch':
         'A previous attempt for this technician has not been confirmed: {amount} via {method}, reference {ref}.',
+      'remittance.errors.idempotencyMismatchGeneric':
+        "A previous attempt for this technician has not been confirmed, but its details aren't available on this device.",
       'remittance.outcomes.success': 'Payment recorded',
       'remittance.outcomes.replayed': 'Already recorded. This is the original receipt, not a second payment.',
       'remittance.outcomes.recomputePending': 'Recorded. The balance will catch up shortly.',
@@ -166,6 +168,20 @@ function threeCalls<T>(calls: T[]): [T, T, T] {
     throw new Error(`expected exactly three recorded calls, got ${calls.length}`);
   }
   return [first, second, third];
+}
+
+function oneCall<T>(calls: T[]): T {
+  const [first] = calls;
+  if (first === undefined) {
+    throw new Error(`expected exactly one recorded call, got ${calls.length}`);
+  }
+  return first;
+}
+
+function readPendingAttempt(technicianId: string): { key: string; amountPaise: number | null; method: string | null; ref: string | null } | null {
+  const raw = window.localStorage.getItem(`commissions.remittance.pendingAttempt.${technicianId}`);
+  if (raw === null) return null;
+  return JSON.parse(raw) as { key: string; amountPaise: number | null; method: string | null; ref: string | null };
 }
 
 async function fillAndSubmit(amount = '200', ref = 'ref-1') {
@@ -397,6 +413,116 @@ describe('RemittanceDrawer', () => {
     expect(thirdCall[0].idempotencyKey).not.toBe(firstCall[0].idempotencyKey);
   });
 
+  // Fix round 3, the N3 regression: round 2 moved the pending-key write from mint time (the open
+  // effect) to submit time, which reopened the exact two-tab race the move to localStorage was
+  // meant to close — tab A opens (key only in its ref), tab B opens before A ever submits, reads
+  // nothing, and mints its own key. Two independent component instances for the same technicianId
+  // simulate two tabs sharing one `localStorage`; the fix is that opening alone — no submission
+  // required — is what persists the key.
+  it('two drawer instances opened for the same technician (simulating two tabs) share one pending key, persisted atomically on open', async () => {
+    render(
+      <RemittanceDrawer open technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
+    );
+    // Tab A has only opened — never submitted — yet the key must already be durable.
+    const afterFirstOpen = readPendingAttempt('t1');
+    expect(afterFirstOpen).not.toBeNull();
+    const mintedByFirstTab = (afterFirstOpen as { key: string }).key;
+
+    recordRemittance.mockResolvedValueOnce(okResponse());
+    // A second, wholly independent render — a second component instance, standing in for a second
+    // browser tab open on the same technician's ledger.
+    render(
+      <RemittanceDrawer open technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
+    );
+    const dialogs = screen.getAllByRole('dialog');
+    const secondTab = dialogs[dialogs.length - 1];
+    if (secondTab === undefined) throw new Error('expected a second dialog to be rendered');
+    const secondInstance = within(secondTab);
+    fireEvent.change(secondInstance.getByLabelText(/amount/i), { target: { value: '200' } });
+    fireEvent.change(secondInstance.getByLabelText(/reference/i), { target: { value: 'ref-1' } });
+    fireEvent.click(secondInstance.getByRole('button', { name: /record payment/i }));
+
+    await waitFor(() => expect(recordRemittance).toHaveBeenCalledTimes(1));
+    const call = oneCall(recordRemittance.mock.calls as [{ idempotencyKey: string }][]);
+    // The second "tab" read and reused the first tab's key — it never minted its own.
+    expect(call[0].idempotencyKey).toBe(mintedByFirstTab);
+  });
+
+  // Fix round 3: write-if-absent must mean "this key has no fingerprint yet", not "this key
+  // differs from what's stored" (round 2's bug) — a same-key retry with different inputs must never
+  // overwrite the original attempt's fingerprint in storage.
+  it('does not overwrite a pending attempt\'s stored fingerprint on a same-key retry with different inputs', async () => {
+    recordRemittance.mockRejectedValueOnce(Object.assign(new Error('net'), { status: 503 }));
+    recordRemittance.mockRejectedValueOnce(Object.assign(new Error('net'), { status: 503 }));
+    render(
+      <RemittanceDrawer open technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
+    );
+    await fillAndSubmit('200', 'ref-1');
+    const afterFirst = readPendingAttempt('t1');
+    expect(afterFirst?.amountPaise).toBe(20000);
+    expect(afterFirst?.ref).toBe('ref-1');
+
+    await fillAndSubmit('50', 'ref-2');
+    const afterSecond = readPendingAttempt('t1');
+    // Still the FIRST attempt's fingerprint, byte for byte — the second, different submission under
+    // the same still-pending key must never have touched it.
+    expect(afterSecond?.key).toBe(afterFirst?.key);
+    expect(afterSecond?.amountPaise).toBe(20000);
+    expect(afterSecond?.ref).toBe('ref-1');
+  });
+
+  // Fix round 3 (Important): a 409 can occur with nothing readable to explain it — deterministically
+  // whenever localStorage is unavailable (privacy window, embedded webview), not just as a race.
+  // Rendering nothing here reads as "the button is broken" on the one screen that moves real money.
+  it('shows a generic message on an idempotency mismatch when the pending record cannot be read', async () => {
+    const getItemSpy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('storage disabled');
+    });
+    try {
+      recordRemittance.mockRejectedValue(
+        Object.assign(new Error(), { status: 409, body: { code: 'IDEMPOTENCY_MISMATCH' } }),
+      );
+      render(
+        <RemittanceDrawer open technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
+      );
+      await fillAndSubmit();
+      const alert = await screen.findByRole('alert');
+      expect(alert).toHaveTextContent(/previous attempt for this technician has not been confirmed/i);
+      expect(alert).toHaveTextContent(/details aren't available/i);
+      // The discard action is still offered — clearing whatever key is held in memory even though
+      // nothing could be read back to confirm it.
+      expect(screen.getByRole('button', { name: /discard the pending attempt/i })).toBeInTheDocument();
+    } finally {
+      getItemSpy.mockRestore();
+    }
+  });
+
+  // Fix round 3 (Important): a stale wedge should not require a failed round trip to discover.
+  // Opening the drawer onto an already-fingerprinted pending attempt (left behind by an earlier
+  // ambiguous failure, possibly from a different admin on a shared machine, since localStorage
+  // entries carry no TTL) must disclose it immediately — not wait for a 409 that may never come if
+  // the operator simply types a non-colliding amount/reference this time.
+  it('proactively discloses a stale pending attempt when the drawer opens onto one', async () => {
+    recordRemittance.mockRejectedValueOnce(Object.assign(new Error('net'), { status: 503 }));
+    const { rerender } = render(
+      <RemittanceDrawer open technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
+    );
+    // Leaves ₹200/UPI/ref-1 pending with a filled-in fingerprint, then closes without resolving it.
+    await fillAndSubmit('200', 'ref-1');
+    rerender(
+      <RemittanceDrawer open={false} technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
+    );
+
+    // Reopening — no submission yet this time — must show the disclosure immediately.
+    rerender(
+      <RemittanceDrawer open technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
+    );
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('₹200.00');
+    expect(alert).toHaveTextContent('ref-1');
+    expect(screen.getByRole('button', { name: /discard the pending attempt/i })).toBeInTheDocument();
+  });
+
   it('tells the operator when the server allocated differently than previewed', async () => {
     // The preview (₹200 against dueRows) spans 2 jobs; the server recorded against only 1.
     recordRemittance.mockResolvedValue(okResponse({ allocations: [{ bookingId: 'b1', paise: 20000 }] }));
@@ -490,8 +616,9 @@ describe('RemittanceDrawer', () => {
       await Promise.resolve();
       expect(screen.getByRole('button', { name: /cancel/i })).toBeDisabled();
 
+      // Fix round 3: REQUEST_TIMEOUT_MS raised from 20s to 45s (rural connectivity headroom).
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(20_000);
+        await vi.advanceTimersByTimeAsync(45_000);
       });
 
       expect(screen.getByRole('button', { name: /cancel/i })).not.toBeDisabled();
