@@ -242,11 +242,13 @@
         "payment": "Payment",
         "created": "Created",
         "evidencePhotos": "Job Photos",
+        "auditLog": "Audit trail",
         "actions": {
           "heading": "Actions",
           "noPermission": "Your role can review this order but cannot run operational overrides."
         }
       },
+      "auditLogLink": "View audit trail",
       "toast": {
         "success": "Action completed successfully."
       }

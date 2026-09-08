@@ -17,6 +17,8 @@ vi.mock('next-intl', () => ({
       'detail.sections.payment': 'Payment',
       'detail.sections.created': 'Created',
       'detail.sections.evidencePhotos': 'Job Photos',
+      'detail.sections.auditLog': 'Audit trail',
+      'detail.auditLogLink': 'View audit trail',
       'detail.sections.actions.heading': 'Actions',
       'detail.sections.actions.noPermission': 'Your role can review this order but cannot run operational overrides.',
       'detail.toast.success': 'Action completed successfully.',
@@ -112,5 +114,13 @@ describe('OrderSlideOver', () => {
     render(<OrderSlideOver order={order} onClose={onClose} />);
     fireEvent.click(screen.getByLabelText('Close slide-over'));
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it('links an order to its audit trail', () => {
+    render(<OrderSlideOver order={order} onClose={vi.fn()} />);
+    expect(screen.getByRole('link', { name: /audit/i })).toHaveAttribute(
+      'href',
+      expect.stringContaining(`/audit-log?resourceType=booking&resourceId=${order.id}`),
+    );
   });
 });
