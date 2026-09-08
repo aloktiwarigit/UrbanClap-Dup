@@ -72,6 +72,8 @@ export type AuditAction =
   | 'PAYOUT_APPROVE'
   | 'PAYMENT_CAPTURED'
   | 'REFUND_APPROVE'
+  // PII
+  | 'PII_CONTACT_REVEALED'
   // Reconciliation
   | 'RECON_MISMATCH_ALERT'
   | 'RECON_RETRY_ATTEMPT'

@@ -119,7 +119,7 @@ describe('POST /v1/admin/orders/{id}/reveal-contact', () => {
     const res = await revealContactHandler(request({ party: 'CUSTOMER' }), ctx, admin);
     expect(res.status).toBe(429);
     expect((res.jsonBody as { code: string }).code).toBe('RATE_LIMITED');
-    expect(res.headers?.['Retry-After']).toBe('4');
+    expect((res.headers as Record<string, string> | undefined)?.['Retry-After']).toBe('4');
     expect(appendAuditEntry).not.toHaveBeenCalled();
   });
 
