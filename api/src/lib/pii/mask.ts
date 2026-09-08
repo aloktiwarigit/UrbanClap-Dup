@@ -25,8 +25,9 @@ const VPA_HANDLE_MASK = '••••••';
  * a person. Anything shorter than four characters is masked entirely.
  */
 export function maskPhone(phone: string | null | undefined): string {
-  if (!phone || phone.length < 4) return MASK_PLACEHOLDER;
-  return `+91 XXXXX-X${phone.slice(-4)}`;
+  const trimmed = phone?.trim();
+  if (!trimmed || trimmed.length < 4) return MASK_PLACEHOLDER;
+  return `+91 XXXXX-X${trimmed.slice(-4)}`;
 }
 
 /**
@@ -38,12 +39,21 @@ export function maskPhone(phone: string | null | undefined): string {
  * masked entirely rather than being reduced to a near-plaintext hint.
  */
 export function maskVpa(vpa: string | null | undefined): string {
-  if (!vpa) return MASK_PLACEHOLDER;
-  const separator = vpa.indexOf('@');
-  if (separator <= 0 || separator === vpa.length - 1) return MASK_PLACEHOLDER;
+  const trimmed = vpa?.trim();
+  if (!trimmed) return MASK_PLACEHOLDER;
 
-  const handle = vpa.slice(0, separator);
-  const psp = vpa.slice(separator + 1);
+  // A valid UPI VPA has exactly one `@`. Anything else — no separator, or
+  // more than one — is malformed and must not be parsed as handle+PSP,
+  // since a second `@` would otherwise let an entire segment through
+  // unmasked as if it were the PSP suffix.
+  const atCount = trimmed.split('@').length - 1;
+  if (atCount !== 1) return MASK_PLACEHOLDER;
+
+  const separator = trimmed.indexOf('@');
+  if (separator <= 0 || separator === trimmed.length - 1) return MASK_PLACEHOLDER;
+
+  const handle = trimmed.slice(0, separator);
+  const psp = trimmed.slice(separator + 1);
   if (handle.length < 3) return `••••••••@${psp}`;
   return `${handle.slice(0, 2)}${VPA_HANDLE_MASK}@${psp}`;
 }

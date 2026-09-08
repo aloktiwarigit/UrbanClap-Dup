@@ -28,6 +28,11 @@ describe('maskPhone', () => {
     expect(masked).not.toContain('98765');
     expect(masked).not.toContain('432');
   });
+
+  it('trims whitespace before masking so padded stored values are not leaked', () => {
+    expect(maskPhone('9876543210  ')).toBe(maskPhone('9876543210'));
+    expect(maskPhone('  9876543210')).toBe(maskPhone('9876543210'));
+  });
 });
 
 describe('maskVpa', () => {
@@ -55,6 +60,20 @@ describe('maskVpa', () => {
     expect(maskVpa('')).toBe(MASK_PLACEHOLDER);
     expect(maskVpa(null)).toBe(MASK_PLACEHOLDER);
     expect(maskVpa(undefined)).toBe(MASK_PLACEHOLDER);
+  });
+
+  it('returns the placeholder for a malformed VPA with more than one @', () => {
+    expect(maskVpa('ab@cd@ef')).toBe(MASK_PLACEHOLDER);
+    expect(maskVpa('alok@secret.handle@okaxis')).toBe(MASK_PLACEHOLDER);
+  });
+
+  it('returns the placeholder for a trailing @ with no PSP suffix', () => {
+    expect(maskVpa('alok@')).toBe(MASK_PLACEHOLDER);
+  });
+
+  it('trims whitespace before masking so padded stored values are not leaked', () => {
+    expect(maskVpa('alok.tiwari@okhdfcbank  ')).toBe(maskVpa('alok.tiwari@okhdfcbank'));
+    expect(maskVpa('  alok.tiwari@okhdfcbank')).toBe(maskVpa('alok.tiwari@okhdfcbank'));
   });
 });
 
