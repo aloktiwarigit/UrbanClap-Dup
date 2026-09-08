@@ -34,6 +34,12 @@ export type UpdateTechnicianClientConfigParams = NonNullable<
   operations['putTechnicianClientConfig']['requestBody']
 >['content']['application/json'];
 
+// The catalogue category document. Used by the settings page's per-category rate table
+// (E21-S03 task 9) — categories are catalogue data, not commission data, but the only field
+// this app ever edits on them (`commissionBps`) is a rate, so its client functions live here
+// alongside the other rate-editing calls rather than in a new module for two functions.
+export type AdminServiceCategory = components['schemas']['AdminServiceCategory'];
+
 export interface RecordRemittanceParams {
   technicianId: string;
   amountPaise: number;
@@ -142,6 +148,35 @@ export async function updateCommissionConfig(
 ): Promise<CommissionConfig> {
   const result = await getBrowserClient().PUT('/v1/admin/catalogue/commission-config', {
     body: patch,
+  });
+  return unwrap(result, 'PUT');
+}
+
+// Categories list has no query params and no pagination on this endpoint (P0-3 era catalogue —
+// small, hand-curated roster). Returns the flat array, not the `{ categories }` envelope, so
+// callers never have to unwrap it themselves.
+export async function fetchAdminCategories(): Promise<AdminServiceCategory[]> {
+  const result = await getBrowserClient().GET('/v1/admin/catalogue/categories');
+  const data = unwrap(result, 'GET');
+  return data.categories;
+}
+
+/**
+ * Sets, changes, or clears a category's commission-rate override.
+ *
+ * `commissionBps: null` clears the override so the category goes back to inheriting the global
+ * default (`CommissionConfig.defaultCommissionBps`) — see the doc comment on
+ * `UpdateCategoryBodySchema` in the API for why `null` (not omission) is the wire value that
+ * means "remove this key". A number sets/replaces the override; the 1500–3500 range is the same
+ * one `updateCommissionConfig`'s `defaultCommissionBps` enforces, and the API 400s outside it.
+ */
+export async function updateCategoryCommission(
+  categoryId: string,
+  commissionBps: number | null,
+): Promise<AdminServiceCategory> {
+  const result = await getBrowserClient().PUT('/v1/admin/catalogue/categories/{id}', {
+    params: { path: { id: categoryId } },
+    body: { commissionBps },
   });
   return unwrap(result, 'PUT');
 }

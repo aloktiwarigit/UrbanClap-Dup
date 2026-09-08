@@ -484,7 +484,8 @@
     "subtitle": "नकद जॉब पर कमीशन बकाया वाले तकनीशियन।",
     "metadata": {
       "title": "कमीशन — HomeHeroo एडमिन",
-      "detailTitle": "तकनीशियन कमीशन लेजर — HomeHeroo एडमिन"
+      "detailTitle": "तकनीशियन कमीशन लेजर — HomeHeroo एडमिन",
+      "settingsTitle": "कमीशन सेटिंग्स — HomeHeroo एडमिन"
     },
     "loading": "कमीशन डैशबोर्ड लोड हो रहा है…",
     "errors": {
@@ -660,6 +661,81 @@
         "recomputePending": "दर्ज किया गया। शेष राशि जल्द ही अपडेट होगी।",
         "allocationMismatch": "पूर्वावलोकन से अलग आवंटित किया गया। कोई अन्य निपटान पहले पहुंच गया। पूर्वावलोकन में {previewCount, plural, one {# जॉब} other {# जॉब्स}} में {previewAmount} दिखाया गया था; {actualCount, plural, one {# जॉब} other {# जॉब्स}} में {actualAmount} दर्ज किया गया।",
         "allocationResplit": "पूर्वावलोकन से अलग आवंटित किया गया। {bookings} को कुल राशि का अलग हिस्सा मिला।"
+      }
+    },
+    "settings": {
+      "heading": "कमीशन सेटिंग्स",
+      "loading": "कमीशन सेटिंग्स लोड हो रही हैं…",
+      "notAuthorized": {
+        "eyebrow": "सेटिंग्स",
+        "headline": "आपके पास कमीशन सेटिंग्स तक पहुंच नहीं है।",
+        "copy": "यह क्षेत्र केवल सुपर-एडमिन के लिए सीमित है।"
+      },
+      "errors": {
+        "configLoadFailed": "कमीशन कॉन्फ़िगरेशन लोड नहीं हो सका।",
+        "featuresLoadFailed": "तकनीशियन ऐप फ़ीचर फ़्लैग लोड नहीं हो सके।",
+        "categoriesLoadFailed": "प्रति-श्रेणी दर तालिका लोड नहीं हो सकी।",
+        "rowsLoadFailed": "थ्रेशोल्ड प्रभाव उपलब्ध नहीं है — तकनीशियन शेष राशियाँ लोड नहीं हो सकीं।",
+        "rateSaveFailed": "कमीशन दर सहेजी नहीं जा सकी। पुनः प्रयास करें।",
+        "thresholdOrder": "चेतावनी सीमा अवरोध सीमा से कम होनी चाहिए।",
+        "invalidThresholdAmount": "दोनों सीमाओं के लिए मान्य रुपये राशि दर्ज करें।",
+        "enforcementSaveFailed": "प्रवर्तन सेटिंग्स सहेजी नहीं जा सकीं। पुनः प्रयास करें।",
+        "holdEnforcementSaveFailed": "होल्ड प्रवर्तन सेटिंग सहेजी नहीं जा सकी। पुनः प्रयास करें।",
+        "featuresSaveFailed": "तकनीशियन ऐप फ़ीचर सहेजे नहीं जा सके। पुनः प्रयास करें।",
+        "categorySaveFailed": "इस श्रेणी की दर सहेजी नहीं जा सकी। पुनः प्रयास करें।"
+      },
+      "messages": {
+        "rateSaved": "कमीशन दर सहेजी गई।",
+        "enforcementSaved": "प्रवर्तन सेटिंग्स सहेजी गईं।",
+        "holdEnforcementSaved": "होल्ड प्रवर्तन सेटिंग सहेजी गई।",
+        "featuresSaved": "तकनीशियन ऐप फ़ीचर सहेजे गए।",
+        "categorySaved": "श्रेणी दर सहेजी गई।"
+      },
+      "updatedBy": "अंतिम बार {actor} द्वारा {date} को बदला गया",
+      "rates": {
+        "heading": "दरें",
+        "globalLabel": "वैश्विक कमीशन दर (%)",
+        "globalSave": "दर सहेजें",
+        "consequence": "यह अब से बनने वाली बुकिंग पर लागू होता है। पुरानी बुकिंग वही दर बनाए रखेंगी जिस पर वे बनी थीं।",
+        "invalidRate": "15% और 35% के बीच की दर दर्ज करें।",
+        "categoryTableHeading": "प्रति-श्रेणी दरें",
+        "categoryTableEmpty": "अभी तक कोई श्रेणी नहीं है।",
+        "columns": {
+          "category": "श्रेणी",
+          "effectiveRate": "प्रभावी दर",
+          "status": "स्थिति",
+          "override": "ओवरराइड (%)"
+        },
+        "statusOverride": "ओवरराइड",
+        "statusInherited": "इनहेरिटेड",
+        "setOverride": "सहेजें",
+        "clearOverride": "वैश्विक दर अपनाएँ"
+      },
+      "enforcement": {
+        "heading": "प्रवर्तन",
+        "warnLabel": "चेतावनी सीमा (₹)",
+        "blockLabel": "अवरोध सीमा (₹)",
+        "save": "प्रवर्तन सेटिंग्स सहेजें",
+        "appliesWithin": "5 मिनट के भीतर लागू होता है।",
+        "impactNone": "{amount} पर, बकाया राशि रखने वाला कोई भी तकनीशियन आज अवरुद्ध नहीं होगा।",
+        "impact": "{amount} पर, बकाया राशि रखने वाले {count, plural, one {# तकनीशियन} other {# तकनीशियन}} आज अवरुद्ध हो जाएंगे ({names})।",
+        "holdEnforcementLabel": "जो तकनीशियन बहुत अधिक बकाया रखते हैं उन्हें रोकें",
+        "enforceKycLabel": "डिस्पैच से पहले KYC आवश्यक करें",
+        "confirmEnableTitle": "होल्ड प्रवर्तन चालू करें?",
+        "confirmEnableBody": "जिन तकनीशियनों की शेष राशि अवरोध सीमा से अधिक हो जाएगी, उन्हें भुगतान करने तक काम मिलना बंद हो जाएगा। 5 मिनट के भीतर लागू होता है।",
+        "confirmDisableTitle": "होल्ड प्रवर्तन बंद करें?",
+        "confirmDisableBody": "पहले से अवरुद्ध तकनीशियनों को तुरंत फिर से काम मिलना शुरू हो जाएगा, भले ही उन पर अभी भी कमीशन बकाया हो।",
+        "confirmConfirm": "पुष्टि करें",
+        "confirmCancel": "रद्द करें"
+      },
+      "features": {
+        "heading": "तकनीशियन ऐप फ़ीचर",
+        "save": "फ़ीचर सहेजें",
+        "wallet": "वॉलेट",
+        "duesBanner": "बकाया बैनर",
+        "upiQr": "UPI QR कलेक्शन",
+        "incentives": "प्रोत्साहन",
+        "addOnRequests": "ऐड-ऑन अनुरोध"
       }
     }
   },

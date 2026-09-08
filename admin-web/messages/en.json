@@ -484,7 +484,8 @@
     "subtitle": "Technicians who owe commission on cash jobs.",
     "metadata": {
       "title": "Commissions — HomeHeroo admin",
-      "detailTitle": "Technician commission ledger — HomeHeroo admin"
+      "detailTitle": "Technician commission ledger — HomeHeroo admin",
+      "settingsTitle": "Commission settings — HomeHeroo admin"
     },
     "loading": "Loading commission dashboard…",
     "errors": {
@@ -660,6 +661,81 @@
         "recomputePending": "Recorded. The balance will catch up shortly.",
         "allocationMismatch": "Allocated differently than previewed. Another settlement landed first. Preview showed {previewAmount} across {previewCount, plural, one {# job} other {# jobs}}; recorded {actualAmount} across {actualCount, plural, one {# job} other {# jobs}}.",
         "allocationResplit": "Allocated differently than previewed. {bookings} received a different share of the same total."
+      }
+    },
+    "settings": {
+      "heading": "Commission settings",
+      "loading": "Loading commission settings…",
+      "notAuthorized": {
+        "eyebrow": "Settings",
+        "headline": "You do not have access to commission settings.",
+        "copy": "This area is limited to super-admins."
+      },
+      "errors": {
+        "configLoadFailed": "Could not load the commission configuration.",
+        "featuresLoadFailed": "Could not load the technician app feature flags.",
+        "categoriesLoadFailed": "Could not load the per-category rate table.",
+        "rowsLoadFailed": "Threshold impact unavailable — could not load technician balances.",
+        "rateSaveFailed": "Could not save the commission rate. Try again.",
+        "thresholdOrder": "The warn threshold must be below the block threshold.",
+        "invalidThresholdAmount": "Enter valid rupee amounts for both thresholds.",
+        "enforcementSaveFailed": "Could not save enforcement settings. Try again.",
+        "holdEnforcementSaveFailed": "Could not save the hold enforcement setting. Try again.",
+        "featuresSaveFailed": "Could not save the technician app features. Try again.",
+        "categorySaveFailed": "Could not save this category's rate. Try again."
+      },
+      "messages": {
+        "rateSaved": "Commission rate saved.",
+        "enforcementSaved": "Enforcement settings saved.",
+        "holdEnforcementSaved": "Hold enforcement setting saved.",
+        "featuresSaved": "Technician app features saved.",
+        "categorySaved": "Category rate saved."
+      },
+      "updatedBy": "Last changed by {actor} · {date}",
+      "rates": {
+        "heading": "Rates",
+        "globalLabel": "Global commission rate (%)",
+        "globalSave": "Save rate",
+        "consequence": "Applies to bookings created from now on. Past bookings keep the rate they were priced at.",
+        "invalidRate": "Enter a rate between 15% and 35%.",
+        "categoryTableHeading": "Per-category rates",
+        "categoryTableEmpty": "No categories yet.",
+        "columns": {
+          "category": "Category",
+          "effectiveRate": "Effective rate",
+          "status": "Status",
+          "override": "Override (%)"
+        },
+        "statusOverride": "Override",
+        "statusInherited": "Inherited",
+        "setOverride": "Save",
+        "clearOverride": "Inherit global"
+      },
+      "enforcement": {
+        "heading": "Enforcement",
+        "warnLabel": "Warn threshold (₹)",
+        "blockLabel": "Block threshold (₹)",
+        "save": "Save enforcement settings",
+        "appliesWithin": "Applies within 5 minutes.",
+        "impactNone": "At {amount}, no technicians currently carrying a balance would be blocked today.",
+        "impact": "At {amount}, {count, plural, one {# technician} other {# technicians}} currently carrying a balance would be blocked today ({names}).",
+        "holdEnforcementLabel": "Block technicians who owe too much",
+        "enforceKycLabel": "Require KYC before dispatch",
+        "confirmEnableTitle": "Turn on hold enforcement?",
+        "confirmEnableBody": "Technicians whose balance crosses the block threshold will stop receiving work until they pay down. Applies within 5 minutes.",
+        "confirmDisableTitle": "Turn off hold enforcement?",
+        "confirmDisableBody": "Technicians already blocked will start receiving work again immediately, even if they still owe commission.",
+        "confirmConfirm": "Confirm",
+        "confirmCancel": "Cancel"
+      },
+      "features": {
+        "heading": "Technician app features",
+        "save": "Save features",
+        "wallet": "Wallet",
+        "duesBanner": "Dues banner",
+        "upiQr": "UPI QR collection",
+        "incentives": "Incentives",
+        "addOnRequests": "Add-on requests"
       }
     }
   },
