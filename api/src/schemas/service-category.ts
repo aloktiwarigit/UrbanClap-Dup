@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { extendZodWithOpenApi } from '@asteasolutions/zod-to-openapi';
 import { rejectPriceInProse } from './service.js';
+import { CommissionBpsSchema } from './commission-config.js';
 
 extendZodWithOpenApi(z);
 
@@ -66,7 +67,10 @@ export const UpdateCategoryBodySchema = rejectPriceInProse(
   })
     .partial()
     .extend({
-      commissionBps: z.number().int().min(1500).max(3500).nullable().optional(),
+      // Fix round 1 (minor): derived from the shared `CommissionBpsSchema` (same 1500-3500 bound
+      // the global rate and service-level override use) rather than re-declaring the literals, so
+      // a later re-narrowing of that bound cannot leave this write body stale.
+      commissionBps: CommissionBpsSchema.nullable().optional(),
     }),
 );
 

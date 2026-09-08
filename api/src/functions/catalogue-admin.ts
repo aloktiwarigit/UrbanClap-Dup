@@ -87,6 +87,24 @@ export async function updateCategoryHandler(req: HttpRequest, _ctx: InvocationCo
   try {
     const id = req.params['id']!;
     const body = UpdateCategoryBodySchema.parse(await parseJson(req));
+    // E21-S03 task 9 fix round 1 (I-4) — authorization gap: this route is
+    // `requireAdmin(['super-admin', 'ops-manager'])` because ops-managers legitimately edit a
+    // category's name, images and activation. But `commissionBps` is a money field, and the
+    // *global* rate (`putAdminCommissionConfig`) is `requireAdmin(['super-admin'])` only. Without
+    // this check an ops-manager — who cannot touch the global rate — could set a per-category
+    // override that supersedes it for every service in that category, silently changing what
+    // technicians are charged. Fixed field-level rather than by narrowing the endpoint's role
+    // list: locking ops-managers out of all catalogue work to close a rate hole would be a much
+    // worse trade than rejecting just this one field from them. Checked on `'commissionBps' in
+    // body` (not on its value) so both setting AND clearing an override require super-admin —
+    // clearing is still a rate change (the category returns to inheriting the global default).
+    if ('commissionBps' in body && admin.role !== 'super-admin') {
+      return {
+        status: 403,
+        headers: JSON_HEADERS,
+        jsonBody: { code: 'FORBIDDEN', requiredRoles: ['super-admin'], field: 'commissionBps' },
+      };
+    }
     assertNonEmptyPatch(body);
     const updated = await catalogueRepo.updateCategory(id, body, admin.adminId);
     if (!updated) return { status: 404, headers: JSON_HEADERS, jsonBody: { error: 'Category not found' } };

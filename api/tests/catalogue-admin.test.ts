@@ -122,6 +122,87 @@ describe('PUT /v1/admin/catalogue/categories/{id}', () => {
       'dev-user', 'super-admin', 'CATALOGUE_CATEGORY_UPDATED', 'category', 'plumbing', expect.any(Object),
     );
   });
+
+  // Fix round 1 (I-4): `requireAdmin(['super-admin', 'ops-manager'])` guards this whole route
+  // (ops-managers legitimately edit name/images/activation), but `commissionBps` is a money field
+  // that must be super-admin-only — the global rate PUT already is. This block pins the
+  // field-level guard added to `updateCategoryHandler` directly (the shared
+  // `vi.mock('../src/middleware/requireAdmin.js', ...)` above always passes `mockAdmin` through
+  // regardless of the roles it was constructed with, so these tests call the handler with an
+  // explicit `AdminContext` to exercise the handler's own role check, not the route-level HOF).
+  describe('commissionBps requires super-admin (I-4)', () => {
+    const opsManager: AdminContext = { adminId: 'ops-1', role: 'ops-manager', sessionId: 'test-session' };
+
+    it('super-admin can set a category commission override', async () => {
+      const res = await updateCategoryHandler(
+        makeReq('http://localhost/...', { commissionBps: 2500 }, { id: 'plumbing' }, 'PUT'),
+        {} as never,
+        mockAdmin,
+      );
+      expect(res.status).toBe(200);
+      expect(vi.mocked(catalogueRepo.updateCategory)).toHaveBeenCalledWith(
+        'plumbing', { commissionBps: 2500 }, 'dev-user',
+      );
+    });
+
+    it('super-admin can clear a category commission override', async () => {
+      const res = await updateCategoryHandler(
+        makeReq('http://localhost/...', { commissionBps: null }, { id: 'plumbing' }, 'PUT'),
+        {} as never,
+        mockAdmin,
+      );
+      expect(res.status).toBe(200);
+      expect(vi.mocked(catalogueRepo.updateCategory)).toHaveBeenCalledWith(
+        'plumbing', { commissionBps: null }, 'dev-user',
+      );
+    });
+
+    it('ops-manager can still patch a name-only body', async () => {
+      const res = await updateCategoryHandler(
+        makeReq('http://localhost/...', { name: 'Plumbing Updated' }, { id: 'plumbing' }, 'PUT'),
+        {} as never,
+        opsManager,
+      );
+      expect(res.status).toBe(200);
+      expect(vi.mocked(catalogueRepo.updateCategory)).toHaveBeenCalledWith(
+        'plumbing', { name: 'Plumbing Updated' }, 'ops-1',
+      );
+    });
+
+    it('ops-manager setting commissionBps gets 403 and the stored document is unchanged', async () => {
+      vi.mocked(catalogueRepo.updateCategory).mockClear();
+      const res = await updateCategoryHandler(
+        makeReq('http://localhost/...', { commissionBps: 2500 }, { id: 'plumbing' }, 'PUT'),
+        {} as never,
+        opsManager,
+      );
+      expect(res.status).toBe(403);
+      expect(res.jsonBody).toMatchObject({ code: 'FORBIDDEN', field: 'commissionBps' });
+      expect(vi.mocked(catalogueRepo.updateCategory)).not.toHaveBeenCalled();
+    });
+
+    it('ops-manager clearing commissionBps also gets 403 and the stored document is unchanged', async () => {
+      vi.mocked(catalogueRepo.updateCategory).mockClear();
+      const res = await updateCategoryHandler(
+        makeReq('http://localhost/...', { commissionBps: null }, { id: 'plumbing' }, 'PUT'),
+        {} as never,
+        opsManager,
+      );
+      expect(res.status).toBe(403);
+      expect(vi.mocked(catalogueRepo.updateCategory)).not.toHaveBeenCalled();
+    });
+
+    it('ops-manager mixing commissionBps into an otherwise-allowed patch is still rejected wholesale', async () => {
+      vi.mocked(catalogueRepo.updateCategory).mockClear();
+      const res = await updateCategoryHandler(
+        makeReq('http://localhost/...', { name: 'Plumbing Updated', commissionBps: 2500 }, { id: 'plumbing' }, 'PUT'),
+        {} as never,
+        opsManager,
+      );
+      expect(res.status).toBe(403);
+      expect(vi.mocked(catalogueRepo.updateCategory)).not.toHaveBeenCalled();
+    });
+  });
 });
 
 describe('PATCH /v1/admin/catalogue/categories/{id}/toggle', () => {

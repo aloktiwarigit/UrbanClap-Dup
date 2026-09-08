@@ -153,6 +153,19 @@ describe('P0-3 — update body accepts a partial patch', () => {
       ServiceCategorySchema.parse({ ...richCategory, commissionBps: null }),
     ).toThrow();
   });
+
+  // Fix round 1 (minor): the sibling `UpdateServiceBodySchema` already has a "still rejects
+  // unknown fields" assertion above (line 125-127) but `UpdateCategoryBodySchema` did not — added
+  // here as its own strictness guard, and specifically exercised with `.extend()`'d in the mix
+  // (a `name` + `commissionBps` body) since `.extend()` is the operation task 9 added to build
+  // the nullable write field, and it must not have silently dropped `.strict()`'s unknown-key
+  // rejection along the way.
+  it('UpdateCategoryBodySchema still rejects unknown fields (schema stays strict after .extend())', () => {
+    expect(() => UpdateCategoryBodySchema.parse({ name: 'AC Service', nope: true })).toThrow();
+    expect(() =>
+      UpdateCategoryBodySchema.parse({ name: 'AC Service', commissionBps: 2000, nope: true }),
+    ).toThrow();
+  });
 });
 
 describe('P0-3 — repository merge preserves untouched content', () => {
