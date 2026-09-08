@@ -495,9 +495,22 @@ export function RemittanceDrawer({
     // prevent, if the earlier attempt this key belongs to actually landed. A genuine mismatch is
     // surfaced by the server's 409 below and resolved only by the operator's explicit discard. In
     // the normal flow this key was already minted *and persisted* by the open effect (fix round 3);
-    // the `?? mintKey()` fallback only covers a re-submission in the same open session after an
-    // earlier success already cleared the ref (see the success branch below).
-    const idempotencyKey = idempotencyKeyRef.current ?? mintKey();
+    // the fallback below only covers a re-submission in the same open session after an earlier
+    // success already cleared the ref (see the success branch below).
+    //
+    // Fix round 6 (P1): the fallback used to be `idempotencyKeyRef.current ?? mintKey()` — minting
+    // a brand-new key without first checking whether another tab had reserved one in the meantime.
+    // Sequence: tab A records successfully (clears its ref *and* storage — see the success branch —
+    // while deliberately staying open), tab B opens the same technician and reserves a key via the
+    // open effect, tab A's operator then records a second payment. With the old fallback, A's null
+    // ref minted a fresh key instead of reading B's reservation, and the write-if-absent block just
+    // below (`existingForThisKey.key !== idempotencyKey`) then overwrote B's reservation with A's —
+    // leaving A and B holding different keys for the same technician, exactly defeating the
+    // per-technician duplicate-payment protection points 1-2 of the class doc comment exist to
+    // guarantee. The fix mirrors the open effect exactly: re-read storage first and reuse whatever
+    // key is already reserved there; only mint when storage is genuinely empty. `loadPendingAttempt`
+    // already wraps its own storage access in try/catch.
+    const idempotencyKey = idempotencyKeyRef.current ?? loadPendingAttempt(technicianId)?.key ?? mintKey();
     idempotencyKeyRef.current = idempotencyKey;
     const previewAtSubmit = previewAllocations;
 

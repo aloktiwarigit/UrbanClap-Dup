@@ -17,6 +17,7 @@ const ALLOWED = [
   '/audit-log',
   '/admin-users',
   '/compliance',
+  '/settings',
 ] as const;
 
 describe('getSafeNextPath — allowlist enforcement', () => {
@@ -26,6 +27,18 @@ describe('getSafeNextPath — allowlist enforcement', () => {
 
   it('allows an allowed path with a sub-path', () => {
     expect(getSafeNextPath('/orders/123', 'super-admin')).toBe('/orders/123');
+  });
+
+  // Codex round 2 (P2): '/settings/commission' is route-guarded via ADMIN_ROUTE_CAPABILITIES
+  // (settings.manage) but was missing from this allowlist, so a bookmarked settings URL bounced
+  // an unauthenticated super-admin to the role default after login instead of back to the page
+  // they asked for. 'hi' is the default locale (src/i18n/config.ts) and the reported case.
+  it('allows the settings sub-path, locale-prefixed with the default locale (the reported case)', () => {
+    expect(getSafeNextPath('/hi/settings/commission', 'super-admin')).toBe('/hi/settings/commission');
+  });
+
+  it('allows the settings sub-path, bare', () => {
+    expect(getSafeNextPath('/settings/commission', 'super-admin')).toBe('/settings/commission');
   });
 
   it('allows an allowed path but strips query string (security: prevents param injection)', () => {

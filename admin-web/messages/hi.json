@@ -738,6 +738,8 @@
         "appliesWithin": "5 मिनट के भीतर लागू होता है।",
         "impactNone": "{amount} पर, बकाया राशि रखने वाला कोई भी तकनीशियन आज अवरुद्ध नहीं होगा।",
         "impact": "{amount} पर, बकाया राशि रखने वाले {count, plural, one {# तकनीशियन} other {# तकनीशियन}} आज अवरुद्ध हो जाएंगे ({names})।",
+        "impactNonePartial": "{amount} पर, इस पेज पर बकाया राशि रखने वाला कोई भी तकनीशियन आज अवरुद्ध नहीं होगा।",
+        "impactPartial": "{amount} पर, इस पेज पर बकाया राशि रखने वाले {count, plural, one {# तकनीशियन} other {# तकनीशियन}} आज अवरुद्ध हो जाएंगे ({names})।",
         "holdEnforcementLabel": "जो तकनीशियन बहुत अधिक बकाया रखते हैं उन्हें रोकें",
         "enforceKycLabel": "डिस्पैच से पहले KYC आवश्यक करें",
         "confirmEnableTitle": "होल्ड प्रवर्तन चालू करें?",

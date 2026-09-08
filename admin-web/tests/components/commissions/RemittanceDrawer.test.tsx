@@ -463,6 +463,76 @@ describe('RemittanceDrawer', () => {
     expect(call[0].idempotencyKey).toBe(mintedByFirstTab);
   });
 
+  // Fix round 6 (P1): the mirror image of the test above, and the one the old
+  // `idempotencyKeyRef.current ?? mintKey()` fallback could not pass. Sequence: tab A records a
+  // payment successfully — this clears both A's ref *and* the stored reservation, and the drawer
+  // deliberately stays open (class doc comment, point 3). Tab B then opens the same technician and
+  // reserves a key purely by mounting (the test above). Tab A's operator, still looking at the same
+  // open drawer, records a second, genuinely new payment. With the old fallback, A's now-null ref
+  // minted a fresh key instead of reading B's reservation, and the write-if-absent block a few
+  // lines below (`existingForThisKey.key !== idempotencyKey`) then overwrote B's reservation with
+  // that fresh key — leaving A and B holding two different keys for the same technician and
+  // defeating the exact per-technician duplicate-payment protection this file exists to guarantee.
+  // The fix re-reads storage before minting, so A's second submission reuses B's reserved key
+  // instead of clobbering it. To show the protection actually holds end to end, tab B then submits
+  // too: because both tabs now share one key, both real network calls carry the identical
+  // `idempotencyKey`, which is what lets the server's write-if-absent / 409 machinery — not a race
+  // between two independently-minted keys — be the thing deciding whether a second charge happens.
+  it('reuses another tab\'s reserved key instead of minting a fresh one after this tab\'s own success cleared its ref', async () => {
+    recordRemittance.mockResolvedValueOnce(okResponse());
+    render(
+      <RemittanceDrawer open technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
+    );
+    // Tab A's first payment succeeds — this clears A's ref and the stored reservation, per the
+    // "Success. The key is retired now" branch — but the drawer stays open (invariant 3).
+    await fillAndSubmit('200', 'ref-1');
+    await waitFor(() => expect(readPendingAttempt('t1')).toBeNull());
+
+    // Tab B opens on the same technician only after A's ref/storage were cleared, and reserves a
+    // key purely by mounting — no submission required (see the test above).
+    render(
+      <RemittanceDrawer open technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
+    );
+    const reservedByTabB = readPendingAttempt('t1');
+    expect(reservedByTabB).not.toBeNull();
+    const keyReservedByTabB = (reservedByTabB as { key: string }).key;
+
+    // Tab A's operator records a second, genuinely new payment. The bug: A's null ref would mint
+    // its own key here and overwrite tab B's reservation in storage.
+    recordRemittance.mockResolvedValueOnce(okResponse());
+    const dialogsAfterBOpened = screen.getAllByRole('dialog');
+    const tabADialog = dialogsAfterBOpened[0];
+    if (tabADialog === undefined) throw new Error("expected tab A's dialog to still be present");
+    const tabA = within(tabADialog);
+    fireEvent.change(tabA.getByLabelText(/amount/i), { target: { value: '50' } });
+    fireEvent.change(tabA.getByLabelText(/reference/i), { target: { value: 'ref-2' } });
+    fireEvent.click(tabA.getByRole('button', { name: /record payment/i }));
+    await waitFor(() => expect(recordRemittance).toHaveBeenCalledTimes(2));
+
+    // Tab B, unaware anything happened, submits its own (different) payment using the key it
+    // reserved at mount — its ref was never invalidated by A's activity.
+    recordRemittance.mockResolvedValueOnce(okResponse());
+    const dialogsAfterASubmitted = screen.getAllByRole('dialog');
+    const tabBDialog = dialogsAfterASubmitted[dialogsAfterASubmitted.length - 1];
+    if (tabBDialog === undefined) throw new Error("expected tab B's dialog to still be present");
+    const tabB = within(tabBDialog);
+    fireEvent.change(tabB.getByLabelText(/amount/i), { target: { value: '75' } });
+    fireEvent.change(tabB.getByLabelText(/reference/i), { target: { value: 'ref-3' } });
+    fireEvent.click(tabB.getByRole('button', { name: /record payment/i }));
+    await waitFor(() => expect(recordRemittance).toHaveBeenCalledTimes(3));
+
+    const [, tabASecondCall, tabBCall] = threeCalls(
+      recordRemittance.mock.calls as [{ idempotencyKey: string }][],
+    );
+    // The core assertion: tab A's second submission reused tab B's reservation rather than
+    // minting its own — against the old fallback this fails, because A would have minted a fresh
+    // key and clobbered B's reservation before B ever got to read it.
+    expect(tabASecondCall[0].idempotencyKey).toBe(keyReservedByTabB);
+    // And because both tabs now hold the very same key, both real submissions carry it — the
+    // duplicate-payment protection this file exists to guarantee is intact across the two tabs.
+    expect(tabBCall[0].idempotencyKey).toBe(keyReservedByTabB);
+  });
+
   // Fix round 3: write-if-absent must mean "this key has no fingerprint yet", not "this key
   // differs from what's stored" (round 2's bug) — a same-key retry with different inputs must never
   // overwrite the original attempt's fingerprint in storage.

@@ -738,6 +738,8 @@
         "appliesWithin": "Applies within 5 minutes.",
         "impactNone": "At {amount}, no technicians currently carrying a balance would be blocked today.",
         "impact": "At {amount}, {count, plural, one {# technician} other {# technicians}} currently carrying a balance would be blocked today ({names}).",
+        "impactNonePartial": "At {amount}, no technicians on this page currently carrying a balance would be blocked today.",
+        "impactPartial": "At {amount}, {count, plural, one {# technician} other {# technicians}} on this page currently carrying a balance would be blocked today ({names}).",
         "holdEnforcementLabel": "Block technicians who owe too much",
         "enforceKycLabel": "Require KYC before dispatch",
         "confirmEnableTitle": "Turn on hold enforcement?",

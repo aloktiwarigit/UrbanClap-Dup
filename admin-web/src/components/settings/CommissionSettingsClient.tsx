@@ -43,6 +43,11 @@ export interface CommissionSettingsClientProps {
   // why the impact copy below says "currently carrying a balance" rather than implying full
   // roster coverage.
   rows?: ThresholdImpactRow[];
+  // Codex round 2 (P2): seeds whether `rows` above should be treated as a partial (page-scoped)
+  // set for tests — mirrors `fetchCommissionDashboard`'s real `continuationToken !== undefined`
+  // signal, which `loadRows` below derives itself in production. Defaults to false: a directly
+  // seeded `rows` array is assumed to be the whole set unless a test says otherwise.
+  rowsPartial?: boolean;
 }
 
 // Only whole percent or up to 2 decimal places (matches the rupee-amount pattern used elsewhere
@@ -128,6 +133,7 @@ export function CommissionSettingsClient({
   initialTechnicianConfig,
   initialCategories,
   rows: initialRows,
+  rowsPartial: initialRowsPartial = false,
 }: CommissionSettingsClientProps) {
   const t = useTranslations('commissions');
   const locale = useLocale();
@@ -180,6 +186,14 @@ export function CommissionSettingsClient({
 
   const [dashboardRows, setDashboardRows] = useState<ThresholdImpactRow[] | undefined>(initialRows);
   const [rowsError, setRowsError] = useState<string | null>(null);
+  // Codex round 2 (P2): `fetchCommissionDashboard` returns only its first page (50 rows) plus a
+  // `continuationToken` when more exist — `dashboardRows` above silently held only that page, so
+  // the threshold-impact preview undercounted above 50 technicians carrying a balance with no
+  // indication. Mirrors the exact `isPartial` qualifier idiom `CommissionsClient`/`SummaryBand`
+  // already established for the roll-up: true whenever a continuation token is present, in which
+  // case the copy below must say the figure covers only the loaded page rather than draining
+  // every page just to compute a settings-screen preview.
+  const [dashboardRowsPartial, setDashboardRowsPartial] = useState<boolean>(initialRowsPartial);
 
   const globalRateId = useId();
   const warnId = useId();
@@ -230,6 +244,7 @@ export function CommissionSettingsClient({
     try {
       const dashboard = await fetchCommissionDashboard();
       setDashboardRows(dashboard.technicians);
+      setDashboardRowsPartial(dashboard.continuationToken !== undefined);
     } catch {
       setRowsError(t('settings.errors.rowsLoadFailed'));
     }
@@ -649,8 +664,13 @@ export function CommissionSettingsClient({
             {impact !== null && (
               <p data-testid="threshold-impact" className="text-[length:var(--text-sm)] text-[var(--color-text)]">
                 {impact.blockedCount === 0
-                  ? t('settings.enforcement.impactNone', { amount: formatINR(candidateBlockPaise ?? 0, locale) })
-                  : t('settings.enforcement.impact', {
+                  ? t(
+                      dashboardRowsPartial
+                        ? 'settings.enforcement.impactNonePartial'
+                        : 'settings.enforcement.impactNone',
+                      { amount: formatINR(candidateBlockPaise ?? 0, locale) },
+                    )
+                  : t(dashboardRowsPartial ? 'settings.enforcement.impactPartial' : 'settings.enforcement.impact', {
                       amount: formatINR(candidateBlockPaise ?? 0, locale),
                       count: impact.blockedCount,
                       names: impact.sample.join(', '),

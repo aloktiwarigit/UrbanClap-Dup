@@ -69,6 +69,10 @@ vi.mock('next-intl', () => ({
       'settings.enforcement.impactNone': 'At {amount}, no technicians currently carrying a balance would be blocked today.',
       'settings.enforcement.impact':
         'At {amount}, {count} technician(s) currently carrying a balance would be blocked today ({names}).',
+      'settings.enforcement.impactNonePartial':
+        'At {amount}, no technicians on this page currently carrying a balance would be blocked today.',
+      'settings.enforcement.impactPartial':
+        'At {amount}, {count} technician(s) on this page currently carrying a balance would be blocked today ({names}).',
       'settings.enforcement.holdEnforcementLabel': 'Block technicians who owe too much',
       'settings.enforcement.enforceKycLabel': 'Require KYC before dispatch',
       'settings.enforcement.confirmEnableTitle': 'Turn on hold enforcement?',
@@ -260,6 +264,76 @@ describe('CommissionSettingsClient', () => {
 
     expect(screen.getByTestId('threshold-impact')).toHaveTextContent(/1 technician/);
     expect(screen.getByTestId('threshold-impact')).toHaveTextContent(/Ramesh/);
+    // Unqualified: this is the whole set (`rowsPartial` defaults to false), so the copy must not
+    // carry the page-scoped qualifier.
+    expect(screen.getByTestId('threshold-impact')).not.toHaveTextContent(/on this page/i);
+  });
+
+  // Codex round 2 (P2): `fetchCommissionDashboard` only ever returns its first page (50 rows)
+  // plus a `continuationToken` when more exist. Before this fix, `dashboardRows` silently held
+  // just that page and the preview counted blocked technicians from it alone — undercounting
+  // above 50 technicians carrying a balance, with nothing on screen to say so. The fix labels
+  // the figure instead of draining every page to compute a settings-screen preview, mirroring
+  // the exact `isPartial` qualifier idiom `CommissionsClient`/`SummaryBand` already established
+  // for the commissions roll-up.
+  it('labels the threshold-impact preview as page-scoped when the dashboard reports more pages exist', async () => {
+    const user = userEvent.setup();
+    render(
+      <CommissionSettingsClient
+        initialConfig={config()}
+        initialTechnicianConfig={techConfig()}
+        initialCategories={[]}
+        rows={[{ technicianName: 'Ramesh', outstandingPaise: 139346 }]}
+        rowsPartial
+      />,
+    );
+
+    await setThresholds(user, { block: '1000' });
+
+    expect(screen.getByTestId('threshold-impact')).toHaveTextContent(/1 technician/);
+    expect(screen.getByTestId('threshold-impact')).toHaveTextContent(/Ramesh/);
+    expect(screen.getByTestId('threshold-impact')).toHaveTextContent(/on this page/i);
+  });
+
+  it('labels the threshold-impact preview as page-scoped even in the zero-blocked case, when the dashboard reports more pages exist', async () => {
+    const user = userEvent.setup();
+    render(
+      <CommissionSettingsClient
+        initialConfig={config()}
+        initialTechnicianConfig={techConfig()}
+        initialCategories={[]}
+        rows={[{ technicianName: 'Ramesh', outstandingPaise: 139346 }]}
+        rowsPartial
+      />,
+    );
+
+    // ₹1,000,000 is above every seeded balance, so nothing on this page would be blocked — but
+    // there may still be blocked technicians on pages this preview never fetched.
+    await setThresholds(user, { block: '1000000' });
+
+    expect(screen.getByTestId('threshold-impact')).toHaveTextContent(/on this page/i);
+  });
+
+  it('derives the page-scoped label itself from a live fetch that reports a continuation token, not only from the `rowsPartial` test seed', async () => {
+    const user = userEvent.setup();
+    fetchCommissionDashboard.mockResolvedValue({
+      technicians: [{ technicianName: 'Ramesh', outstandingPaise: 139346 }],
+      totalOutstanding: 139346,
+      unreconciledTechnicianCount: 0,
+      continuationToken: 'page-2',
+    });
+    render(
+      <CommissionSettingsClient
+        initialConfig={config()}
+        initialTechnicianConfig={techConfig()}
+        initialCategories={[]}
+      />,
+    );
+
+    await waitFor(() => expect(fetchCommissionDashboard).toHaveBeenCalled());
+    await setThresholds(user, { block: '1000' });
+
+    expect(screen.getByTestId('threshold-impact')).toHaveTextContent(/on this page/i);
   });
 
   it('renders nothing for the threshold-impact preview when no rows have loaded', () => {
@@ -550,6 +624,16 @@ describe('the real messages/en.json copy (not the mocked dictionary above)', () 
     expect(messageAt('commissions.settings.enforcement.impact')).toMatch(
       /currently carrying a balance/i,
     );
+  });
+
+  // Codex round 2 (P2): the page-scoped variants must exist and must actually say "this page" —
+  // matching the exact wording idiom `messages/en.json`'s `summaryBand.technicianCountPartial`
+  // already uses for the same "loaded page, not the whole roster" qualifier, rather than a
+  // second, differently-worded idiom for the same idea.
+  it('labels the page-scoped threshold-impact copy as covering only the loaded page', () => {
+    expect(messageAt('commissions.settings.enforcement.impactNonePartial')).toMatch(/on this page/i);
+    expect(messageAt('commissions.settings.enforcement.impactPartial')).toMatch(/on this page/i);
+    expect(messageAt('commissions.summaryBand.technicianCountPartial')).toMatch(/on this page/i);
   });
 
   it('states the threshold-order rule as warn below block, matching the client-side check', () => {
