@@ -23,6 +23,12 @@ export const OrderSchema = z.object({
   customerPhone: z.string(),
   technicianId: z.string().optional(),
   technicianName: z.string().optional(),
+  /**
+   * Masked technician phone (ADR 0034). Optional and read-path only: absent
+   * for unassigned bookings and for technicians whose number cannot be
+   * resolved. Never widen this to a required field.
+   */
+  technicianPhoneMasked: z.string().optional(),
   serviceId: z.string().optional(),
   serviceName: z.string().optional(),
   categoryId: z.string().optional(),

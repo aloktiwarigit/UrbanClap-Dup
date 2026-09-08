@@ -5,6 +5,7 @@ import { catalogueRepo } from './catalogue-repository.js';
 import { getTechniciansByIds } from './technician-repository.js';
 import { getFirebaseAdmin } from '../services/firebaseAdmin.js';
 import { getStorageDownloadUrl } from '../firebase/admin.js';
+import { maskPhone } from '../lib/pii/mask.js';
 
 const PHOTO_STAGE_ORDER = ['EN_ROUTE', 'REACHED', 'IN_PROGRESS', 'COMPLETED'];
 
@@ -130,19 +131,58 @@ async function fetchServiceNames(serviceIds: string[]): Promise<Map<string, stri
   return names;
 }
 
-async function fetchTechnicianNames(technicianIds: string[]): Promise<Map<string, string>> {
+interface TechnicianContact {
+  displayName: string;
+  phoneNumber?: string;
+}
+
+/**
+ * Resolves display names from Cosmos and phone numbers from Firebase Auth.
+ *
+ * A booking's technicianId may hold either the technician document id or its
+ * technicianId field, so every contact is registered under both keys. The
+ * Firebase uid is always the document id (see admin/technicians/list.ts).
+ */
+async function fetchTechnicianContacts(
+  technicianIds: string[],
+): Promise<Map<string, TechnicianContact>> {
+  const contacts = new Map<string, TechnicianContact>();
+  if (technicianIds.length === 0) return contacts;
+
+  let techs: Awaited<ReturnType<typeof getTechniciansByIds>> = [];
   try {
-    const techs = await getTechniciansByIds(technicianIds);
-    const names = new Map<string, string>();
-    for (const tech of techs) {
-      const displayName = tech.displayName?.trim() || tech.name?.trim() || tech.technicianId || tech.id;
-      if (tech.id) names.set(tech.id, displayName);
-      if (tech.technicianId) names.set(tech.technicianId, displayName);
-    }
-    return names;
+    techs = await getTechniciansByIds(technicianIds);
   } catch {
-    return new Map();
+    return contacts;
   }
+
+  const phones = new Map<string, string>();
+  const uids = unique(techs.map((tech) => tech.id));
+  if (uids.length > 0) {
+    try {
+      const auth = getFirebaseAdmin().auth();
+      for (let index = 0; index < uids.length; index += 100) {
+        const result = await auth.getUsers(uids.slice(index, index + 100).map((uid) => ({ uid })));
+        for (const user of result.users) {
+          if (user.phoneNumber) phones.set(user.uid, user.phoneNumber);
+        }
+      }
+    } catch {
+      // Firebase Auth metadata is best-effort; the roster still renders without it.
+    }
+  }
+
+  for (const tech of techs) {
+    const displayName = tech.displayName?.trim() || tech.name?.trim() || tech.technicianId || tech.id;
+    const phoneNumber = tech.id ? phones.get(tech.id) : undefined;
+    const contact: TechnicianContact = {
+      displayName,
+      ...(phoneNumber ? { phoneNumber } : {}),
+    };
+    if (tech.id) contacts.set(tech.id, contact);
+    if (tech.technicianId) contacts.set(tech.technicianId, contact);
+  }
+  return contacts;
 }
 
 interface CustomerProfile {
@@ -173,12 +213,20 @@ async function fetchCustomerProfiles(customerIds: string[]): Promise<Map<string,
   }
 }
 
+/**
+ * The single PII serialization boundary for admin orders (ADR 0034).
+ *
+ * Raw phone numbers are used above this line for fallback resolution and are
+ * masked on the way out. queryOrders and getOrderById both end here, so no
+ * admin orders response can carry an unmasked number. The full number is
+ * reachable only via POST /v1/admin/orders/{id}/reveal-contact.
+ */
 async function hydrateOrders(orders: Order[]): Promise<Order[]> {
   if (orders.length === 0) return orders;
 
-  const [serviceNames, technicianNames, customerProfiles] = await Promise.all([
+  const [serviceNames, technicianContacts, customerProfiles] = await Promise.all([
     fetchServiceNames(unique(orders.map((order) => order.serviceId))),
-    fetchTechnicianNames(unique(orders.map((order) => order.technicianId))),
+    fetchTechnicianContacts(unique(orders.map((order) => order.technicianId))),
     fetchCustomerProfiles(unique(orders.map((order) => order.customerId))),
   ]);
 
@@ -188,12 +236,18 @@ async function hydrateOrders(orders: Order[]): Promise<Order[]> {
       ? customerProfile?.displayName ?? customerProfile?.phoneNumber ?? order.customerName
       : order.customerName;
 
+    const technicianContact = order.technicianId ? technicianContacts.get(order.technicianId) : undefined;
+    const rawCustomerPhone = order.customerPhone || customerProfile?.phoneNumber || '';
+
     return OrderSchema.parse({
       ...order,
       customerName,
-      customerPhone: order.customerPhone || customerProfile?.phoneNumber || '',
+      customerPhone: maskPhone(rawCustomerPhone),
       serviceName: order.serviceName ?? (order.serviceId ? serviceNames.get(order.serviceId) : undefined),
-      technicianName: order.technicianName ?? (order.technicianId ? technicianNames.get(order.technicianId) : undefined),
+      technicianName: order.technicianName ?? technicianContact?.displayName,
+      ...(technicianContact?.phoneNumber
+        ? { technicianPhoneMasked: maskPhone(technicianContact.phoneNumber) }
+        : {}),
     });
   });
 }
