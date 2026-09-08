@@ -6,11 +6,7 @@ import { getCustomerSummaries } from '../../../cosmos/booking-repository.js';
 import { getCustomerMetadata } from '../../../cosmos/customer-metadata-repository.js';
 import { getFirebaseAdmin } from '../../../services/firebaseAdmin.js';
 import type { AdminCustomer } from '../../../schemas/admin-customer.js';
-
-function maskPhone(phone: string): string {
-  if (!phone || phone.length < 4) return '••••••••••';
-  return `+91 XXXXX-X${phone.slice(-4)}`;
-}
+import { maskPhone } from '../../../lib/pii/mask.js';
 
 export async function adminListCustomersHandler(
   _req: HttpRequest,
