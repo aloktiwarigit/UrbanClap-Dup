@@ -29,11 +29,19 @@ import { getTechniciansByIds } from '../../src/cosmos/technician-repository.js';
 import { getFirebaseAdmin } from '../../src/services/firebaseAdmin.js';
 import { getStorageDownloadUrl } from '../../src/firebase/admin.js';
 import { queryOrders, getOrderById } from '../../src/cosmos/orders-repository.js';
+import { MASK_PLACEHOLDER } from '../../src/lib/pii/mask.js';
 
 const sampleOrder = {
   id: 'ord_1', customerId: 'cust_1', customerName: 'Rahul', customerPhone: '9999999999',
+  technicianId: 'tech_1',
   status: 'ASSIGNED', city: 'Bengaluru',
   scheduledAt: new Date().toISOString(), amount: 599, createdAt: new Date().toISOString(),
+};
+
+const unassignedOrder = {
+  id: 'ord_unassigned', customerId: 'cust_2', customerName: 'Priya', customerPhone: '8888888888',
+  status: 'PENDING_PAYMENT', city: 'Bengaluru',
+  scheduledAt: new Date().toISOString(), amount: 299, createdAt: new Date().toISOString(),
 };
 
 const customerCreatedBooking = {
@@ -118,7 +126,7 @@ describe('queryOrders', () => {
       id: 'booking_1',
       customerId: 'firebase_uid_123',
       customerName: 'Customer firebase',
-      customerPhone: '',
+      customerPhone: MASK_PLACEHOLDER,
       city: 'Ayodhya',
       scheduledAt: '2026-05-04T10:00:00+05:30',
       amount: 50000,
@@ -161,7 +169,7 @@ describe('queryOrders', () => {
 
     expect(result.items[0]).toMatchObject({
       customerName: 'alok',
-      customerPhone: '+919999999999',
+      customerPhone: '+91 XXXXX-X9999',
       serviceName: 'AC Deep Clean',
       technicianName: 'Ravi Kumar',
     });
@@ -280,5 +288,91 @@ describe('getOrderById', () => {
     });
     const result = await getOrderById('nonexistent');
     expect(result).toBeNull();
+  });
+});
+
+describe('PII masking at the orders serialization boundary', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(catalogueRepo.getServiceByIdCrossPartition).mockResolvedValue(null);
+    vi.mocked(getTechniciansByIds).mockResolvedValue([
+      { id: 'tech_1', technicianId: 'tech_1', displayName: 'Ravi Kumar' },
+    ]);
+    vi.mocked(getFirebaseAdmin).mockReturnValue({
+      auth: () => ({
+        getUsers: vi.fn().mockResolvedValue({
+          users: [
+            { uid: 'cust_1', displayName: 'Rahul', phoneNumber: '+919999999999' },
+            { uid: 'tech_1', phoneNumber: '+919876544321' },
+          ],
+        }),
+      }),
+    } as never);
+  });
+
+  it('masks customerPhone in queryOrders output', async () => {
+    let callCount = 0;
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({
+        container: () => ({
+          items: {
+            query: () => ({
+              fetchAll: vi.fn().mockImplementation(async () => {
+                callCount++;
+                return callCount === 1
+                  ? { resources: [1] }
+                  : { resources: [sampleOrder] };
+              }),
+            }),
+          },
+        }),
+      }),
+    });
+
+    const result = await queryOrders({ page: 1, pageSize: 50 } as never);
+    for (const order of result.items) {
+      expect(order.customerPhone).not.toBe('9999999999');
+      expect(order.customerPhone).toMatch(/^(\+91 XXXXX-X\d{4}|••••••••••)$/);
+    }
+  });
+
+  it('masks customerPhone in getOrderById output', async () => {
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({
+        container: () => ({
+          items: { query: () => ({ fetchAll: vi.fn().mockResolvedValue({ resources: [sampleOrder] }) }) },
+        }),
+      }),
+    });
+
+    const order = await getOrderById('ord_1');
+    expect(order?.customerPhone).toMatch(/^(\+91 XXXXX-X\d{4}|••••••••••)$/);
+  });
+
+  it('exposes technicianPhoneMasked when the technician has a number', async () => {
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({
+        container: () => ({
+          items: { query: () => ({ fetchAll: vi.fn().mockResolvedValue({ resources: [sampleOrder] }) }) },
+        }),
+      }),
+    });
+
+    const order = await getOrderById('ord_1');
+    expect(order?.technicianPhoneMasked).toBe('+91 XXXXX-X4321');
+  });
+
+  it('omits technicianPhoneMasked when no technician is assigned', async () => {
+    vi.mocked(getTechniciansByIds).mockResolvedValue([]);
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({
+        container: () => ({
+          items: { query: () => ({ fetchAll: vi.fn().mockResolvedValue({ resources: [unassignedOrder] }) }) },
+        }),
+      }),
+    });
+
+    const order = await getOrderById('ord_unassigned');
+    expect(order?.technicianPhoneMasked).toBeUndefined();
   });
 });
