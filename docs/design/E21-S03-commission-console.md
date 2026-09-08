@@ -156,7 +156,20 @@ Three server responses need distinct copy, all in the interface's voice:
 
 - `replayed: true` → **"Already recorded. This is the original receipt, not a second payment."**
 - `holdRecomputePending: true` → **"Recorded. The balance will catch up shortly."**
-- `409 IDEMPOTENCY_MISMATCH` → **"That reference was already used for a different amount. Check the amount and reference, then try again."**
+- `409 IDEMPOTENCY_MISMATCH` → names the *pending attempt*, not the reference just typed: **"A previous attempt for this technician has not been confirmed: {amount} via {method}, reference {ref}."** plus an explicit discard action whose copy states the risk it carries.
+
+**Revised after implementation review (2026-09-07).** The original wording here was false in the
+case that actually produces this error. The idempotency key is scoped to the technician and cleared
+only on a successful record, so a 409 means an *earlier, unconfirmed* attempt is still pending — the
+reference the operator just typed has usually never been used for anything. Blaming it sent the
+operator looking for a problem that was not there, and because the key survives the failure, every
+subsequent distinct payment for that technician hit the same error. The message must name the
+pending attempt and offer a way out.
+
+That way out — discarding the pending attempt — deliberately re-arms a double charge, so it is the
+most dangerous control on this surface. Its copy says so plainly: if the earlier attempt did land,
+discarding it and recording again charges the technician twice. This is the one place in the console
+where we ask the owner to make that call, because only they can check whether the money arrived.
 
 When the server's allocation **differs from the preview**, say so explicitly rather than swapping
 the numbers silently — the operator has already read the preview aloud, possibly to the technician:
