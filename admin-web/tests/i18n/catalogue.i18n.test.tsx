@@ -22,6 +22,12 @@ vi.mock('@/api/catalogue', () => ({
   listCategories: vi.fn().mockResolvedValue([]),
   patchCategory: vi.fn(),
 }));
+// Fix round 3 (task 9): ServiceForm now reads the signed-in admin's role (to role-gate the
+// commissionBps field) via useAdminAuth, which throws outside an AdminAuthProvider. These tests
+// only exercise i18n sentinels, not authorization, so a fixed super-admin stand-in is enough.
+vi.mock('@/lib/auth/context', () => ({
+  useAdminAuth: () => ({ auth: { role: 'super-admin' } }),
+}));
 
 import { CategoryForm } from '../../src/components/catalogue/CategoryForm';
 import { CategoryCard } from '../../src/components/catalogue/CategoryCard';
