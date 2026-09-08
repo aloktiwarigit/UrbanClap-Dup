@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { patchTechnician } from '@/api/technicians';
+import { HoldChip } from '@/components/commissions/HoldChip';
+import { formatINR } from '@/lib/format/intl';
 import type { AdminTechnician, TechnicianStatus } from '@/types/technician-admin';
 
 interface Props {
@@ -25,6 +27,7 @@ const KYC_COLORS: Record<string, string> = {
 
 export function TechnicianRosterClient({ initialTechnicians }: Props) {
   const t = useTranslations('technicians');
+  const locale = useLocale();
 
   const [technicians, setTechnicians] = useState(initialTechnicians);
   const [search, setSearch] = useState('');
@@ -95,6 +98,8 @@ export function TechnicianRosterClient({ initialTechnicians }: Props) {
                 <th style={{ padding: '8px 12px' }}>{t('columns.categories')}</th>
                 <th style={{ padding: '8px 12px' }}>{t('columns.status')}</th>
                 <th style={{ padding: '8px 12px' }}>{t('columns.kyc')}</th>
+                <th style={{ padding: '8px 12px' }}>{t('columns.hold')}</th>
+                <th style={{ padding: '8px 12px', textAlign: 'right' }}>{t('columns.balance')}</th>
                 <th style={{ padding: '8px 12px' }}>{t('columns.activeJobs')}</th>
                 <th style={{ padding: '8px 12px' }}>{t('columns.actions')}</th>
               </tr>
@@ -132,6 +137,21 @@ export function TechnicianRosterClient({ initialTechnicians }: Props) {
                         <a href={tech.kycDocumentUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--marigold)', fontSize: '0.7rem' }}>{t('actions.viewKyc')}</a>
                       )}
                     </div>
+                  </td>
+                  <td style={{ padding: '10px 12px' }}>
+                    {tech.commissionHold ? (
+                      <HoldChip
+                        state={tech.commissionHold.state}
+                        {...(tech.commissionHold.override !== undefined
+                          ? { override: tech.commissionHold.override }
+                          : {})}
+                      />
+                    ) : (
+                      <span style={{ color: 'var(--fog-0)' }}>—</span>
+                    )}
+                  </td>
+                  <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--fog-2)' }}>
+                    {tech.commissionHold ? formatINR(tech.commissionHold.outstandingPaise, locale) : '—'}
                   </td>
                   <td style={{ padding: '10px 12px', textAlign: 'center', color: tech.activeBookingCount > 0 ? 'var(--teal-soft)' : 'var(--fog-0)' }}>
                     {tech.activeBookingCount}

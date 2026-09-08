@@ -108,6 +108,8 @@
       "categories": "श्रेणियाँ",
       "status": "स्थिति",
       "kyc": "KYC",
+      "hold": "होल्ड",
+      "balance": "बकाया राशि",
       "activeJobs": "सक्रिय काम",
       "actions": "कार्रवाई"
     },

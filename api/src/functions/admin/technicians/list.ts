@@ -59,6 +59,7 @@ export async function adminListTechniciansHandler(
       commissionPct: doc.commissionPct ?? 20,
       activeBookingCount: counts[i] ?? 0,
       lastActiveAt: doc.updatedAt,
+      commissionHold: doc.commissionHold,
     };
   });
 

@@ -469,6 +469,7 @@ export interface TechnicianAdminDoc {
   skills?: string[];
   commissionPct?: number;
   updatedAt?: string;
+  commissionHold?: CommissionHold;
 }
 
 export async function listAllTechniciansForAdmin(): Promise<TechnicianAdminDoc[]> {
