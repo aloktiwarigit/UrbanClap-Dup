@@ -46,14 +46,14 @@ describe('PII reveal copy', () => {
   }
 
   it('translates the reveal copy into Devanagari rather than copying English', () => {
-    const hiPii = (hi as Record<string, Record<string, Record<string, string>>>)['orders']!['pii']!;
+    const hiPii = (hi as unknown as Record<string, Record<string, Record<string, string>>>)['orders']!['pii']!;
     for (const key of ['showNumber', 'recorded', 'unavailable']) {
       expect(hiPii[key]).toMatch(/[ऀ-ॿ]/);
     }
   });
 
   it('does not promise a reveal without saying it is recorded', () => {
-    const enPii = (en as Record<string, Record<string, Record<string, string>>>)['orders']!['pii']!;
+    const enPii = (en as unknown as Record<string, Record<string, Record<string, string>>>)['orders']!['pii']!;
     expect(enPii['recorded']).toMatch(/audit log/i);
   });
 });
