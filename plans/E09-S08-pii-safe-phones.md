@@ -12,6 +12,8 @@
 
 **Tier:** Feature. **Worktree:** `C:/Alok/Business Projects/wt-e09-s08`, branch `feat/e09-s08-pii-phones` off `origin/main` @ `7e3fdef4`.
 
+**Story size gate (root `CLAUDE.md`):** this plan is ~1,950 lines, past the Feature-tier 800-line trigger. Applying the split rule, **0 of 4** criteria hold — new files 10 (not >20), not an Android story so the 4-layer criterion cannot apply, 0 external SDK integrations (Firebase Auth and Cosmos are both already wired), 4 new test files (not ≥10). The length is inlined test and implementation source, which the writing-plans skill requires verbatim; the underlying story is the smallest in the programme (spec §4 estimates 2h). **No split.** Splitting a 2h story across two review cycles would be ceremony, not risk reduction.
+
 ---
 
 ## Global Constraints
