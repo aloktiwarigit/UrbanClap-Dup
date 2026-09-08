@@ -144,12 +144,15 @@ describe('maskVpa', () => {
   });
 
   it('uses a fixed-width mask so handle length does not leak', () => {
-    expect(maskVpa('ab@ybl')).toBe('ab••••••@ybl');
+    expect(maskVpa('abc@ybl')).toBe('ab••••••@ybl');
     expect(maskVpa('abcdefghijklmnop@ybl')).toBe('ab••••••@ybl');
   });
 
   it('masks the whole handle when it is shorter than three characters', () => {
+    // Keeping two of two characters would reveal the whole handle, so a
+    // handle this short is masked entirely rather than near-plaintext.
     expect(maskVpa('a@ybl')).toBe('••••••••@ybl');
+    expect(maskVpa('ab@ybl')).toBe('••••••••@ybl');
   });
 
   it('returns the placeholder when there is no @ separator', () => {
@@ -234,7 +237,7 @@ export function maskVpa(vpa: string | null | undefined): string {
 cd api && ./node_modules/.bin/vitest run tests/lib/pii/mask.test.ts
 ```
 
-Expected: PASS, 12 tests.
+Expected: PASS, 11 tests.
 
 - [ ] **Step 5: Commit**
 
@@ -513,12 +516,19 @@ beforeEach(() => {
     technicianId: 'tech_1',
   });
   getTechniciansByIds.mockResolvedValue([{ id: 'tech_1', technicianId: 'tech_1' }]);
-  getUsers.mockResolvedValue({
-    users: [
-      { uid: 'cust_1', phoneNumber: '+919999999999' },
-      { uid: 'tech_1', phoneNumber: '+919876544321' },
-    ],
-  });
+  // The mock must honour the requested uid: the handler resolves one subject
+  // at a time via getUsers([{ uid }]) and reads users[0]. A mock that always
+  // returns both users would make the technician case assert the customer's
+  // number and pass for the wrong reason.
+  const directory: Record<string, string> = {
+    cust_1: '+919999999999',
+    tech_1: '+919876544321',
+  };
+  getUsers.mockImplementation(async (identifiers: Array<{ uid: string }>) => ({
+    users: identifiers
+      .filter(({ uid }) => directory[uid] !== undefined)
+      .map(({ uid }) => ({ uid, phoneNumber: directory[uid] })),
+  }));
 });
 
 describe('POST /v1/admin/orders/{id}/reveal-contact', () => {
@@ -577,7 +587,7 @@ describe('POST /v1/admin/orders/{id}/reveal-contact', () => {
   });
 
   it('returns 404 PHONE_UNAVAILABLE when the number cannot be resolved', async () => {
-    getUsers.mockResolvedValue({ users: [] });
+    getUsers.mockImplementation(async () => ({ users: [] }));
     const res = await revealContactHandler(request({ party: 'CUSTOMER' }), ctx, admin);
     expect(res.status).toBe(404);
     expect((res.jsonBody as { code: string }).code).toBe('PHONE_UNAVAILABLE');
@@ -783,7 +793,7 @@ app.http('adminRevealOrderContact', {
 cd api && ./node_modules/.bin/vitest run tests/functions/admin/orders/reveal-contact.test.ts
 ```
 
-Expected: PASS, 11 tests.
+Expected: PASS, 10 tests.
 
 - [ ] **Step 7: Confirm the function is registered**
 
@@ -1272,6 +1282,22 @@ function errorKeyFor(err: unknown): ErrorKey {
   return 'failed';
 }
 
+/**
+ * Resolved through an explicit switch rather than t(`errors.${key}`):
+ * next-intl types t()'s argument as a literal union, so a template-literal
+ * key fails the typecheck.
+ */
+function errorMessage(t: (key: string) => string, key: ErrorKey): string {
+  switch (key) {
+    case 'forbidden':
+      return t('errors.forbidden');
+    case 'rateLimited':
+      return t('errors.rateLimited');
+    default:
+      return t('errors.failed');
+  }
+}
+
 export function ContactReveal({
   orderId,
   party,
@@ -1380,7 +1406,7 @@ export function ContactReveal({
 
       {errorKey !== null && (
         <span role="status" className="text-xs text-[var(--color-danger)]">
-          {t(`errors.${errorKey}`)}
+          {errorMessage(t, errorKey)}
         </span>
       )}
     </div>
