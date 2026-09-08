@@ -9,9 +9,6 @@ export interface DrawerProps {
   title: string;
   children: ReactNode;
   footer?: ReactNode;
-  /** Only 'right' is supported today; kept explicit so a future left/bottom
-   *  variant is an intentional signature change, not a silent default. */
-  side?: 'right';
 }
 
 /**
@@ -23,8 +20,7 @@ export interface DrawerProps {
  * New screens only — OrderSlideOver and ComplaintSlideOver keep their
  * hand-rolled implementations in this story (E21-S03).
  */
-export function Drawer({ open, onClose, title, children, footer, side = 'right' }: DrawerProps) {
-  void side; // only 'right' exists today; reserved for future variants
+export function Drawer({ open, onClose, title, children, footer }: DrawerProps) {
   const titleId = useId();
   const [entered, setEntered] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);

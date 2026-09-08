@@ -84,20 +84,4 @@ describe('Drawer', () => {
     );
     expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
   });
-
-  it('defaults to the right side', () => {
-    render(
-      <Drawer open onClose={noop} title="T">
-        body
-      </Drawer>,
-    );
-    // side='right' is the only supported value today, but assert the prop is
-    // accepted so future non-right values are an intentional type change.
-    render(
-      <Drawer open onClose={noop} title="T2" side="right">
-        body2
-      </Drawer>,
-    );
-    expect(screen.getAllByRole('dialog')).toHaveLength(2);
-  });
 });
