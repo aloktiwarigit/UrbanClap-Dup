@@ -232,8 +232,13 @@ async function hydrateOrders(orders: Order[]): Promise<Order[]> {
 
   return orders.map((order) => {
     const customerProfile = customerProfiles.get(order.customerId);
+    // maskPhone() never returns undefined, so it must only be invoked when a
+    // phoneNumber actually exists — otherwise this fallback would collapse
+    // straight to MASK_PLACEHOLDER instead of reaching order.customerName.
     const customerName = isGeneratedCustomerName(order.customerName, order.customerId)
-      ? customerProfile?.displayName ?? customerProfile?.phoneNumber ?? order.customerName
+      ? customerProfile?.displayName
+        ?? (customerProfile?.phoneNumber ? maskPhone(customerProfile.phoneNumber) : undefined)
+        ?? order.customerName
       : order.customerName;
 
     const technicianContact = order.technicianId ? technicianContacts.get(order.technicianId) : undefined;
