@@ -131,12 +131,9 @@ describe('OrderSlideOver', () => {
   });
 
   it('shows the unavailable copy when the technician has no number on file', () => {
-    render(
-      <OrderSlideOver
-        order={{ ...order, technicianPhoneMasked: undefined }}
-        onClose={vi.fn()}
-      />,
-    );
+    // `order` has no technicianPhoneMasked set (absent, not explicit undefined —
+    // exactOptionalPropertyTypes rejects assigning undefined to an optional field).
+    render(<OrderSlideOver order={order} onClose={vi.fn()} />);
     expect(screen.getAllByText(/unavailable|नंबर दर्ज नहीं/i).length).toBeGreaterThan(0);
   });
 
