@@ -143,6 +143,13 @@ export const adminCommissionReceivablesDashboardHandler: AdminHttpHandler = asyn
  * Full ledger detail for one technician (E21-S02 Task 10). `cashCollectedPaise` and
  * `creditAppliedPaise` are reported separately and are NEVER summed — cash is money that changed
  * hands at the door; credit is commission offset via an incentive, a wholly different flow.
+ *
+ * `cashCollectedPaise` is derived from the technician's `receivables` — mirroring the
+ * technician-facing sibling (`commission-view.service.ts`'s `cashCollectedPaise`) — NOT from
+ * `remittances`. A remittance is money the technician pays back to the platform after the fact;
+ * summing remittances here would report near-₹0 "collected at the door" for every technician
+ * until they remit (remittances are commonly empty), and double-counts money once they do,
+ * since the same cash then also reads out as a "payment applied" via `receivablesOut`.
  */
 export const adminCommissionReceivablesPerTechHandler: AdminHttpHandler = async (
   req: HttpRequest,
@@ -169,7 +176,10 @@ export const adminCommissionReceivablesPerTechHandler: AdminHttpHandler = async 
       a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0,
     );
 
-    const cashCollectedPaise = remittances.reduce((sum, r) => sum + r.amountPaise, 0);
+    const cashCollectedPaise = receivables.reduce(
+      (sum, r) => sum + (r.cashCollectedAmount ?? r.bookingAmount),
+      0,
+    );
     const creditAppliedPaise = receivables.reduce(
       (sum, r) =>
         sum + (r.allocations ?? []).filter((a) => a.source === 'INCENTIVE').reduce((s, a) => s + a.paise, 0),
