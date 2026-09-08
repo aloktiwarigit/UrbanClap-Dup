@@ -287,6 +287,29 @@ export function buildBalanceEvents(detail: CommissionLedgerDetail): BalanceEvent
   });
 }
 
+/** IST (India Standard Time, UTC+05:30) offset in milliseconds — mirrors `api/src/lib/ist-time.ts`. */
+const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+
+/**
+ * Converts a `YYYY-MM-DD` calendar date (as produced by an `<input type="date">`) to the end of
+ * that day in IST, expressed as a UTC ISO datetime string — the shape `z.string().datetime()`
+ * accepts on the hold-override API.
+ *
+ * The business operates out of Ayodhya (UTC+5:30). An override "until 30 September" must cover
+ * all of 30 September *there* — converting the bare date to UTC midnight would expire it at 05:30
+ * IST on the 30th, cutting the operator's intent short by most of a day. So this resolves to
+ * 23:59:59.999 IST on the given date and expresses that instant in UTC, e.g. `2026-09-30` ->
+ * `2026-09-30T18:29:59.999Z`.
+ *
+ * Kept small and dependency-free (no date library) to match the API-side helper's approach.
+ */
+export function endOfIstDayUtcIso(dateStr: string): string {
+  // Parsed as if `23:59:59.999` on `dateStr` were UTC, then shifted back by the IST offset to
+  // get the real UTC instant of 23:59:59.999 IST on that calendar date.
+  const asIfUtc = new Date(`${dateStr}T23:59:59.999Z`);
+  return new Date(asIfUtc.getTime() - IST_OFFSET_MS).toISOString();
+}
+
 /** A translation key plus its interpolation params — see the module-level i18n rule above. */
 export interface HoldReasonMessage {
   key: string;

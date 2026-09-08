@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   buildBalanceStack,
   buildBalanceEvents,
+  endOfIstDayUtcIso,
   holdReason,
   isStale,
   thresholdImpact,
@@ -342,6 +343,20 @@ describe('isStale', () => {
 
   it('fails closed on an unparseable staleAfter — a corrupt row reads as stale, not fresh', () => {
     expect(isStale({ staleAfter: 'not-a-date' }, new Date('2026-09-07T12:00:00.000Z'))).toBe(true);
+  });
+});
+
+describe('endOfIstDayUtcIso', () => {
+  it('converts a calendar date to 23:59:59.999 IST expressed as UTC', () => {
+    // 23:59:59.999 IST (UTC+05:30) on 2026-09-30 is 18:29:59.999 UTC the same date — not UTC
+    // midnight (which would expire the override at 05:30 IST, cutting the day short).
+    expect(endOfIstDayUtcIso('2026-09-30')).toBe('2026-09-30T18:29:59.999Z');
+  });
+
+  it('produces a value that satisfies z.string().datetime() — round-trips through Date unchanged', () => {
+    const iso = endOfIstDayUtcIso('2026-01-01');
+    expect(iso).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+    expect(new Date(iso).toISOString()).toBe(iso);
   });
 });
 

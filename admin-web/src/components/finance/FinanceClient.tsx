@@ -162,7 +162,11 @@ export function FinanceClient() {
         )}
       </section>
 
-      {summary?.payoutsEnabled !== false && (
+      {/* `summary === null` is "still loading", not "permitted" — treating it as permitted let the
+          queue (and its approve controls) flash briefly whenever the queue request resolved before
+          the summary request did, since `payoutsEnabled: false` hadn't arrived yet to hide it. Only
+          render once the summary has loaded and does not report payouts disabled. */}
+      {summary !== null && summary.payoutsEnabled !== false && (
         <section aria-labelledby="payout-heading">
           <h2 id="payout-heading" className="sr-only">Payout Queue</h2>
           {queueLoading && (

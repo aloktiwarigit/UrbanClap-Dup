@@ -630,6 +630,7 @@
       "override": {
         "dialogTitle": "Set hold override",
         "untilLabel": "Override until",
+        "untilRequired": "A date is required.",
         "reasonLabel": "Reason",
         "reasonRequired": "A reason is required.",
         "save": "Save override",

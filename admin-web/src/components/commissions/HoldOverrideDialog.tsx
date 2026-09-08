@@ -3,6 +3,7 @@
 import { useId, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Dialog } from '@/components/ui/Dialog';
+import { endOfIstDayUtcIso } from '@/lib/commissions/derive';
 
 export interface HoldOverrideDialogProps {
   open: boolean;
@@ -25,22 +26,29 @@ export function HoldOverrideDialog({ open, onClose, onSubmit, submitting = false
   const [until, setUntil] = useState('');
   const [reason, setReason] = useState('');
   const [reasonTouched, setReasonTouched] = useState(false);
+  const [untilTouched, setUntilTouched] = useState(false);
 
   const reasonError = reasonTouched && reason.trim() === '' ? t('detail.override.reasonRequired') : undefined;
+  const untilError = untilTouched && until === '' ? t('detail.override.untilRequired') : undefined;
 
   function handleClose() {
     setUntil('');
     setReason('');
     setReasonTouched(false);
+    setUntilTouched(false);
     onClose();
   }
 
   function handleSubmit() {
     setReasonTouched(true);
-    if (reason.trim() === '') {
+    setUntilTouched(true);
+    if (reason.trim() === '' || until === '') {
       return;
     }
-    onSubmit({ until, reason: reason.trim() });
+    // The API validates `until` as `z.string().datetime()` (a full ISO 8601 UTC instant) — the
+    // raw `<input type="date">` value ("2026-09-30") fails that check. Convert to end-of-day IST
+    // expressed in UTC so an override "until 30 September" covers all of that day in Ayodhya.
+    onSubmit({ until: endOfIstDayUtcIso(until), reason: reason.trim() });
   }
 
   return (
@@ -76,9 +84,15 @@ export function HoldOverrideDialog({ open, onClose, onSubmit, submitting = false
             type="date"
             value={until}
             onChange={(e) => setUntil(e.target.value)}
+            onBlur={() => setUntilTouched(true)}
             className="px-2 py-1 rounded border border-[var(--color-border)] text-[var(--color-text)] bg-[var(--color-surface)]"
           />
         </label>
+        {untilError !== undefined && (
+          <p role="alert" className="text-xs text-[var(--color-danger)]">
+            {untilError}
+          </p>
+        )}
         <label htmlFor={reasonId} className="flex flex-col gap-1 text-xs text-[var(--color-text-muted)]">
           {t('detail.override.reasonLabel')}
           <textarea

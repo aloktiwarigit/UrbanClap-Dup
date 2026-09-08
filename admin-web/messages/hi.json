@@ -630,6 +630,7 @@
       "override": {
         "dialogTitle": "होल्ड ओवरराइड सेट करें",
         "untilLabel": "ओवरराइड कब तक",
+        "untilRequired": "तारीख आवश्यक है।",
         "reasonLabel": "कारण",
         "reasonRequired": "कारण आवश्यक है।",
         "save": "ओवरराइड सहेजें",

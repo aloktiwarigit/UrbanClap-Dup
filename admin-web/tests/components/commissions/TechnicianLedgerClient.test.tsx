@@ -87,6 +87,7 @@ vi.mock('next-intl', () => ({
       'detail.credits.empty': 'No credits on this account.',
       'detail.override.dialogTitle': 'Set hold override',
       'detail.override.untilLabel': 'Override until',
+      'detail.override.untilRequired': 'A date is required.',
       'detail.override.reasonLabel': 'Reason',
       'detail.override.reasonRequired': 'A reason is required.',
       'detail.override.save': 'Save override',
@@ -337,8 +338,24 @@ describe('TechnicianLedgerClient', () => {
     await user.click(screen.getByRole('button', { name: 'Save override' }));
 
     await waitFor(() => {
-      expect(setHoldOverride).toHaveBeenCalledWith('t1', { until: '2026-09-30', reason: 'phone call' });
+      expect(setHoldOverride).toHaveBeenCalledTimes(1);
     });
+    // Assert the actual *shape* of what leaves the component, not merely that the mock was
+    // called — the API validates `until` as `z.string().datetime()` (a full ISO 8601 UTC
+    // instant), while the mock here would silently accept the bare `YYYY-MM-DD` date-input value
+    // that never actually satisfies the API. Round-tripping through `Date` and pinning the exact
+    // expected instant catches that regression; `toHaveBeenCalledWith({ until: '2026-09-30', ... })`
+    // would not.
+    const [technicianIdArg, submittedParams] = setHoldOverride.mock.calls[0] as [
+      string,
+      { until: string; reason: string },
+    ];
+    expect(technicianIdArg).toBe('t1');
+    expect(submittedParams.reason).toBe('phone call');
+    expect(submittedParams.until).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+    expect(new Date(submittedParams.until).toISOString()).toBe(submittedParams.until);
+    // 2026-09-30 end-of-day IST (23:59:59.999 at UTC+05:30) is 18:29:59.999 UTC the same date.
+    expect(submittedParams.until).toBe('2026-09-30T18:29:59.999Z');
     expect(await screen.findByText('Hold override saved.')).toBeInTheDocument();
   });
 
@@ -358,6 +375,24 @@ describe('TechnicianLedgerClient', () => {
     await user.click(screen.getByRole('button', { name: 'Save override' }));
     expect(setHoldOverride).not.toHaveBeenCalled();
     expect(screen.getByText('A reason is required.')).toBeInTheDocument();
+  });
+
+  it('will not submit a hold override without a date', async () => {
+    const user = userEvent.setup();
+    render(
+      <TechnicianLedgerClient
+        technicianId="t1"
+        initialDetail={detail({
+          hold: { outstandingPaise: 13478, dueCount: 3, state: 'WARN', evaluatedAt: '2026-09-07T13:24:00.000Z' },
+        })}
+        initialConfig={config({})}
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: 'Set hold override' }));
+    await user.type(screen.getByLabelText('Reason'), 'phone call');
+    await user.click(screen.getByRole('button', { name: 'Save override' }));
+    expect(setHoldOverride).not.toHaveBeenCalled();
+    expect(screen.getByText('A date is required.')).toBeInTheDocument();
   });
 
   it('clears an existing hold override', async () => {
