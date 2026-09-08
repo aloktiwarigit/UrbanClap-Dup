@@ -37,6 +37,8 @@ import {
   clearHoldOverride,
   fetchCommissionConfig,
   updateCommissionConfig,
+  fetchAdminCategories,
+  updateCategoryCommission,
   fetchTechnicianClientConfig,
   updateTechnicianClientConfig,
 } from '../../src/api/commissions';
@@ -95,6 +97,17 @@ const sampleTechnicianClientConfig = {
   features: { wallet: true },
   minSupportedVersionCode: 10,
   updatedBy: 'admin1',
+  updatedAt: '2026-09-01T00:00:00.000Z',
+};
+
+const sampleCategory = {
+  id: 'ac-repair',
+  name: 'AC Repair',
+  heroImageUrl: 'https://example.com/cat.jpg',
+  sortOrder: 1,
+  isActive: true,
+  updatedBy: 'admin1',
+  createdAt: '2026-09-01T00:00:00.000Z',
   updatedAt: '2026-09-01T00:00:00.000Z',
 };
 
@@ -268,6 +281,47 @@ describe('updateTechnicianClientConfig', () => {
     await updateTechnicianClientConfig({ minSupportedVersionCode: 42 });
     expect(PUT).toHaveBeenCalledWith('/v1/admin/config/technician-client', {
       body: { minSupportedVersionCode: 42 },
+    });
+  });
+});
+
+describe('fetchAdminCategories', () => {
+  it('calls GET on the categories endpoint and unwraps the categories array', async () => {
+    GET.mockResolvedValue({ data: { categories: [sampleCategory] } });
+    const result = await fetchAdminCategories();
+    expect(GET).toHaveBeenCalledWith('/v1/admin/catalogue/categories');
+    expect(result).toEqual([sampleCategory]);
+  });
+});
+
+describe('updateCategoryCommission', () => {
+  it('calls PUT with the category id path param and a numeric override', async () => {
+    PUT.mockResolvedValue({ data: { ...sampleCategory, commissionBps: 2500 } });
+    await updateCategoryCommission('ac-repair', 2500);
+    expect(PUT).toHaveBeenCalledWith('/v1/admin/catalogue/categories/{id}', {
+      params: { path: { id: 'ac-repair' } },
+      body: { commissionBps: 2500 },
+    });
+  });
+
+  // The whole point of this call existing (E21-S03 task 9): an explicit `null` — not an omitted
+  // field — is the wire value that clears a category's override back to inheriting the global
+  // default. Forwarding it unchanged, rather than dropping it as "no value to send", is the
+  // entire fix.
+  it('calls PUT with an explicit null to clear the override', async () => {
+    PUT.mockResolvedValue({ data: sampleCategory });
+    await updateCategoryCommission('ac-repair', null);
+    expect(PUT).toHaveBeenCalledWith('/v1/admin/catalogue/categories/{id}', {
+      params: { path: { id: 'ac-repair' } },
+      body: { commissionBps: null },
+    });
+  });
+
+  it('surfaces a validation error as a typed ApiError', async () => {
+    PUT.mockResolvedValue({ error: { error: 'ValidationError' }, response: { status: 400 } });
+    await expect(updateCategoryCommission('ac-repair', 9000)).rejects.toMatchObject({
+      status: 400,
+      body: { error: 'ValidationError' },
     });
   });
 });
