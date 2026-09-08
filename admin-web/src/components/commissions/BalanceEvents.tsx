@@ -95,7 +95,7 @@ export function BalanceEvents({ events }: BalanceEventsProps) {
                 <tr key={event.id}>
                   <td className="px-3 py-2 whitespace-nowrap">{formatDate(event.at, locale)}</td>
                   <td className="px-3 py-2">
-                    <span>{event.label}</span>
+                    <span>{t(event.labelKey, event.labelParams)}</span>
                     {event.bookingId !== undefined && (
                       <span className="block font-mono text-xs text-[var(--color-text-muted)]">
                         {event.bookingId}

@@ -241,6 +241,41 @@ describe('buildBalanceEvents', () => {
     expect(events[2]).toMatchObject({ ref: 'upi-1', actorId: 'admin-1' });
   });
 
+  it('returns i18n keys and params, never a rendered string — hi is the default locale and derive.ts must stay pure (I3, whole-branch review)', () => {
+    const events = buildBalanceEvents(detail);
+    // Both DUE events carry a serviceName in this fixture, so both use the "with service" key.
+    expect(events[0]).toMatchObject({
+      labelKey: 'detail.events.labels.dueWithService',
+      labelParams: { serviceName: 'AC Deep Clean' },
+    });
+    expect(events[1]).toMatchObject({
+      labelKey: 'detail.events.labels.dueWithService',
+      labelParams: { serviceName: 'AC Deep Clean' },
+    });
+    expect(events[2]).toMatchObject({
+      labelKey: 'detail.events.labels.remittance',
+      labelParams: { method: 'UPI' },
+    });
+    // None of the returned objects carry a pre-rendered "label" string.
+    for (const event of events) {
+      expect(event).not.toHaveProperty('label');
+    }
+  });
+
+  it('a DUE event with no serviceName uses the plain (no-service) label key', () => {
+    const noServiceDetail = {
+      ...detail,
+      receivables: detail.receivables.map((r) => {
+        const { serviceName: _serviceName, ...rest } = r as typeof r & { serviceName?: string };
+        return rest;
+      }),
+    } as unknown as CommissionLedgerDetail;
+    const events = buildBalanceEvents(noServiceDetail);
+    const dueEvent = events.find((e) => e.id === 'due:b1');
+    expect(dueEvent).toMatchObject({ labelKey: 'detail.events.labels.due' });
+    expect(dueEvent?.labelParams).toBeUndefined();
+  });
+
   it('the last balance event matches the balance stack total when remittances[] and credits[] fully account for remittedAmount (including a waived row and a credit-consumption event)', () => {
     // This equality is NOT a general invariant — see the KNOWN LIMITATION
     // comment on buildBalanceEvents. It holds here specifically because
@@ -256,14 +291,42 @@ describe('buildBalanceEvents', () => {
 });
 
 describe('holdReason', () => {
-  it('holdReason explains a BLOCKED state in money terms', () => {
+  it('holdReason explains a BLOCKED state in money terms, as an i18n key + params — not a rendered string', () => {
     const reason = holdReason(
       { state: 'BLOCKED', outstandingPaise: 524000, dueCount: 3, evaluatedAt: 'x' },
       { warnPaise: 250000, blockPaise: 500000 },
       'en',
     );
-    expect(reason).toContain('₹5,240.00');
-    expect(reason).toContain('₹5,000.00');
+    // I3 (whole-branch review): hi is the default locale, so this must return a translation key
+    // plus params — money amounts are still pre-formatted through formatINR (data shaping, not a
+    // sentence) — never an already-assembled English sentence.
+    expect(reason).toEqual({
+      key: 'detail.hold.reason.blocked',
+      params: { outstanding: '₹5,240.00', limit: '₹5,000.00', count: 3 },
+    });
+  });
+
+  it('holdReason returns the WARN/CLEAR/default keys for their respective states', () => {
+    const warn = holdReason(
+      { state: 'WARN', outstandingPaise: 300000, dueCount: 2, evaluatedAt: 'x' },
+      { warnPaise: 250000, blockPaise: 500000 },
+      'en',
+    );
+    expect(warn).toEqual({
+      key: 'detail.hold.reason.warn',
+      params: { outstanding: '₹3,000.00', limit: '₹2,500.00', count: 2 },
+    });
+
+    const clear = holdReason(
+      { state: 'CLEAR', outstandingPaise: 0, dueCount: 0, evaluatedAt: 'x' },
+      { warnPaise: 250000, blockPaise: 500000 },
+      'en',
+    );
+    expect(clear).toEqual({ key: 'detail.hold.reason.clear', params: { outstanding: '₹0.00', count: 0 } });
+  });
+
+  it('holdReason returns null for a null hold (no reason to explain)', () => {
+    expect(holdReason(null, { warnPaise: 250000, blockPaise: 500000 }, 'en')).toBeNull();
   });
 });
 

@@ -205,19 +205,24 @@ export function TechnicianLedgerClient({
                   state={detail.hold.state}
                   {...(detail.hold.override !== undefined ? { override: detail.hold.override } : {})}
                 />
-                {config !== null ? (
-                  <p className="text-sm text-[var(--color-text)]">
-                    {holdReason(
-                      detail.hold,
-                      { warnPaise: config.warnThresholdPaise, blockPaise: config.blockThresholdPaise },
-                      locale,
+                {config !== null
+                  ? (() => {
+                      const reason = holdReason(
+                        detail.hold,
+                        { warnPaise: config.warnThresholdPaise, blockPaise: config.blockThresholdPaise },
+                        locale,
+                      );
+                      return (
+                        reason !== null && (
+                          <p className="text-sm text-[var(--color-text)]">{t(reason.key, reason.params)}</p>
+                        )
+                      );
+                    })()
+                  : (
+                      configError !== null && (
+                        <p className="text-xs text-[var(--color-text-muted)]">{configError}</p>
+                      )
                     )}
-                  </p>
-                ) : (
-                  configError !== null && (
-                    <p className="text-xs text-[var(--color-text-muted)]">{configError}</p>
-                  )
-                )}
               </div>
             )}
           </section>

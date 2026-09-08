@@ -551,7 +551,13 @@
       "hold": {
         "heading": "होल्ड स्थिति",
         "setOverride": "होल्ड ओवरराइड सेट करें",
-        "clearOverride": "ओवरराइड हटाएँ"
+        "clearOverride": "ओवरराइड हटाएँ",
+        "reason": {
+          "blocked": "अवरुद्ध: बकाया कमीशन {outstanding}, {limit} की अवरोध सीमा से अधिक है ({count, plural, one {# बुकिंग} other {# बुकिंग}} बकाया)।",
+          "warn": "चेतावनी: बकाया कमीशन {outstanding}, {limit} की चेतावनी सीमा पार कर चुका है ({count, plural, one {# बुकिंग} other {# बुकिंग}} बकाया)।",
+          "clear": "स्पष्ट: बकाया कमीशन {outstanding} ({count, plural, one {# बुकिंग} other {# बुकिंग}} बकाया)।",
+          "default": "बकाया कमीशन {outstanding} ({count, plural, one {# बुकिंग} other {# बुकिंग}} बकाया)।"
+        }
       },
       "balance": {
         "heading": "शेष राशि",
@@ -577,7 +583,14 @@
         },
         "copyReference": "संदर्भ कॉपी करें",
         "copied": "कॉपी किया गया",
-        "empty": "अभी तक कोई शेष राशि घटना नहीं है।"
+        "empty": "अभी तक कोई शेष राशि घटना नहीं है।",
+        "labels": {
+          "due": "देय कमीशन",
+          "dueWithService": "देय कमीशन — {serviceName}",
+          "waiver": "कमीशन माफ किया गया",
+          "remittance": "भुगतान दर्ज किया गया — {method}",
+          "credit": "क्रेडिट लागू किया गया — {source}"
+        }
       },
       "receivables": {
         "heading": "प्राप्य राशियाँ",

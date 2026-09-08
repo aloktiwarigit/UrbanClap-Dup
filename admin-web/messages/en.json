@@ -551,7 +551,13 @@
       "hold": {
         "heading": "Hold status",
         "setOverride": "Set hold override",
-        "clearOverride": "Clear override"
+        "clearOverride": "Clear override",
+        "reason": {
+          "blocked": "Blocked: outstanding commission of {outstanding} exceeds the {limit} block threshold ({count, plural, one {# booking} other {# bookings}} due).",
+          "warn": "Warning: outstanding commission of {outstanding} has passed the {limit} warn threshold ({count, plural, one {# booking} other {# bookings}} due).",
+          "clear": "Clear: outstanding commission of {outstanding} ({count, plural, one {# booking} other {# bookings}} due).",
+          "default": "Outstanding commission of {outstanding} ({count, plural, one {# booking} other {# bookings}} due)."
+        }
       },
       "balance": {
         "heading": "Balance",
@@ -577,7 +583,14 @@
         },
         "copyReference": "Copy reference",
         "copied": "Copied",
-        "empty": "No balance events yet."
+        "empty": "No balance events yet.",
+        "labels": {
+          "due": "Commission due",
+          "dueWithService": "Commission due — {serviceName}",
+          "waiver": "Commission waived",
+          "remittance": "Remittance recorded — {method}",
+          "credit": "Credit applied — {source}"
+        }
       },
       "receivables": {
         "heading": "Receivables",

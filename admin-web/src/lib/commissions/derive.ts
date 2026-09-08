@@ -13,6 +13,17 @@
  * All money arithmetic here is integer paise. Never convert to rupees and
  * never round inside these functions — rounding is the server's job and it
  * has already happened by the time this data arrives.
+ *
+ * i18n rule: this module stays pure and testable, so no function here ever
+ * returns a rendered, human-facing sentence — `hi` is the product's default
+ * locale and every user-facing string must go through next-intl. `holdReason`
+ * and `buildBalanceEvents` both produce human-facing copy (a hold's plain-
+ * language explanation, and each balance event's row label); both return a
+ * translation key plus params rather than a formatted string, and the caller
+ * (a component that already holds a `useTranslations` instance) translates it
+ * at render time. `formatINR`-formatted money strings are the exception — a
+ * locale-aware number format is data shaping, not a sentence, so those are
+ * still produced here and passed through as params.
  */
 import { formatINR } from '@/lib/format/intl';
 import type { CommissionDashboardRow, CommissionLedgerDetail } from '@/api/commissions';
@@ -38,7 +49,11 @@ export interface BalanceEvent {
   id: string;
   at: string;
   kind: BalanceEventKind;
-  label: string;
+  // Translation key (under the `commissions` namespace) plus its interpolation params, NOT a
+  // rendered string — translate with `t(labelKey, labelParams)` at the call site. See the
+  // module-level i18n rule above.
+  labelKey: string;
+  labelParams?: Record<string, string>;
   bookingId?: string;
   ref?: string;
   actorId?: string;
@@ -178,7 +193,9 @@ export function buildBalanceEvents(detail: CommissionLedgerDetail): BalanceEvent
     id: `due:${r.id}`,
     at: r.createdAt,
     kind: 'DUE' as const,
-    label: r.serviceName !== undefined ? `Commission due — ${r.serviceName}` : 'Commission due',
+    ...(r.serviceName !== undefined
+      ? { labelKey: 'detail.events.labels.dueWithService', labelParams: { serviceName: r.serviceName } }
+      : { labelKey: 'detail.events.labels.due' }),
     bookingId: r.bookingId,
     changePaise: r.commissionDue,
     balancePaise: 0, // recomputed below once sorted
@@ -192,7 +209,7 @@ export function buildBalanceEvents(detail: CommissionLedgerDetail): BalanceEvent
         id: `waiver:${r.id}`,
         at: r.updatedAt ?? r.createdAt,
         kind: 'WAIVER' as const,
-        label: 'Commission waived',
+        labelKey: 'detail.events.labels.waiver',
         bookingId: r.bookingId,
         ...(r.waivedReason !== undefined ? { ref: r.waivedReason } : {}),
         ...(r.markedByAdminId !== undefined ? { actorId: r.markedByAdminId } : {}),
@@ -219,7 +236,8 @@ export function buildBalanceEvents(detail: CommissionLedgerDetail): BalanceEvent
       id: `remittance:${rem.id}`,
       at: rem.createdAt,
       kind: 'REMITTANCE' as const,
-      label: `Remittance recorded — ${rem.method}`,
+      labelKey: 'detail.events.labels.remittance',
+      labelParams: { method: rem.method },
       ...(soleAllocation !== undefined ? { bookingId: soleAllocation.bookingId } : {}),
       ref: rem.ref,
       actorId: rem.recordedByAdminId,
@@ -233,7 +251,8 @@ export function buildBalanceEvents(detail: CommissionLedgerDetail): BalanceEvent
       id: `credit:${credit.id}:${index}`,
       at: consumption.appliedAt,
       kind: 'CREDIT' as const,
-      label: `Credit applied — ${credit.source}`,
+      labelKey: 'detail.events.labels.credit',
+      labelParams: { source: credit.source },
       bookingId: consumption.bookingId,
       ref: credit.refId,
       changePaise: -consumption.paise,
@@ -268,31 +287,44 @@ export function buildBalanceEvents(detail: CommissionLedgerDetail): BalanceEvent
   });
 }
 
+/** A translation key plus its interpolation params — see the module-level i18n rule above. */
+export interface HoldReasonMessage {
+  key: string;
+  params: { outstanding: string; count: number; limit?: string };
+}
+
 /**
- * Explains a technician's hold state in money terms — the one function in
- * this module allowed to produce a human-facing string, because it must
- * quote the actual thresholds involved. Formats every amount through
- * `formatINR`; never hand-format money.
+ * Explains a technician's hold state in money terms. Quotes the actual thresholds involved, so it
+ * still formats every amount through `formatINR` (locale-aware number formatting, not a sentence)
+ * — but it does NOT assemble the surrounding sentence itself. It returns a translation key plus
+ * params; the caller (which already holds a `useTranslations('commissions')` instance) translates
+ * it, so the sentence goes through `hi.json`/`en.json` like every other user-facing string
+ * instead of always rendering in English regardless of locale.
  */
-export function holdReason(hold: CommissionHold, thresholds: HoldThresholds, locale: string): string {
+export function holdReason(
+  hold: CommissionHold,
+  thresholds: HoldThresholds,
+  locale: string,
+): HoldReasonMessage | null {
   if (hold === null) {
-    return '';
+    return null;
   }
   const outstanding = formatINR(hold.outstandingPaise, locale);
-  const bookingsWord = hold.dueCount === 1 ? 'booking' : 'bookings';
   switch (hold.state) {
-    case 'BLOCKED': {
-      const blockLimit = formatINR(thresholds.blockPaise, locale);
-      return `Blocked: outstanding commission of ${outstanding} exceeds the ${blockLimit} block threshold (${hold.dueCount} ${bookingsWord} due).`;
-    }
-    case 'WARN': {
-      const warnLimit = formatINR(thresholds.warnPaise, locale);
-      return `Warning: outstanding commission of ${outstanding} has passed the ${warnLimit} warn threshold (${hold.dueCount} ${bookingsWord} due).`;
-    }
+    case 'BLOCKED':
+      return {
+        key: 'detail.hold.reason.blocked',
+        params: { outstanding, limit: formatINR(thresholds.blockPaise, locale), count: hold.dueCount },
+      };
+    case 'WARN':
+      return {
+        key: 'detail.hold.reason.warn',
+        params: { outstanding, limit: formatINR(thresholds.warnPaise, locale), count: hold.dueCount },
+      };
     case 'CLEAR':
-      return `Clear: outstanding commission of ${outstanding} (${hold.dueCount} ${bookingsWord} due).`;
+      return { key: 'detail.hold.reason.clear', params: { outstanding, count: hold.dueCount } };
     default:
-      return `Outstanding commission of ${outstanding} (${hold.dueCount} ${bookingsWord} due).`;
+      return { key: 'detail.hold.reason.default', params: { outstanding, count: hold.dueCount } };
   }
 }
 
