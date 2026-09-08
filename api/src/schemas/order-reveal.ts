@@ -6,9 +6,11 @@ extendZodWithOpenApi(z);
 export const RevealPartyEnum = z.enum(['CUSTOMER', 'TECHNICIAN']);
 
 /** Write body — strict, per the read-widen/write-strict invariant. */
-export const RevealContactBodySchema = z.object({
-  party: RevealPartyEnum,
-});
+export const RevealContactBodySchema = z
+  .object({
+    party: RevealPartyEnum,
+  })
+  .strict();
 
 export const RevealContactResponseSchema = z.object({
   party: RevealPartyEnum,

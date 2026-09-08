@@ -1,38 +1,60 @@
 import { app } from '@azure/functions';
 import type { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { randomUUID } from 'node:crypto';
+import * as Sentry from '@sentry/node';
 import { requireAdmin } from '../../../middleware/requireAdmin.js';
 import type { AdminContext } from '../../../types/admin.js';
 import { getOrderById } from '../../../cosmos/orders-repository.js';
 import { getTechniciansByIds } from '../../../cosmos/technician-repository.js';
 import { appendAuditEntry } from '../../../cosmos/audit-log-repository.js';
-import { consume } from '../../../cosmos/rate-limit-repository.js';
+import { consumeStrict } from '../../../cosmos/rate-limit-repository.js';
 import { getFirebaseAdmin } from '../../../services/firebaseAdmin.js';
-import { maskPhone } from '../../../lib/pii/mask.js';
+import { maskPhone, MASK_PLACEHOLDER } from '../../../lib/pii/mask.js';
 import { RevealContactBodySchema, type RevealParty } from '../../../schemas/order-reveal.js';
 
 /** 30 reveals per minute per admin (spec §6 E09-S08). */
 const REVEAL_CAPACITY = 30;
 const REVEAL_REFILL_PER_SEC = 0.5;
 
+/**
+ * Resolves the full phone number for a Firebase uid.
+ *
+ * Throws on a genuine lookup failure (Firebase Auth outage) rather than
+ * swallowing the error — the caller must be able to tell "the number does
+ * not exist" (404 PHONE_UNAVAILABLE) apart from "we could not check" (502
+ * CONTACT_LOOKUP_FAILED). Silently collapsing both to the same response
+ * would hide an outage as if it were routine data absence.
+ */
 async function phoneForUid(uid: string): Promise<string | undefined> {
-  try {
-    const { users } = await getFirebaseAdmin().auth().getUsers([{ uid }]);
-    return users[0]?.phoneNumber ?? undefined;
-  } catch {
-    return undefined;
-  }
+  const { users } = await getFirebaseAdmin().auth().getUsers([{ uid }]);
+  return users[0]?.phoneNumber ?? undefined;
 }
 
 /**
- * Resolves the technician's Firebase uid. A booking's technicianId may hold
- * either the technician document id or its technicianId field; the uid is
- * always the document id.
+ * Resolves the technician's Firebase uid.
+ *
+ * `getTechniciansByIds` queries `WHERE ARRAY_CONTAINS(@ids, c.id) OR
+ * ARRAY_CONTAINS(@ids, c.technicianId)` with no ORDER BY, so for a single
+ * input it can legitimately return more than one doc — e.g. doc A with
+ * `id = technicianId` (an unrelated technician) and doc B with
+ * `id = <real assignee>, technicianId = technicianId`. Taking whichever the
+ * cross-partition query happens to order first risks disclosing an
+ * unrelated person's phone number on the one endpoint in this API that
+ * discloses PII. Resolve deterministically instead:
+ *   1. An exact `id === technicianId` match wins outright.
+ *   2. Otherwise, a `technicianId === technicianId` match is accepted only
+ *      if it is unique.
+ *   3. Anything ambiguous or absent resolves to `undefined` — the handler
+ *      then answers PARTY_NOT_AVAILABLE rather than guess.
  */
 async function technicianUid(technicianId: string): Promise<string | undefined> {
   try {
     const techs = await getTechniciansByIds([technicianId]);
-    return techs[0]?.id ?? undefined;
+    const exact = techs.find((t) => t.id === technicianId);
+    if (exact) return exact.id;
+    const byTechnicianId = techs.filter((t) => t.technicianId === technicianId);
+    if (byTechnicianId.length === 1) return byTechnicianId[0]!.id;
+    return undefined;
   } catch {
     return undefined;
   }
@@ -46,6 +68,11 @@ async function technicianUid(technicianId: string): Promise<string | undefined> 
  * Rate limiting runs here rather than in withRateLimit because the budget is
  * per admin: withRateLimit's keyExtractor only sees the raw request and runs
  * before requireAdmin has resolved an identity.
+ *
+ * The rate limiter is called via consumeStrict(), not consume(): this is the
+ * one endpoint in the API where "the limiter silently disabled itself under
+ * Cosmos throttling" is worse than a visible failure, so a Cosmos error here
+ * fails the request closed (503) instead of granting it.
  */
 export async function revealContactHandler(
   req: HttpRequest,
@@ -67,7 +94,13 @@ export async function revealContactHandler(
   }
   const party: RevealParty = parsed.data.party;
 
-  const budget = await consume(`rl:pii-reveal:${admin.adminId}`, REVEAL_CAPACITY, REVEAL_REFILL_PER_SEC);
+  let budget: Awaited<ReturnType<typeof consumeStrict>>;
+  try {
+    budget = await consumeStrict(`rl:pii-reveal:${admin.adminId}`, REVEAL_CAPACITY, REVEAL_REFILL_PER_SEC);
+  } catch (err: unknown) {
+    Sentry.captureException(err);
+    return { status: 503, jsonBody: { code: 'RATE_LIMIT_UNAVAILABLE' } };
+  }
   if (!budget.allowed) {
     const retryAfterSec = Math.ceil((budget.retryAfterMs ?? 1000) / 1000);
     return {
@@ -89,10 +122,23 @@ export async function revealContactHandler(
   }
   if (!subjectId) return { status: 404, jsonBody: { code: 'PARTY_NOT_AVAILABLE' } };
 
-  const phone = await phoneForUid(subjectId);
+  let phone: string | undefined;
+  try {
+    phone = await phoneForUid(subjectId);
+  } catch (err: unknown) {
+    Sentry.captureException(err);
+    return { status: 502, jsonBody: { code: 'CONTACT_LOOKUP_FAILED' } };
+  }
   if (!phone) return { status: 404, jsonBody: { code: 'PHONE_UNAVAILABLE' } };
 
   const revealedAt = new Date().toISOString();
+  const phoneMasked = maskPhone(phone);
+  // Derive last4 from the trimmed value, and never from the raw one: a phone
+  // under 4 characters makes maskPhone() collapse to MASK_PLACEHOLDER, and
+  // slicing the raw (untrimmed) string in that case would write the entire
+  // number in cleartext into audit_log — exactly the leak this story exists
+  // to prevent.
+  const phoneLast4 = phoneMasked === MASK_PLACEHOLDER ? '' : phone.trim().slice(-4);
 
   // The audit payload carries the masked number only — audit_log is readable
   // by any role with audit.read, so storing the raw number there would defeat
@@ -107,19 +153,31 @@ export async function revealContactHandler(
     payload: {
       party,
       subjectId,
-      phoneMasked: maskPhone(phone),
-      phoneLast4: phone.slice(-4),
+      phoneMasked,
+      phoneLast4,
     },
     timestamp: revealedAt,
     partitionKey: revealedAt.slice(0, 7),
   });
 
-  return { status: 200, jsonBody: { party, phone, revealedAt } };
+  return {
+    status: 200,
+    // This response carries the one raw phone number the API ever emits —
+    // never cache it, matching the convention in dashboard/feed.ts and
+    // dashboard/pending-actions.ts for other admin responses that must not
+    // be served stale from a shared cache.
+    headers: { 'Cache-Control': 'no-store' },
+    jsonBody: { party, phone, revealedAt },
+  };
 }
+
+export const adminRevealOrderContactHandler = requireAdmin(['super-admin', 'ops-manager'])(
+  revealContactHandler,
+);
 
 app.http('adminRevealOrderContact', {
   methods: ['POST'],
   route: 'v1/admin/orders/{id}/reveal-contact',
   authLevel: 'anonymous',
-  handler: requireAdmin(['super-admin', 'ops-manager'])(revealContactHandler),
+  handler: adminRevealOrderContactHandler,
 });

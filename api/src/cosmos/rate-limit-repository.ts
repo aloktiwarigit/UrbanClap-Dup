@@ -33,7 +33,7 @@ export async function consume(
   refillPerSec: number,
 ): Promise<ConsumeResult> {
   try {
-    return await attemptConsume(key, capacity, refillPerSec, false);
+    return await attemptConsume(key, capacity, refillPerSec, false, false);
   } catch (err: unknown) {
     // Fail-open: rate limiting is best-effort; don't 503 real traffic
     Sentry.withScope((scope) => {
@@ -44,11 +44,31 @@ export async function consume(
   }
 }
 
+/**
+ * Same token-bucket algorithm as consume(), but fails CLOSED: a Cosmos error,
+ * and retry-exhaustion after a second consecutive 412 ETag collision, are
+ * thrown to the caller instead of silently granting the request. `consume()`
+ * is correct for best-effort callers (e.g. per-IP throttles on public
+ * endpoints); it is wrong for the PII contact-reveal endpoint, where an
+ * invisible "rate limiting silently disabled under Cosmos throttling"
+ * fallback is worse than a visible failure. The caller is responsible for
+ * catching the rejection, reporting it (Sentry), and returning an explicit
+ * error response — this function does not report to Sentry itself.
+ */
+export async function consumeStrict(
+  key: string,
+  capacity: number,
+  refillPerSec: number,
+): Promise<ConsumeResult> {
+  return attemptConsume(key, capacity, refillPerSec, false, true);
+}
+
 async function attemptConsume(
   key: string,
   capacity: number,
   refillPerSec: number,
   isRetry: boolean,
+  failClosed: boolean,
 ): Promise<ConsumeResult> {
   const container = getContainer();
   const now = Date.now();
@@ -108,11 +128,16 @@ async function attemptConsume(
   } catch (err: unknown) {
     if (isCosmosPreconditionFailed(err)) {
       if (isRetry) {
+        if (failClosed) {
+          // Second consecutive 412 under fail-closed semantics — we could
+          // not establish a budget at all; that is a failure, not a grant.
+          throw new Error('rate limit retry exhausted: two consecutive 412 ETag collisions');
+        }
         // Second consecutive 412 — fail-open rather than loop
         return { allowed: true };
       }
       // Concurrent consume: retry once with a fresh read
-      return attemptConsume(key, capacity, refillPerSec, true);
+      return attemptConsume(key, capacity, refillPerSec, true, failClosed);
     }
     throw err;
   }
