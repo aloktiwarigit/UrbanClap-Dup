@@ -9,6 +9,8 @@ import type {
   EscalateRequest,
   NoteRequest,
   TechnicianCandidate,
+  RevealParty,
+  RevealContactResponse,
 } from '@/types/order';
 import { apiUrl } from './base';
 
@@ -121,4 +123,29 @@ export async function fetchTechnicianCandidatesForOrder(id: string): Promise<Tec
   if (!res.ok) throw new Error(`fetchTechnicianCandidatesForOrder failed: ${res.status}`);
   const json = (await res.json()) as { technicians?: TechnicianCandidate[] };
   return json.technicians ?? [];
+}
+
+/** Error thrown by revealOrderContact, carrying the HTTP status so the UI can
+ *  distinguish forbidden (403) from rate-limited (429) from everything else. */
+export class RevealContactError extends Error {
+  readonly status: number;
+  constructor(status: number) {
+    super(`revealOrderContact failed: ${status}`);
+    this.name = 'RevealContactError';
+    this.status = status;
+  }
+}
+
+export async function revealOrderContact(
+  id: string,
+  party: RevealParty,
+): Promise<RevealContactResponse> {
+  const res = await fetch(apiUrl(`/v1/admin/orders/${id}/reveal-contact`), {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ party }),
+  });
+  if (!res.ok) throw new RevealContactError(res.status);
+  return res.json() as Promise<RevealContactResponse>;
 }
