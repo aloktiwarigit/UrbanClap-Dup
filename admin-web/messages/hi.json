@@ -89,7 +89,9 @@
     "adminUsers": "एडमिन उपयोगकर्ता",
     "compliance": "अनुपालन",
     "technicians": "तकनीशियन",
-    "customers": "ग्राहक"
+    "customers": "ग्राहक",
+    "commissions": "कमीशन",
+    "settings": "सेटिंग्स"
   },
   "locale": {
     "switcher": {

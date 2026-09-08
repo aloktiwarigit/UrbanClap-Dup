@@ -36,6 +36,15 @@ const NAV_I18N_KEY: Record<string, string> = {
   '/compliance':   'compliance',
   '/technicians':  'technicians',
   '/customers':    'customers',
+  // E21-S03 task 11: these two nav items (Commissions, Settings) were added to ADMIN_NAV_ITEMS
+  // by task 10 without a matching entry here, so `labelKey` fell through to the hardcoded
+  // English `item.label` ("Commissions" / "Settings") and `t(labelKey)` threw MISSING_MESSAGE on
+  // every render for every admin who can see either item, in both locales — nothing in
+  // Rail.test.tsx caught it because that test mocks `useTranslations` to return the key itself,
+  // which never diverges from a hardcoded English label the way a real MISSING_MESSAGE does.
+  // Found via tests/a11y/commissions.a11y.spec.ts, which renders through real next-intl.
+  '/finance/commissions': 'commissions',
+  '/settings/commission': 'settings',
 };
 
 export function Rail() {

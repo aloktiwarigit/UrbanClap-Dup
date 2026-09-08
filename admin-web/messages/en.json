@@ -89,7 +89,9 @@
     "adminUsers": "Admin Users",
     "compliance": "Compliance",
     "technicians": "Technicians",
-    "customers": "Customers"
+    "customers": "Customers",
+    "commissions": "Commissions",
+    "settings": "Settings"
   },
   "locale": {
     "switcher": {
