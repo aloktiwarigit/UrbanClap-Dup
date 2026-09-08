@@ -375,4 +375,65 @@ describe('PII masking at the orders serialization boundary', () => {
     const order = await getOrderById('ord_unassigned');
     expect(order?.technicianPhoneMasked).toBeUndefined();
   });
+
+  it('masks the phone-number fallback in customerName when the profile has no displayName', async () => {
+    vi.mocked(getFirebaseAdmin).mockReturnValue({
+      auth: () => ({
+        getUsers: vi.fn().mockResolvedValue({
+          users: [{ uid: 'firebase_uid_123', phoneNumber: '+919876543210' }],
+        }),
+      }),
+    } as never);
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({
+        container: () => ({
+          items: { query: () => ({ fetchAll: vi.fn().mockResolvedValue({ resources: [customerCreatedBooking] }) }) },
+        }),
+      }),
+    });
+
+    const order = await getOrderById('booking_1');
+    expect(order?.customerName).toBe('+91 XXXXX-X3210');
+    expect(order?.customerName).not.toContain('9876543210');
+  });
+
+  it('keeps the displayName in customerName when the profile has one', async () => {
+    vi.mocked(getFirebaseAdmin).mockReturnValue({
+      auth: () => ({
+        getUsers: vi.fn().mockResolvedValue({
+          users: [{ uid: 'firebase_uid_123', displayName: 'Alok T', phoneNumber: '+919876543210' }],
+        }),
+      }),
+    } as never);
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({
+        container: () => ({
+          items: { query: () => ({ fetchAll: vi.fn().mockResolvedValue({ resources: [customerCreatedBooking] }) }) },
+        }),
+      }),
+    });
+
+    const order = await getOrderById('booking_1');
+    expect(order?.customerName).toBe('Alok T');
+  });
+
+  it('falls back to the generated customerName when the profile has neither displayName nor phoneNumber', async () => {
+    vi.mocked(getFirebaseAdmin).mockReturnValue({
+      auth: () => ({
+        getUsers: vi.fn().mockResolvedValue({
+          users: [{ uid: 'firebase_uid_123' }],
+        }),
+      }),
+    } as never);
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({
+        container: () => ({
+          items: { query: () => ({ fetchAll: vi.fn().mockResolvedValue({ resources: [customerCreatedBooking] }) }) },
+        }),
+      }),
+    });
+
+    const order = await getOrderById('booking_1');
+    expect(order?.customerName).toBe('Customer firebase');
+  });
 });
