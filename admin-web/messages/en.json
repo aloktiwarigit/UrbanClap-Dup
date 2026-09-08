@@ -628,26 +628,29 @@
       },
       "preview": {
         "label": "Preview. The server recalculates when you record this.",
-        "empty": "No amount entered yet."
+        "empty": "No amount entered yet.",
+        "unallocated": "{amount} will not be allocated to any due job — it will become a credit."
       },
       "actual": {
-        "label": "Recorded allocation"
+        "label": "Recorded allocation",
+        "creditCreated": "Credit created: {amount}."
       },
       "actions": {
         "cancel": "Cancel",
         "submit": "Record payment"
       },
       "errors": {
-        "invalidAmount": "Enter an amount greater than ₹0.",
+        "invalidAmount": "Enter an amount greater than ₹0, with at most 2 decimal places.",
         "refRequired": "A reference is required.",
-        "recordFailed": "Could not record this payment. Try again.",
+        "recordFailed": "Could not confirm this payment was recorded. Check the technician's ledger before trying again.",
         "idempotencyMismatch": "That reference was already used for a different amount. Check the amount and reference, then try again."
       },
       "outcomes": {
         "success": "Payment recorded",
         "replayed": "Already recorded. This is the original receipt, not a second payment.",
         "recomputePending": "Recorded. The balance will catch up shortly.",
-        "allocationMismatch": "Allocated differently than previewed. Another settlement landed first. Preview showed {previewAmount} across {previewCount, plural, one {# job} other {# jobs}}; recorded {actualAmount} across {actualCount, plural, one {# job} other {# jobs}}."
+        "allocationMismatch": "Allocated differently than previewed. Another settlement landed first. Preview showed {previewAmount} across {previewCount, plural, one {# job} other {# jobs}}; recorded {actualAmount} across {actualCount, plural, one {# job} other {# jobs}}.",
+        "allocationResplit": "Allocated differently than previewed. {bookings} received a different share of the same total."
       }
     }
   },
