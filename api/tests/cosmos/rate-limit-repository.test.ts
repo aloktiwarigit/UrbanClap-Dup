@@ -28,7 +28,7 @@ vi.mock('@sentry/node', () => ({
   withScope: (cb: (s: unknown) => void) => cb({ setLevel: vi.fn() }),
 }));
 
-import { consume } from '../../src/cosmos/rate-limit-repository.js';
+import { consume, consumeStrict } from '../../src/cosmos/rate-limit-repository.js';
 
 // ── Helper: build a bucket doc ────────────────────────────────────────────
 function makeDoc(tokens: number, lastRefillAtMs = Date.now()) {
@@ -209,5 +209,48 @@ describe('consume — fail-open on Cosmos error', () => {
     mockRead.mockRejectedValue(new Error('ECONNREFUSED'));
 
     await expect(consume('test-key', 10, 10 / 60)).resolves.toBeDefined();
+  });
+});
+
+describe('consumeStrict — fails CLOSED (used by the PII reveal endpoint)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('propagates the Cosmos error instead of failing open', async () => {
+    mockRead.mockRejectedValue(new Error('Cosmos throttled'));
+
+    await expect(consumeStrict('test-key', 10, 10 / 60)).rejects.toThrow('Cosmos throttled');
+  });
+
+  it('throws instead of failing open when 412 persists on retry', async () => {
+    const now = Date.now();
+    vi.useFakeTimers();
+    vi.setSystemTime(now);
+
+    const doc = makeDoc(5, now);
+    const err412 = Object.assign(new Error('Precondition failed'), { code: 412 });
+    mockRead.mockResolvedValue({ resource: doc, etag: 'etag-1' });
+    mockReplace.mockRejectedValue(err412);
+
+    await expect(consumeStrict('test-key', 10, 10 / 60)).rejects.toThrow();
+
+    vi.useRealTimers();
+  });
+
+  it('still allows normally when tokens are available (same algorithm as consume)', async () => {
+    mockRead.mockResolvedValue({ resource: makeDoc(5) });
+    mockReplace.mockResolvedValue({ resource: makeDoc(4) });
+
+    const result = await consumeStrict('test-key', 10, 10 / 60);
+    expect(result.allowed).toBe(true);
+  });
+
+  it('does not call Sentry.captureException itself — the caller decides how to report the failure', async () => {
+    const Sentry = await import('@sentry/node');
+    mockRead.mockRejectedValue(new Error('Cosmos throttled'));
+
+    await expect(consumeStrict('test-key', 10, 10 / 60)).rejects.toThrow();
+    expect(Sentry.captureException).not.toHaveBeenCalled();
   });
 });
