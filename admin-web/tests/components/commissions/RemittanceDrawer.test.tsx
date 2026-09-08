@@ -378,7 +378,10 @@ describe('RemittanceDrawer', () => {
       <RemittanceDrawer open technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
     );
     await fillAndSubmit();
-    expect(await screen.findByRole('status')).toHaveTextContent(/catch up shortly/i);
+    // The proactive-disclosure region is always mounted (fix round 5, I2), so `role="status"` is
+    // no longer unique on this screen — scope this to the toast by its text.
+    const statuses = await screen.findAllByRole('status');
+    expect(statuses.some((el) => /catch up shortly/i.test(el.textContent ?? ''))).toBe(true);
   });
 
   // Fix round 2, N1: the abandoned-key wedge. A first attempt fails ambiguously (response lost),
@@ -409,7 +412,7 @@ describe('RemittanceDrawer', () => {
       within(alert).getByRole('button', { name: /discard the pending attempt/i }),
     ).toBeInTheDocument();
     expect(within(alert).getByText(/will charge the technician twice/i)).toBeInTheDocument();
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.getByTestId('pending-attempt-disclosure')).toBeEmptyDOMElement();
 
     recordRemittance.mockResolvedValueOnce(okResponse());
     fireEvent.click(screen.getByRole('button', { name: /discard the pending attempt/i }));
@@ -536,7 +539,8 @@ describe('RemittanceDrawer', () => {
     rerender(
       <RemittanceDrawer open technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
     );
-    const status = screen.getByRole('status');
+    const status = screen.getByTestId('pending-attempt-disclosure');
+    expect(status).toHaveAttribute('role', 'status');
     expect(status).toHaveTextContent('₹200.00');
     expect(status).toHaveTextContent('ref-1');
     // It names the safe move, not just the fact.
@@ -547,6 +551,121 @@ describe('RemittanceDrawer', () => {
     expect(
       screen.queryByRole('button', { name: /discard the pending attempt/i }),
     ).not.toBeInTheDocument();
+  });
+
+  // Fix round 5 (I1): variant A means "a wedge you did not just create". Round 4 refreshed it from
+  // storage on every failed outcome, which meant a clean drawer + an ambiguous 503 described the
+  // operator's OWN attempt back to them a second after their click, with those exact values still
+  // in the inputs above it — inviting the belief that two ₹200/ref-1 attempts are outstanding. It
+  // also contradicted the toast rendered in the same update: `recordFailed` says "check the ledger
+  // before trying again", variant A says "record it again". One event, two live regions, opposed
+  // instructions. The pending record still exists in storage — reopening the drawer is where it
+  // legitimately surfaces (the test above) — but it is not disclosed as a pre-existing wedge here.
+  it('does not describe the operator\'s own just-failed attempt back to them as a pending wedge', async () => {
+    recordRemittance.mockRejectedValueOnce(Object.assign(new Error('net'), { status: 503 }));
+    render(
+      <RemittanceDrawer open technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
+    );
+    await fillAndSubmit('200', 'ref-1');
+    // The toast is the whole disclosure for this event, and it is the assertive one.
+    const toast = await screen.findByRole('alert');
+    expect(toast).toHaveTextContent(/could not confirm this payment was recorded/i);
+    expect(screen.getByTestId('pending-attempt-disclosure')).toBeEmptyDOMElement();
+    // Storage does hold the attempt — this is a display decision, not a lifecycle change.
+    expect(readPendingAttempt('t1')?.ref).toBe('ref-1');
+    expect(readPendingAttempt('t1')?.amountPaise).toBe(20000);
+  });
+
+  it('does not describe the operator\'s own just-timed-out attempt back to them either', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      recordRemittance.mockReturnValueOnce(new Promise(() => {}));
+      render(
+        <RemittanceDrawer open technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
+      );
+      fireEvent.change(screen.getByLabelText(/amount/i), { target: { value: '200' } });
+      fireEvent.change(screen.getByLabelText(/reference/i), { target: { value: 'ref-1' } });
+      fireEvent.click(screen.getByRole('button', { name: /record payment/i }));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(45_000);
+      });
+      // Same collision as the 503 branch: the timeout copy also says "check the ledger before
+      // trying again", which variant A would contradict.
+      expect(await screen.findByRole('alert')).toHaveTextContent(/taking longer than expected/i);
+      expect(screen.getByTestId('pending-attempt-disclosure')).toBeEmptyDOMElement();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // Fix round 5 (I2): round 4 mounted the `role="status"` region together with its content, which
+  // this file's own round-2 note (on `allocation-disclosures`) says most assistive tech will not
+  // announce — so the disclosure was probably inaudible to exactly the users the polite role was
+  // chosen for. The region must exist from first render and only ever have its children change.
+  it('mounts the proactive disclosure region from the first render and only changes its contents', async () => {
+    recordRemittance.mockRejectedValue(Object.assign(new Error('net'), { status: 503 }));
+    render(
+      <RemittanceDrawer open technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
+    );
+    const regionAtMount = screen.getByTestId('pending-attempt-disclosure');
+    expect(regionAtMount).toHaveAttribute('role', 'status');
+    expect(regionAtMount).toBeEmptyDOMElement();
+
+    // First attempt fails ambiguously — its own fingerprint is not disclosed back to it (I1), so
+    // the region is still mounted and still empty.
+    await fillAndSubmit('200', 'ref-1');
+    await screen.findByText(/could not confirm this payment was recorded/i);
+    expect(screen.getByTestId('pending-attempt-disclosure')).toBeEmptyDOMElement();
+
+    // A second, genuinely different attempt fails too. Now the ref-1 record IS a wedge relative to
+    // what was just submitted, and variant A appears — inside the region that was already there.
+    await fillAndSubmit('50', 'ref-2');
+    await waitFor(() =>
+      expect(screen.getByTestId('pending-attempt-disclosure')).toHaveTextContent('ref-1'),
+    );
+    const regionWithContent = screen.getByTestId('pending-attempt-disclosure');
+    // The same DOM node, now populated — a mutation inside a live region, not an insertion of one,
+    // which is what makes it announceable at all.
+    expect(regionWithContent).toBe(regionAtMount);
+  });
+
+  // Fix round 5 (M1): `refreshPendingDisclosure()` also runs on the 409 branch, so
+  // `pendingDisclosure` is populated but suppressed by variant B. The next submit clears `conflict`
+  // at the top of `handleSubmit`, which without the `!submitting` guard unsuppresses variant A for
+  // the whole in-flight window — the banner flipping red-with-discard → amber-without-discard →
+  // red, the discard button visibly vanishing and coming back.
+  it('does not flash the proactive variant while a submit is in flight after a 409', async () => {
+    recordRemittance.mockRejectedValueOnce(Object.assign(new Error('net'), { status: 503 }));
+    recordRemittance.mockRejectedValueOnce(
+      Object.assign(new Error(), { status: 409, body: { code: 'IDEMPOTENCY_MISMATCH' } }),
+    );
+    render(
+      <RemittanceDrawer open technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
+    );
+    await fillAndSubmit('200', 'ref-1');
+    await fillAndSubmit('50', 'ref-2');
+    // Variant B is showing, and variant A is populated-but-suppressed behind it.
+    expect(await screen.findByRole('alert')).toHaveTextContent('ref-1');
+    expect(screen.getByTestId('pending-attempt-disclosure')).toBeEmptyDOMElement();
+
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      recordRemittance.mockReturnValueOnce(new Promise(() => {}));
+      fireEvent.click(screen.getByRole('button', { name: /record payment/i }));
+      await waitFor(() => expect(recordRemittance).toHaveBeenCalledTimes(3));
+      // Mid-flight: variant B has been cleared for the new attempt, and variant A must not take
+      // its place — no amber banner, no discard button appearing and vanishing.
+      expect(screen.getByTestId('pending-attempt-disclosure')).toBeEmptyDOMElement();
+      expect(
+        screen.queryByRole('button', { name: /discard the pending attempt/i }),
+      ).not.toBeInTheDocument();
+      // Let the watchdog settle the race rather than leaving a live timer behind.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(45_000);
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   // Fix round 4: variant A mirrors *storage*, variant B is a *result of the last submission*.
@@ -564,7 +683,7 @@ describe('RemittanceDrawer', () => {
     rerender(
       <RemittanceDrawer open technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
     );
-    expect(screen.getByRole('status')).toHaveTextContent('ref-1');
+    expect(screen.getByTestId('pending-attempt-disclosure')).toHaveTextContent('ref-1');
 
     // A second, different payment attempt that fails ambiguously — a 503, not a 409, so nothing
     // about the pending record changed.
@@ -574,8 +693,8 @@ describe('RemittanceDrawer', () => {
     // The failure toast proves the catch path ran to completion, so this is not just a stale render.
     await screen.findByText(/could not confirm this payment was recorded/i);
 
-    const disclosure = screen.getAllByRole('status').find((el) => el.textContent?.includes('ref-1'));
-    expect(disclosure).toBeDefined();
+    const disclosure = screen.getByTestId('pending-attempt-disclosure');
+    expect(disclosure).toHaveTextContent('ref-1');
     // Still the original wedge's fingerprint, not the just-typed inputs.
     expect(disclosure).toHaveTextContent('₹200.00');
     // Storage agrees: the wedge is exactly as it was.
@@ -598,7 +717,7 @@ describe('RemittanceDrawer', () => {
     rerender(
       <RemittanceDrawer open technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
     );
-    expect(screen.getByRole('status')).toHaveTextContent('ref-1');
+    expect(screen.getByTestId('pending-attempt-disclosure')).toHaveTextContent('ref-1');
 
     // Submit with a blank amount — the drawer resets its fields on open, so this is the very first
     // interaction of a normal session on a wedged technician.
@@ -608,7 +727,7 @@ describe('RemittanceDrawer', () => {
     expect(screen.getAllByRole('alert')).toHaveLength(1);
     expect(screen.getByRole('alert')).toHaveTextContent(/enter an amount greater than ₹0/i);
     // And the disclosure is still there — a typo does not resolve a wedge.
-    expect(screen.getByRole('status')).toHaveTextContent('ref-1');
+    expect(screen.getByTestId('pending-attempt-disclosure')).toHaveTextContent('ref-1');
   });
 
   it('tells the operator when the server allocated differently than previewed', async () => {

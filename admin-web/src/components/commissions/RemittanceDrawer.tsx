@@ -363,8 +363,11 @@ export function RemittanceDrawer({
   // which made a statement of fact shout like a failure and put the discard action on screen at the
   // one moment it is guaranteed to be the wrong move (see the render block and design §5). Kept as
   // a mirror of *storage*, not as a result of the last submission: it is re-derived from
-  // `loadPendingAttempt` on open and after every settled submit, never blanket-cleared at the top
-  // of `handleSubmit` the way the 409-derived flags are — a 503 does not change what is wedged.
+  // `loadPendingAttempt` on open and after a settled submit, never blanket-cleared at the top of
+  // `handleSubmit` the way the 409-derived flags are — a 503 does not change what is wedged. Fix
+  // round 5 (I1): the one exception is a failure whose stored fingerprint is exactly what was just
+  // submitted, which is the operator's *own* attempt rather than a wedge they walked into; see the
+  // catch block for why describing that back to them is both wrong and self-contradictory.
   const [pendingDisclosure, setPendingDisclosure] = useState<PendingAttemptFingerprint | null>(null);
   // Fix round 3 (Important): a 409 occurred but the pending record could not be read (storage
   // unavailable, or — theoretically — present with no fingerprint yet). `conflict` alone cannot
@@ -563,11 +566,28 @@ export function RemittanceDrawer({
         // less than "could not record".
         show(t('remittance.errors.recordFailed'), 'error');
       }
-      // Fix round 4: re-derive variant A from storage on every failed outcome. Nothing here has
-      // touched the pending record, so a pre-existing wedge must still be disclosed afterwards —
-      // and an ambiguous failure that just wrote this attempt's own fingerprint is itself now a
-      // wedge worth naming, with the safe move (retry under the same key) spelled out.
-      refreshPendingDisclosure();
+      // Fix round 4: re-derive variant A from storage on every failed outcome — a pre-existing
+      // wedge is unchanged by this failure and must still be disclosed afterwards.
+      //
+      // Fix round 5 (I1): but *only* a wedge the operator did not just create. Round 4 refreshed
+      // unconditionally, so a clean drawer + a 503 raised variant A describing the operator's own
+      // attempt, one second after their own click, with those exact values still in the inputs
+      // above it — "an earlier attempt ... ₹200.00 via UPI, reference ref-1" invites the reading
+      // that two ₹200/ref-1 attempts are outstanding, which is the wrong belief to induce here. It
+      // also contradicted the toast rendered in the same update: `recordFailed`/`timeout` say
+      // "check the ledger before trying again", variant A says "record it again". Two live regions,
+      // one event, opposed instructions. When the stored fingerprint IS what was just submitted,
+      // the refresh is skipped entirely — leaving whatever variant A already showed (nothing, on a
+      // clean drawer; the pre-existing wedge, if there was one). Storage is untouched either way,
+      // so reopening the drawer later still surfaces it through the open effect.
+      const storedAfterFailure = loadPendingAttempt(technicianId);
+      const isOwnJustSubmittedAttempt =
+        storedAfterFailure !== null &&
+        hasFingerprint(storedAfterFailure) &&
+        storedAfterFailure.amountPaise === paise &&
+        storedAfterFailure.method === method &&
+        storedAfterFailure.ref === trimmedRef;
+      if (!isOwnJustSubmittedAttempt) refreshPendingDisclosure();
       return;
     } finally {
       // Fix round 3 (Minor): the watchdog timer used to always fire, even when the real request won
@@ -739,25 +759,37 @@ export function RemittanceDrawer({
              the one moment it is guaranteed to be wrong. Design §5 scopes discard to the 409.
 
           Suppressed while variant B is showing — a live 409 names the same pending attempt with
-          more authority, and two banners about one record is noise.
+          more authority, and two banners about one record is noise — and while a request is in
+          flight (fix round 5, M1): `handleSubmit` clears `conflict` at the top, which would
+          otherwise unsuppress a variant A left populated by the previous 409 and flip the banner
+          red-with-discard → amber-without-discard → red across the in-flight window, the discard
+          button visibly vanishing and returning.
+
+          The region itself is mounted unconditionally with empty children, and only its *content*
+          appears and disappears (fix round 5, I2) — the same shape as the `allocation-disclosures`
+          container below, and for the reason spelled out in its comment: most assistive tech does
+          not announce a live region whose region and content are inserted in the same update, so
+          round 4's conditionally-mounted `role="status"` would have been silent. `empty:m-0` keeps
+          the always-present-but-empty wrapper from claiming a slot in the parent's `space-y`
+          rhythm (`:empty` + class out-specifies Tailwind v4's zero-specificity `:where()` space
+          selector, so no `!important` is needed).
         */}
-        {conflict === null && !conflictUnreadable && pendingDisclosure !== null && (
-          <div
-            role="status"
-            className="space-y-[var(--space-2)] rounded border border-[var(--color-warn)] bg-[var(--color-surface-raised)] p-[var(--space-3)]"
-          >
-            <p className="text-xs text-[var(--color-warn)]">
-              {t('remittance.warnings.pendingAttempt', {
-                amount: formatINR(pendingDisclosure.amountPaise, locale),
-                method: methodLabel(pendingDisclosure.method, t),
-                ref: pendingDisclosure.ref,
-              })}
-            </p>
-            <p className="text-xs text-[var(--color-text-muted)]">
-              {t('remittance.warnings.pendingAttemptSafeMove')}
-            </p>
-          </div>
-        )}
+        <div role="status" data-testid="pending-attempt-disclosure" className="empty:m-0">
+          {pendingDisclosure !== null && conflict === null && !conflictUnreadable && !submitting && (
+            <div className="space-y-[var(--space-2)] rounded border border-[var(--color-warn)] bg-[var(--color-surface-raised)] p-[var(--space-3)]">
+              <p className="text-xs text-[var(--color-warn)]">
+                {t('remittance.warnings.pendingAttempt', {
+                  amount: formatINR(pendingDisclosure.amountPaise, locale),
+                  method: methodLabel(pendingDisclosure.method, t),
+                  ref: pendingDisclosure.ref,
+                })}
+              </p>
+              <p className="text-xs text-[var(--color-text-muted)]">
+                {t('remittance.warnings.pendingAttemptSafeMove')}
+              </p>
+            </div>
+          )}
+        </div>
 
         {/*
           Variant B — the live 409 IDEMPOTENCY_MISMATCH (fix round 2, N1). Red, assertive, and the
