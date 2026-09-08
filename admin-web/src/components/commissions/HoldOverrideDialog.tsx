@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Dialog } from '@/components/ui/Dialog';
 import { endOfIstDayUtcIso } from '@/lib/commissions/derive';
@@ -30,6 +30,22 @@ export function HoldOverrideDialog({ open, onClose, onSubmit, submitting = false
 
   const reasonError = reasonTouched && reason.trim() === '' ? t('detail.override.reasonRequired') : undefined;
   const untilError = untilTouched && until === '' ? t('detail.override.untilRequired') : undefined;
+
+  // Codex round 3 (P2): a successful save closes this dialog from the *parent* — flipping `open` to
+  // false without ever calling `handleClose` — while this component itself stays mounted (`Dialog`
+  // unmounts only its own rendered output when `open` is false, not the parent `HoldOverrideDialog`
+  // holding this state). `handleClose`'s reset alone therefore only covered the Cancel/backdrop/
+  // Escape paths; a reopen after an external close kept showing the previous date, reason and
+  // touched-validation state, submittable by accident. Reset on the `open` transition itself instead
+  // — the same pattern `RemittanceDrawer`'s own open effect uses — so every reopen starts clean
+  // regardless of how the previous close happened.
+  useEffect(() => {
+    if (!open) return;
+    setUntil('');
+    setReason('');
+    setReasonTouched(false);
+    setUntilTouched(false);
+  }, [open]);
 
   function handleClose() {
     setUntil('');

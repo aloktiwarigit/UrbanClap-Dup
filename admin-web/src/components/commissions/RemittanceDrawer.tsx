@@ -498,34 +498,45 @@ export function RemittanceDrawer({
     // the fallback below only covers a re-submission in the same open session after an earlier
     // success already cleared the ref (see the success branch below).
     //
-    // Fix round 6 (P1): the fallback used to be `idempotencyKeyRef.current ?? mintKey()` — minting
-    // a brand-new key without first checking whether another tab had reserved one in the meantime.
-    // Sequence: tab A records successfully (clears its ref *and* storage — see the success branch —
-    // while deliberately staying open), tab B opens the same technician and reserves a key via the
-    // open effect, tab A's operator then records a second payment. With the old fallback, A's null
-    // ref minted a fresh key instead of reading B's reservation, and the write-if-absent block just
-    // below (`existingForThisKey.key !== idempotencyKey`) then overwrote B's reservation with A's —
-    // leaving A and B holding different keys for the same technician, exactly defeating the
-    // per-technician duplicate-payment protection points 1-2 of the class doc comment exist to
-    // guarantee. The fix mirrors the open effect exactly: re-read storage first and reuse whatever
-    // key is already reserved there; only mint when storage is genuinely empty. `loadPendingAttempt`
-    // already wraps its own storage access in try/catch.
-    const idempotencyKey = idempotencyKeyRef.current ?? loadPendingAttempt(technicianId)?.key ?? mintKey();
+    // Fix round 6 (P1) + fix round 7 (P1, the 4th finding on this resolution — the recurrence IS
+    // the diagnosis): there are two sources of truth for one shared value — this tab's in-memory
+    // ref and the cross-tab `localStorage` record — and precedence between them must not be
+    // ambiguous in either direction. Round 6 fixed "ref is null, so mint blind, clobbering another
+    // tab's reservation." Round 7 is "ref is non-null but stale, so prefer it over a *newer* shared
+    // reservation another tab has since written" — e.g. tab A opens (ref=A, storage=A), tab B opens,
+    // discards, and re-reserves (storage=B) while A's ref is untouched at A; A then submits. The old
+    // `ref ?? storage ?? mint` order picks A's stale ref, and the write-if-absent block below used
+    // to overwrite B's live reservation with A's — leaving A and B holding different keys for the
+    // same technician and defeating points 1-2 of the class doc comment.
+    //
+    // The fix stops patching direction and removes the ambiguity: storage is authoritative whenever
+    // it has an answer, full stop. The ref only matters in the one case it was ever legitimate for —
+    // storage itself being unreadable (privacy mode, embedded webview) or genuinely empty (a fresh
+    // tab that raced ahead of its own open effect) — where it provides within-session continuity.
+    // Read storage exactly once here: the same value both resolves which key to submit AND decides
+    // whether a fingerprint still needs writing below, so the two can never disagree with each other
+    // the way two independent reads previously could (see the write-if-absent comment below).
+    // `loadPendingAttempt` already wraps its own storage access in try/catch.
+    const storedPendingAttempt = loadPendingAttempt(technicianId);
+    const idempotencyKey = storedPendingAttempt?.key ?? idempotencyKeyRef.current ?? mintKey();
+    // Keep the ref in sync with whatever was just resolved so later reads in this same submit (and
+    // any synchronous re-render before the request settles) see the same value this request uses.
     idempotencyKeyRef.current = idempotencyKey;
     const previewAtSubmit = previewAllocations;
 
-    // Fix round 3: write-if-absent now means "this key has no fingerprint yet", not "this key
-    // differs from whatever is currently stored". Round 2's version compared keys, so a same-key
-    // retry with different inputs (the exact abandoned-key-wedge scenario) silently overwrote the
-    // original fingerprint — which then made the *next* mismatch report the operator's own just-
-    // typed input as "the previous attempt", the precise false-blame N1 exists to eliminate. A
-    // fingerprint, once filled in for a key, is never touched again by this check.
-    const existingForThisKey = loadPendingAttempt(technicianId);
-    if (
-      existingForThisKey === null ||
-      existingForThisKey.key !== idempotencyKey ||
-      !hasFingerprint(existingForThisKey)
-    ) {
+    // Fix round 3: write-if-absent means "this key has no fingerprint yet", not "this key differs
+    // from whatever is currently stored". Round 2's version compared keys, so a same-key retry with
+    // different inputs (the abandoned-key-wedge scenario) silently overwrote the original
+    // fingerprint — which then made the *next* mismatch report the operator's own just-typed input
+    // as "the previous attempt", the false-blame N1 exists to eliminate.
+    //
+    // Fix round 7: this used to re-read storage a second time into a separate `existingForThisKey`
+    // and additionally guard on `existingForThisKey.key !== idempotencyKey`. With storage now
+    // resolving `idempotencyKey` itself (above), that key can no longer differ from
+    // `storedPendingAttempt.key` whenever storage had an answer — the two are read once and the
+    // same value — so that disjunct was dead code load-bearing only for the old ref-first bug. The
+    // remaining, real question is just whether a fingerprint has been written yet.
+    if (storedPendingAttempt === null || !hasFingerprint(storedPendingAttempt)) {
       savePendingAttempt(technicianId, { key: idempotencyKey, amountPaise: paise, method, ref: trimmedRef });
     }
 

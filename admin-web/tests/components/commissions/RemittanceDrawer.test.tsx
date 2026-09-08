@@ -533,6 +533,67 @@ describe('RemittanceDrawer', () => {
     expect(tabBCall[0].idempotencyKey).toBe(keyReservedByTabB);
   });
 
+  // Fix round 7 (P1) — the 4th finding on this same resolution, closing the direction round 6 left
+  // open. Round 6 fixed "ref is null, so mint blind, clobbering another tab's reservation." This is
+  // the mirror bug: "ref is non-null but stale, so prefer it over a *newer* shared reservation
+  // another tab has since written." Tab A opens and reserves key A; tab B then opens (reusing A's
+  // reservation, per the open effect), discards it, and reopens — which mints and persists a fresh
+  // key B, purely through B's own lifecycle, with no direct storage poking. Tab A's ref is untouched
+  // at A throughout. Tab A then submits: with the old `ref ?? storage ?? mint` precedence this sends
+  // stale key A and the write-if-absent block overwrites B's live reservation with A's, leaving A and
+  // B on two different keys the server cannot de-duplicate between — the double-charge Codex found.
+  // Storage-first precedence must submit B's key instead.
+  it('submits the shared reservation from storage, not this tab\'s stale in-memory ref, after another tab discards and re-reserves (fix round 7, P1)', async () => {
+    render(
+      <RemittanceDrawer open technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
+    );
+    const keyA = readPendingAttempt('t1')?.key;
+    expect(keyA).toBeDefined();
+
+    // Tab B: opens (its own open effect reuses A's reservation verbatim — real cross-tab behaviour),
+    // then discards it and reopens, which mints and persists a genuinely fresh key purely through
+    // B's own component lifecycle (no direct storage writes standing in for it).
+    const { rerender: rerenderB } = render(
+      <RemittanceDrawer open technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
+    );
+    const dialogsAfterBOpened = screen.getAllByRole('dialog');
+    const tabBDialogFirst = dialogsAfterBOpened[dialogsAfterBOpened.length - 1];
+    if (tabBDialogFirst === undefined) throw new Error('expected a second dialog to be rendered');
+    expect(within(tabBDialogFirst).getByTestId('pending-attempt-disclosure')).toBeEmptyDOMElement();
+    // B "discards" its (shared, unattempted) reservation — the same storage effect
+    // `handleDiscardPending` produces — then closes and reopens, which is what actually mints and
+    // persists B's fresh reservation, through the real open-effect code path.
+    window.localStorage.removeItem('commissions.remittance.pendingAttempt.t1');
+    rerenderB(
+      <RemittanceDrawer open={false} technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
+    );
+    rerenderB(
+      <RemittanceDrawer open technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
+    );
+    const keyB = readPendingAttempt('t1')?.key;
+    expect(keyB).toBeDefined();
+    expect(keyB).not.toBe(keyA);
+
+    // Tab A, still holding its now-stale ref to key A (its own effect never re-ran — it never
+    // closed), submits a genuinely new payment.
+    recordRemittance.mockResolvedValueOnce(okResponse());
+    const dialogsAfterBReopened = screen.getAllByRole('dialog');
+    const tabADialog = dialogsAfterBReopened[0];
+    if (tabADialog === undefined) throw new Error("expected tab A's dialog to still be present");
+    const tabA = within(tabADialog);
+    fireEvent.change(tabA.getByLabelText(/amount/i), { target: { value: '200' } });
+    fireEvent.change(tabA.getByLabelText(/reference/i), { target: { value: 'ref-1' } });
+    fireEvent.click(tabA.getByRole('button', { name: /record payment/i }));
+    await waitFor(() => expect(recordRemittance).toHaveBeenCalledTimes(1));
+
+    const call = oneCall(recordRemittance.mock.calls as [{ idempotencyKey: string }][]);
+    // The core assertion: tab A submits tab B's shared reservation, not its own stale ref. Against
+    // the old `idempotencyKeyRef.current ?? loadPendingAttempt(...)?.key ?? mintKey()` precedence
+    // this fails — that order picks up stale key A instead.
+    expect(call[0].idempotencyKey).toBe(keyB);
+    expect(call[0].idempotencyKey).not.toBe(keyA);
+  });
+
   // Fix round 3: write-if-absent must mean "this key has no fingerprint yet", not "this key
   // differs from what's stored" (round 2's bug) — a same-key retry with different inputs must never
   // overwrite the original attempt's fingerprint in storage.
