@@ -5,6 +5,7 @@ import { requireAdmin, type AdminHttpHandler } from '../../../middleware/require
 import type { AdminContext } from '../../../types/admin.js';
 import { FinanceSummaryQuerySchema } from '../../../schemas/finance.js';
 import { getDailyPnL } from '../../../cosmos/finance-repository.js';
+import { arePayoutsEnabled } from '../../../shared/payouts-enabled.js';
 
 export const adminFinanceSummaryHandler: AdminHttpHandler = async (
   req: HttpRequest,
@@ -20,7 +21,10 @@ export const adminFinanceSummaryHandler: AdminHttpHandler = async (
   }
   try {
     const summary = await getDailyPnL(parsed.data.from, parsed.data.to);
-    return { status: 200, jsonBody: summary };
+    // Single source of truth: the same arePayoutsEnabled() the payout-approval endpoint and the
+    // prepaid-payout timers already gate on (api/src/shared/payouts-enabled.ts). Read it once,
+    // here, rather than adding a second env-var check for admin-web to key off of.
+    return { status: 200, jsonBody: { ...summary, payoutsEnabled: arePayoutsEnabled() } };
   } catch {
     return { status: 502, jsonBody: { code: 'UPSTREAM_ERROR' } };
   }
