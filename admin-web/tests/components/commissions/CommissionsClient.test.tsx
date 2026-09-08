@@ -188,6 +188,59 @@ describe('CommissionsClient', () => {
     mockRole = 'super-admin';
   });
 
+  // I1 (whole-branch review fix wave): the recompute endpoint is requireAdmin(['super-admin'])
+  // only, but the finance role holds finance.settleCommission — gating the button on that
+  // capability let a finance user see and click a button the API always refuses. Gate on
+  // settings.manage instead, the branch's existing super-admin-only capability.
+  it('hides Recompute from finance (holds finance.settleCommission but not settings.manage, and the API is super-admin-only)', () => {
+    mockRole = 'finance';
+    render(
+      <CommissionsClient
+        initialData={dashboard({
+          technicians: [
+            {
+              technicianId: 'a',
+              technicianName: 'Ramesh Kumar',
+              outstandingPaise: 139346,
+              dueCount: 7,
+              state: 'CLEAR',
+              evaluatedAt: EVALUATED_AT,
+              staleAfter: NOT_STALE,
+            },
+          ],
+          totalOutstanding: 139346,
+          unreconciledTechnicianCount: 0,
+        })}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: 'Recompute' })).not.toBeInTheDocument();
+    mockRole = 'super-admin';
+  });
+
+  it('shows Recompute to super-admin', () => {
+    mockRole = 'super-admin';
+    render(
+      <CommissionsClient
+        initialData={dashboard({
+          technicians: [
+            {
+              technicianId: 'a',
+              technicianName: 'Ramesh Kumar',
+              outstandingPaise: 139346,
+              dueCount: 7,
+              state: 'CLEAR',
+              evaluatedAt: EVALUATED_AT,
+              staleAfter: NOT_STALE,
+            },
+          ],
+          totalOutstanding: 139346,
+          unreconciledTechnicianCount: 0,
+        })}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Recompute' })).toBeInTheDocument();
+  });
+
   it('qualifies the summary band as page-scoped when a continuation token shows more pages exist', () => {
     render(
       <CommissionsClient

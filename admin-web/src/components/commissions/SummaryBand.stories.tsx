@@ -74,7 +74,7 @@ export const Recomputing: Story = {
   },
 };
 
-// A viewer without finance.settleCommission never sees the recompute control at all.
+// A viewer without settings.manage (super-admin only) never sees the recompute control at all.
 export const WithoutRecomputeCapability: Story = {
   args: {
     ...Reconciled.args,

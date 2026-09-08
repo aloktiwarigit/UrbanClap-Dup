@@ -12,6 +12,7 @@ import {
 import { isStale } from '@/lib/commissions/derive';
 import { hasCapability } from '@/admin/capabilities';
 import { useAdminAuth } from '@/lib/auth/context';
+import { useToast, ToastRegion } from '@/components/ui/Toast';
 import { SummaryBand } from './SummaryBand';
 import { HoldChip } from './HoldChip';
 import { EmptyState } from '@/components/EmptyState';
@@ -22,8 +23,6 @@ export interface CommissionsClientProps {
   // changing it on a re-render (which does not happen from any current caller) would not refetch.
   initialData?: CommissionDashboard;
 }
-
-type Toast = { message: string; type: 'success' | 'error' };
 
 /**
  * The commission-console roll-up screen (design doc §3, task-6 brief). Owns all state; `page.tsx`
@@ -37,14 +36,18 @@ export function CommissionsClient({ initialData }: CommissionsClientProps) {
   const t = useTranslations('commissions');
   const locale = useLocale();
   const { auth } = useAdminAuth();
-  const canRecompute = hasCapability(auth?.role, 'finance.settleCommission');
+  // The recompute endpoint is requireAdmin(['super-admin']) only (E21-S03 plan). Gate on
+  // settings.manage — the branch's existing super-admin-only capability, already used for the
+  // hold-override controls — not finance.settleCommission, which the finance role also holds and
+  // would surface a button the API always refuses for that role.
+  const canRecompute = hasCapability(auth?.role, 'settings.manage');
 
   const [data, setData] = useState<CommissionDashboard | null>(initialData ?? null);
   const [loading, setLoading] = useState(initialData === undefined);
   const [error, setError] = useState<string | null>(null);
   const [continuationStack, setContinuationStack] = useState<string[]>([]);
   const [recomputing, setRecomputing] = useState(false);
-  const [toast, setToast] = useState<Toast | null>(null);
+  const { toast, show, dismiss } = useToast();
 
   const fetchPage = useCallback(
     async (continuationToken?: string) => {
@@ -88,9 +91,9 @@ export function CommissionsClient({ initialData }: CommissionsClientProps) {
     setRecomputing(true);
     try {
       await recomputeAllHolds();
-      setToast({ message: t('messages.recomputeQueued'), type: 'success' });
+      show(t('messages.recomputeQueued'), 'success');
     } catch {
-      setToast({ message: t('errors.recomputeFailed'), type: 'error' });
+      show(t('errors.recomputeFailed'), 'error');
     } finally {
       setRecomputing(false);
     }
@@ -134,18 +137,7 @@ export function CommissionsClient({ initialData }: CommissionsClientProps) {
         </p>
       </div>
 
-      {toast && (
-        <p
-          role="status"
-          className={`text-sm rounded p-[var(--space-3)] ${
-            toast.type === 'success'
-              ? 'bg-green-50 text-[var(--color-success)]'
-              : 'bg-red-50 text-[var(--color-danger)]'
-          }`}
-        >
-          {toast.message}
-        </p>
-      )}
+      <ToastRegion toast={toast} onDismiss={dismiss} />
 
       {data && (
         <SummaryBand
