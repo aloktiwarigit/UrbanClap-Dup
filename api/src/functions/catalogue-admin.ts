@@ -53,6 +53,48 @@ function zodErr(err: ZodError): HttpResponseInit {
   };
 }
 
+/**
+ * Field-level authorization guard for `commissionBps` across every catalogue create/update body
+ * in this route group (E21-S03 task 9, I-4 — fix rounds 1 and 2).
+ *
+ * `adminRoles` below is `requireAdmin(['super-admin', 'ops-manager'])` for the whole group,
+ * because ops-managers legitimately create and edit categories and services (name, images,
+ * pricing, activation). But `commissionBps` is a commission-rate field that participates in the
+ * SERVICE > CATEGORY > GLOBAL resolution cascade (see the doc comments on `ServiceSchema` and
+ * `ServiceCategorySchema`), and the *global* default (`putAdminCommissionConfig`) is
+ * `requireAdmin(['super-admin'])` only. Without this guard on every write path, an ops-manager —
+ * who cannot touch the global rate — could set a category- or service-level override that
+ * supersedes it, silently changing what technicians are charged for some or all bookings.
+ *
+ * Checked on key PRESENCE (`'commissionBps' in body`), not on its value, so setting AND clearing
+ * (an explicit `null`, accepted only on the category update body) both require super-admin —
+ * clearing an override is still a rate change, since the category/service then falls back to
+ * inheriting whatever is beneath it in the cascade.
+ *
+ * Fixed field-level rather than by narrowing `adminRoles`: locking ops-managers out of all
+ * catalogue work to close a rate hole would be a much worse trade than rejecting just this one
+ * field from them.
+ *
+ * Round 1 covered `updateCategoryHandler` only, which is what the review that raised I-4 was
+ * scoped to. Round 2 found the identical field unguarded on three more write paths wired to the
+ * same `adminRoles` constant in this same file — `createCategoryHandler`, `createServiceHandler`,
+ * and `updateServiceHandler` — so an ops-manager could reach the exact outcome I-4 exists to
+ * prevent by *creating* a category/service with `commissionBps` populated, or by *updating* a
+ * service's `commissionBps` directly (a service-level override outranks both category and
+ * global). All four call sites now route through this one function so a fifth write path added
+ * later to this file cannot go unguarded by omission.
+ */
+function commissionBpsForbidden(body: object, admin: AdminContext): HttpResponseInit | null {
+  if ('commissionBps' in body && admin.role !== 'super-admin') {
+    return {
+      status: 403,
+      headers: JSON_HEADERS,
+      jsonBody: { code: 'FORBIDDEN', requiredRoles: ['super-admin'], field: 'commissionBps' },
+    };
+  }
+  return null;
+}
+
 // ── Categories ────────────────────────────────────────────────────────────────
 
 export async function listAdminCategoriesHandler(_req: HttpRequest, _ctx: InvocationContext, _admin: AdminContext): Promise<HttpResponseInit> {
@@ -70,6 +112,10 @@ export async function getCategoryHandler(req: HttpRequest, _ctx: InvocationConte
 export async function createCategoryHandler(req: HttpRequest, _ctx: InvocationContext, admin: AdminContext): Promise<HttpResponseInit> {
   try {
     const body = CreateCategoryBodySchema.parse(await parseJson(req));
+    // Fix round 2 (I-4, third path): see `commissionBpsForbidden`'s doc comment. Checked before
+    // the existence lookup so nothing is read or written for a rejected request.
+    const forbidden = commissionBpsForbidden(body, admin);
+    if (forbidden) return forbidden;
     const existing = await catalogueRepo.getCategoryById(body.id);
     if (existing) return { status: 409, headers: JSON_HEADERS, jsonBody: { error: `Category '${body.id}' already exists` } };
     const created = await catalogueRepo.createCategory(body, admin.adminId);
@@ -87,24 +133,9 @@ export async function updateCategoryHandler(req: HttpRequest, _ctx: InvocationCo
   try {
     const id = req.params['id']!;
     const body = UpdateCategoryBodySchema.parse(await parseJson(req));
-    // E21-S03 task 9 fix round 1 (I-4) — authorization gap: this route is
-    // `requireAdmin(['super-admin', 'ops-manager'])` because ops-managers legitimately edit a
-    // category's name, images and activation. But `commissionBps` is a money field, and the
-    // *global* rate (`putAdminCommissionConfig`) is `requireAdmin(['super-admin'])` only. Without
-    // this check an ops-manager — who cannot touch the global rate — could set a per-category
-    // override that supersedes it for every service in that category, silently changing what
-    // technicians are charged. Fixed field-level rather than by narrowing the endpoint's role
-    // list: locking ops-managers out of all catalogue work to close a rate hole would be a much
-    // worse trade than rejecting just this one field from them. Checked on `'commissionBps' in
-    // body` (not on its value) so both setting AND clearing an override require super-admin —
-    // clearing is still a rate change (the category returns to inheriting the global default).
-    if ('commissionBps' in body && admin.role !== 'super-admin') {
-      return {
-        status: 403,
-        headers: JSON_HEADERS,
-        jsonBody: { code: 'FORBIDDEN', requiredRoles: ['super-admin'], field: 'commissionBps' },
-      };
-    }
+    // Fix round 1 (I-4): see `commissionBpsForbidden`'s doc comment above.
+    const forbidden = commissionBpsForbidden(body, admin);
+    if (forbidden) return forbidden;
     assertNonEmptyPatch(body);
     const updated = await catalogueRepo.updateCategory(id, body, admin.adminId);
     if (!updated) return { status: 404, headers: JSON_HEADERS, jsonBody: { error: 'Category not found' } };
@@ -146,6 +177,11 @@ export async function getServiceHandler(req: HttpRequest, _ctx: InvocationContex
 export async function createServiceHandler(req: HttpRequest, _ctx: InvocationContext, admin: AdminContext): Promise<HttpResponseInit> {
   try {
     const body = CreateServiceBodySchema.parse(await parseJson(req));
+    // Fix round 2 (I-4, third path): see `commissionBpsForbidden`'s doc comment. A service-level
+    // override outranks both category and global, so this is not a lesser case of the category
+    // gap — it is the same gap one layer further down the cascade.
+    const forbidden = commissionBpsForbidden(body, admin);
+    if (forbidden) return forbidden;
     const existing = await catalogueRepo.getServiceByIdCrossPartition(body.id);
     if (existing) return { status: 409, headers: JSON_HEADERS, jsonBody: { error: `Service '${body.id}' already exists` } };
     const created = await catalogueRepo.createService(body, admin.adminId);
@@ -163,6 +199,9 @@ export async function updateServiceHandler(req: HttpRequest, _ctx: InvocationCon
   try {
     const id = req.params['id']!;
     const body = UpdateServiceBodySchema.parse(await parseJson(req));
+    // Fix round 2 (I-4, fourth path): see `commissionBpsForbidden`'s doc comment.
+    const forbidden = commissionBpsForbidden(body, admin);
+    if (forbidden) return forbidden;
     assertNonEmptyPatch(body);
     const updated = await catalogueRepo.updateService(id, body, admin.adminId);
     if (!updated) return { status: 404, headers: JSON_HEADERS, jsonBody: { error: 'Service not found' } };

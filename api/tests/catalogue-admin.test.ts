@@ -17,6 +17,9 @@ import { catalogueAuditEntry } from '../src/services/catalogueAudit.service.js';
 import { catalogueRepo } from '../src/cosmos/catalogue-repository.js';
 
 const mockAdmin: AdminContext = { adminId: 'dev-user', role: 'super-admin', sessionId: 'test-session' };
+// Shared across every commissionBps-requires-super-admin (I-4) block below — fix round 2 found
+// the field unguarded on three more write paths beyond the update-category one round 1 fixed.
+const opsManager: AdminContext = { adminId: 'ops-1', role: 'ops-manager', sessionId: 'test-session' };
 
 vi.mock('../src/cosmos/catalogue-repository.js', () => {
   const NOW = '2026-04-19T00:00:00.000Z';
@@ -82,6 +85,37 @@ describe('POST /v1/admin/catalogue/categories', () => {
     const res = await createCategoryHandler(makeReq('http://localhost/api/v1/admin/catalogue/categories', { name: '' }), {} as never, mockAdmin);
     expect(res.status).toBe(400);
   });
+
+  // Fix round 2 (I-4, third path): round 1 guarded `updateCategoryHandler` only. An ops-manager
+  // who cannot set the global rate, and (after round 1) cannot update a category's commissionBps,
+  // could still reach the exact outcome I-4 exists to prevent simply by *creating* a category
+  // with commissionBps populated — createCategoryHandler had no field-level check at all.
+  describe('commissionBps requires super-admin on create (I-4, fix round 2)', () => {
+    it('super-admin can create a category with a commission override', async () => {
+      const body = { id: 'plumbing', name: 'Plumbing', heroImageUrl: 'https://example.com/p.jpg', sortOrder: 3, commissionBps: 2500 };
+      const res = await createCategoryHandler(makeReq('http://localhost/...', body), {} as never, mockAdmin);
+      expect(res.status).toBe(201);
+      expect(vi.mocked(catalogueRepo.createCategory)).toHaveBeenCalledWith(
+        expect.objectContaining({ commissionBps: 2500 }), 'dev-user',
+      );
+    });
+
+    it('ops-manager can create an ordinary category without commissionBps', async () => {
+      const body = { id: 'plumbing', name: 'Plumbing', heroImageUrl: 'https://example.com/p.jpg', sortOrder: 3 };
+      const res = await createCategoryHandler(makeReq('http://localhost/...', body), {} as never, opsManager);
+      expect(res.status).toBe(201);
+      expect(vi.mocked(catalogueRepo.createCategory)).toHaveBeenCalledWith(body, 'ops-1');
+    });
+
+    it('ops-manager creating a category with commissionBps gets 403 and nothing is written', async () => {
+      const body = { id: 'plumbing', name: 'Plumbing', heroImageUrl: 'https://example.com/p.jpg', sortOrder: 3, commissionBps: 2500 };
+      const res = await createCategoryHandler(makeReq('http://localhost/...', body), {} as never, opsManager);
+      expect(res.status).toBe(403);
+      expect(res.jsonBody).toMatchObject({ code: 'FORBIDDEN', field: 'commissionBps' });
+      expect(vi.mocked(catalogueRepo.createCategory)).not.toHaveBeenCalled();
+      expect(vi.mocked(catalogueRepo.getCategoryById)).not.toHaveBeenCalled();
+    });
+  });
 });
 
 describe('GET /v1/admin/catalogue/categories', () => {
@@ -131,8 +165,6 @@ describe('PUT /v1/admin/catalogue/categories/{id}', () => {
   // regardless of the roles it was constructed with, so these tests call the handler with an
   // explicit `AdminContext` to exercise the handler's own role check, not the route-level HOF).
   describe('commissionBps requires super-admin (I-4)', () => {
-    const opsManager: AdminContext = { adminId: 'ops-1', role: 'ops-manager', sessionId: 'test-session' };
-
     it('super-admin can set a category commission override', async () => {
       const res = await updateCategoryHandler(
         makeReq('http://localhost/...', { commissionBps: 2500 }, { id: 'plumbing' }, 'PUT'),
@@ -264,6 +296,40 @@ describe('POST /v1/admin/catalogue/services', () => {
       'dev-user', 'super-admin', 'CATALOGUE_SERVICE_CREATED', 'service', 'leak-fix', expect.any(Object),
     );
   });
+
+  // Fix round 2 (I-4, fourth path): a service-level commissionBps outranks both category and
+  // global (SERVICE > CATEGORY > GLOBAL), so this is the same authorization gap one layer further
+  // down the cascade, not a lesser variant of it.
+  describe('commissionBps requires super-admin on create (I-4, fix round 2)', () => {
+    const withoutBps = {
+      id: 'leak-fix', categoryId: 'plumbing', name: 'Leak Fix', shortDescription: 'Fast.',
+      heroImageUrl: 'https://example.com/l.jpg', basePrice: 39900,
+      durationMinutes: 60, includes: [], faq: [], addOns: [], photoStages: [],
+    };
+    const withBps = { ...withoutBps, commissionBps: 2250 };
+
+    it('super-admin can create a service with a commission override', async () => {
+      const res = await createServiceHandler(makeReq('http://localhost/...', withBps), {} as never, mockAdmin);
+      expect(res.status).toBe(201);
+      expect(vi.mocked(catalogueRepo.createService)).toHaveBeenCalledWith(
+        expect.objectContaining({ commissionBps: 2250 }), 'dev-user',
+      );
+    });
+
+    it('ops-manager can create an ordinary service without commissionBps', async () => {
+      const res = await createServiceHandler(makeReq('http://localhost/...', withoutBps), {} as never, opsManager);
+      expect(res.status).toBe(201);
+      expect(vi.mocked(catalogueRepo.createService)).toHaveBeenCalledWith(withoutBps, 'ops-1');
+    });
+
+    it('ops-manager creating a service with commissionBps gets 403 and nothing is written', async () => {
+      const res = await createServiceHandler(makeReq('http://localhost/...', withBps), {} as never, opsManager);
+      expect(res.status).toBe(403);
+      expect(res.jsonBody).toMatchObject({ code: 'FORBIDDEN', field: 'commissionBps' });
+      expect(vi.mocked(catalogueRepo.createService)).not.toHaveBeenCalled();
+      expect(vi.mocked(catalogueRepo.getServiceByIdCrossPartition)).not.toHaveBeenCalled();
+    });
+  });
 });
 
 describe('PUT /v1/admin/catalogue/services/{id}', () => {
@@ -285,6 +351,47 @@ describe('PUT /v1/admin/catalogue/services/{id}', () => {
     expect(vi.mocked(catalogueAuditEntry)).toHaveBeenCalledWith(
       'dev-user', 'super-admin', 'CATALOGUE_SERVICE_UPDATED', 'service', 'leak-fix', expect.any(Object),
     );
+  });
+
+  // Fix round 2 (I-4): updateServiceHandler had no field-level check either — a service-level
+  // commissionBps is a partial patch here (UpdateServiceBodySchema), so the ops-manager path
+  // below only patches an unrelated field, mirroring the "ops-manager can still patch a name-only
+  // body" case already covered for categories.
+  describe('commissionBps requires super-admin on update (I-4, fix round 2)', () => {
+    it('super-admin can update a service commission override', async () => {
+      const res = await updateServiceHandler(
+        makeReq('http://localhost/...', { commissionBps: 3000 }, { id: 'leak-fix' }, 'PUT'),
+        {} as never,
+        mockAdmin,
+      );
+      expect(res.status).toBe(200);
+      expect(vi.mocked(catalogueRepo.updateService)).toHaveBeenCalledWith(
+        'leak-fix', { commissionBps: 3000 }, 'dev-user',
+      );
+    });
+
+    it('ops-manager can still patch a name-only body', async () => {
+      const res = await updateServiceHandler(
+        makeReq('http://localhost/...', { name: 'Leak Fix Updated' }, { id: 'leak-fix' }, 'PUT'),
+        {} as never,
+        opsManager,
+      );
+      expect(res.status).toBe(200);
+      expect(vi.mocked(catalogueRepo.updateService)).toHaveBeenCalledWith(
+        'leak-fix', { name: 'Leak Fix Updated' }, 'ops-1',
+      );
+    });
+
+    it('ops-manager setting a service commissionBps gets 403 and the stored document is unchanged', async () => {
+      const res = await updateServiceHandler(
+        makeReq('http://localhost/...', { commissionBps: 3000 }, { id: 'leak-fix' }, 'PUT'),
+        {} as never,
+        opsManager,
+      );
+      expect(res.status).toBe(403);
+      expect(res.jsonBody).toMatchObject({ code: 'FORBIDDEN', field: 'commissionBps' });
+      expect(vi.mocked(catalogueRepo.updateService)).not.toHaveBeenCalled();
+    });
   });
 });
 
