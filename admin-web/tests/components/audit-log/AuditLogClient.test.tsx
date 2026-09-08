@@ -1,7 +1,12 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuditLogClient } from '../../../src/components/audit-log/AuditLogClient';
 import type { AuditLogEntry } from '../../../src/types/audit-log';
+
+let currentSearchParams = new URLSearchParams();
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => currentSearchParams,
+}));
 
 const { getTranslation } = vi.hoisted(() => {
   const dictionaries: Record<string, Record<string, string>> = {
@@ -63,8 +68,43 @@ function jsonResponse(body: unknown, ok = true, status = 200) {
 }
 
 describe('AuditLogClient', () => {
+  beforeEach(() => {
+    currentSearchParams = new URLSearchParams();
+  });
+
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it('seeds resourceType/resourceId filters from a deep-link URL and applies them to the first fetch', async () => {
+    currentSearchParams = new URLSearchParams('resourceType=booking&resourceId=bk-1');
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ entries: [], continuationToken: undefined }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<AuditLogClient />);
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const url = String(fetchMock.mock.calls[0]?.[0] ?? '');
+    expect(url).toContain('resourceType=booking');
+    expect(url).toContain('resourceId=bk-1');
+
+    // The filter inputs themselves reflect the seeded values, not just the fetch call.
+    expect(screen.getByLabelText('Resource Type')).toHaveValue('booking');
+    expect(screen.getByLabelText('Resource ID')).toHaveValue('bk-1');
+  });
+
+  it('behaves exactly as before when no deep-link params are present', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ entries: [], continuationToken: undefined }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<AuditLogClient />);
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const url = String(fetchMock.mock.calls[0]?.[0] ?? '');
+    expect(url).not.toContain('resourceType=');
+    expect(url).not.toContain('resourceId=');
+    expect(screen.getByLabelText('Resource Type')).toHaveValue('');
+    expect(screen.getByLabelText('Resource ID')).toHaveValue('');
   });
 
   it('loads entries and requests next and previous pages', async () => {

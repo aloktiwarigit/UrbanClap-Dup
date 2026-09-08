@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { AuditLogTable } from './AuditLogTable';
 import { AuditLogFilters } from './AuditLogFilters';
@@ -8,9 +9,30 @@ import { EMPTY_FILTERS } from '@/types/audit-log';
 import { apiUrl } from '@/api/base';
 import type { AuditLogListResponse, AuditLogFiltersState } from '@/types/audit-log';
 
+// Seeds the filter state from the ?resourceType=&resourceId= a deep link (e.g. the audit-trail
+// link on an order's slide-over) arrives with, so the list is filtered to that resource on first
+// paint instead of landing on an unfiltered "everything" view that looks like it worked but
+// didn't. Falls back to EMPTY_FILTERS untouched when neither param is present — every other
+// filter field is never sourced from the URL.
+function initialFiltersFromSearchParams(searchParams: URLSearchParams): AuditLogFiltersState {
+  const resourceType = searchParams.get('resourceType');
+  const resourceId = searchParams.get('resourceId');
+  if (resourceType === null && resourceId === null) {
+    return EMPTY_FILTERS;
+  }
+  return {
+    ...EMPTY_FILTERS,
+    resourceType: resourceType ?? '',
+    resourceId: resourceId ?? '',
+  };
+}
+
 export function AuditLogClient() {
   const t = useTranslations('auditLog');
-  const [filters, setFilters] = useState<AuditLogFiltersState>(EMPTY_FILTERS);
+  const searchParams = useSearchParams();
+  const [filters, setFilters] = useState<AuditLogFiltersState>(() =>
+    initialFiltersFromSearchParams(searchParams),
+  );
   const [data, setData] = useState<AuditLogListResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
