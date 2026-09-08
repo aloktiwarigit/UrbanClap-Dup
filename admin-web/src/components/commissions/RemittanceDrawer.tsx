@@ -830,8 +830,8 @@ export function RemittanceDrawer({
           data-testid={isActual ? undefined : 'allocation-preview'}
           className={
             isActual
-              ? 'pl-[var(--space-3)] border-l border-[var(--color-border)] text-[var(--color-text)] transition-[opacity] duration-[220ms] ease-out motion-reduce:transition-none'
-              : 'pl-[var(--space-3)] border-l border-dashed border-[var(--color-text-faint)] text-[var(--color-text-faint)] transition-[opacity] duration-[220ms] ease-out motion-reduce:transition-none'
+              ? 'pl-[var(--space-3)] border-l border-[var(--color-border)] text-[var(--color-text)] transition-[opacity,color,border-color] duration-[220ms] ease-out motion-reduce:transition-none'
+              : 'pl-[var(--space-3)] border-l border-dashed border-[var(--color-text-faint)] text-[var(--color-text-faint)] transition-[opacity,color,border-color] duration-[220ms] ease-out motion-reduce:transition-none'
           }
         >
           <p className="text-xs">
