@@ -246,6 +246,8 @@
         "created": "बनाया गया",
         "evidencePhotos": "काम की तस्वीरें",
         "auditLog": "ऑडिट ट्रेल",
+        "customerPhone": "ग्राहक फ़ोन",
+        "technicianPhone": "तकनीशियन फ़ोन",
         "actions": {
           "heading": "कार्रवाइयां",
           "noPermission": "आपकी भूमिका इस ऑर्डर की समीक्षा कर सकती है लेकिन परिचालन बदलाव नहीं कर सकती।"
@@ -322,7 +324,8 @@
         "city": "शहर",
         "scheduledAt": "निर्धारित समय",
         "amount": "राशि (INR)",
-        "createdAt": "बनाया गया"
+        "createdAt": "बनाया गया",
+        "technicianPhone": "तकनीशियन फ़ोन"
       }
     },
     "statuses": {
@@ -336,6 +339,23 @@
       "COMPLETED": "पूर्ण",
       "CANCELLED": "रद्द",
       "REFUNDED": "रिफंड किया"
+    },
+    "pii": {
+      "showNumber": "नंबर दिखाएँ",
+      "showNumberAria": "{party} का पूरा नंबर दिखाएँ",
+      "hideNow": "अभी छिपाएँ · {seconds}से",
+      "hideNowAria": "नंबर अभी छिपाएँ",
+      "recorded": "आपको दिखाया गया और ऑडिट लॉग में दर्ज किया गया।",
+      "unavailable": "कोई नंबर दर्ज नहीं है",
+      "party": {
+        "customer": "ग्राहक",
+        "technician": "तकनीशियन"
+      },
+      "errors": {
+        "forbidden": "आपकी भूमिका संपर्क नंबर नहीं देख सकती।",
+        "rateLimited": "बहुत ज़्यादा बार देखा गया। एक मिनट बाद कोशिश करें।",
+        "failed": "नंबर नहीं दिखाया जा सका। दोबारा कोशिश करें।"
+      }
     }
   },
   "complaints": {

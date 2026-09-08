@@ -246,6 +246,8 @@
         "created": "Created",
         "evidencePhotos": "Job Photos",
         "auditLog": "Audit trail",
+        "customerPhone": "Customer phone",
+        "technicianPhone": "Technician phone",
         "actions": {
           "heading": "Actions",
           "noPermission": "Your role can review this order but cannot run operational overrides."
@@ -322,7 +324,8 @@
         "city": "City",
         "scheduledAt": "Scheduled At",
         "amount": "Amount (INR)",
-        "createdAt": "Created At"
+        "createdAt": "Created At",
+        "technicianPhone": "Technician Phone"
       }
     },
     "statuses": {
@@ -336,6 +339,23 @@
       "COMPLETED": "Completed",
       "CANCELLED": "Cancelled",
       "REFUNDED": "Refunded"
+    },
+    "pii": {
+      "showNumber": "Show number",
+      "showNumberAria": "Show the full {party} number",
+      "hideNow": "Hide now · {seconds}s",
+      "hideNowAria": "Hide the number now",
+      "recorded": "Shown to you and recorded in the audit log.",
+      "unavailable": "No number on file",
+      "party": {
+        "customer": "customer",
+        "technician": "technician"
+      },
+      "errors": {
+        "forbidden": "Your role can't reveal contact numbers.",
+        "rateLimited": "Too many reveals. Try again in a minute.",
+        "failed": "Couldn't reveal the number. Try again."
+      }
     }
   },
   "complaints": {
