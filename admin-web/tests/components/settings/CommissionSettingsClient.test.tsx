@@ -7,6 +7,7 @@ import type {
   TechnicianClientConfig,
   AdminServiceCategory,
 } from '../../../src/api/commissions';
+import enMessages from '../../../messages/en.json';
 
 // task-9 brief + design doc §6. This is the settings page where the owner changes commission
 // rates, hold thresholds, and the technician app's feature flags — three sections kept
@@ -473,5 +474,85 @@ describe('CommissionSettingsClient', () => {
     // still render and work, per the "fetch independently and degrade" rule.
     expect(screen.getByLabelText('Global commission rate (%)')).toBeInTheDocument();
     expect(within(enforcementRegion()).getByLabelText('Warn threshold (₹)')).toBeInTheDocument();
+  });
+
+  // Fix round 1 (I-2): `rupeesToPaise` alone accepts a leading "-" (→ a negative paise value that
+  // would still pass a naive `warn < block` comparison) and silently rounds more than 2 decimal
+  // places. Both must be rejected before the API ever sees them, with the same
+  // invalidThresholdAmount message the blank/non-numeric case already used.
+  it('rejects a negative warn threshold without calling the API', async () => {
+    const user = userEvent.setup();
+    render(
+      <CommissionSettingsClient
+        initialConfig={config()}
+        initialTechnicianConfig={techConfig()}
+        initialCategories={[]}
+        rows={[]}
+      />,
+    );
+
+    await setThresholds(user, { warn: '-100' });
+    await user.click(within(enforcementRegion()).getByRole('button', { name: /save/i }));
+
+    expect(updateCommissionConfig).not.toHaveBeenCalled();
+    expect(await screen.findByText('Enter valid rupee amounts for both thresholds.')).toBeInTheDocument();
+  });
+
+  it('rejects a threshold amount with more than 2 decimal places without calling the API', async () => {
+    const user = userEvent.setup();
+    render(
+      <CommissionSettingsClient
+        initialConfig={config()}
+        initialTechnicianConfig={techConfig()}
+        initialCategories={[]}
+        rows={[]}
+      />,
+    );
+
+    await setThresholds(user, { block: '12.345' });
+    await user.click(within(enforcementRegion()).getByRole('button', { name: /save/i }));
+
+    expect(updateCommissionConfig).not.toHaveBeenCalled();
+    expect(await screen.findByText('Enter valid rupee amounts for both thresholds.')).toBeInTheDocument();
+  });
+});
+
+// I-1 (fix round 1): the mocked `next-intl` dictionary above proves the component renders a
+// *key*; it never reads messages/en.json, so someone could delete the no-repricing consequence
+// line, strip "currently carrying a balance" from the impact copy, or reword the threshold-order
+// message, and the component suite above would stay green regardless. These three sentences are
+// the most expensive copy on this page (design doc §6 ruling + the brief's money-boundary
+// warning), so they are pinned here by reading the real message file directly.
+describe('the real messages/en.json copy (not the mocked dictionary above)', () => {
+  function messageAt(path: string): string {
+    const value = path.split('.').reduce<unknown>((acc, key) => {
+      if (acc !== null && typeof acc === 'object' && key in (acc as Record<string, unknown>)) {
+        return (acc as Record<string, unknown>)[key];
+      }
+      return undefined;
+    }, enMessages);
+    if (typeof value !== 'string') {
+      throw new Error(`messages/en.json is missing a string at "${path}"`);
+    }
+    return value;
+  }
+
+  it('states that a rate change never reprices past bookings', () => {
+    expect(messageAt('commissions.settings.rates.consequence')).toMatch(
+      /Past bookings keep the rate they were priced at/i,
+    );
+  });
+
+  it('scopes the threshold-impact preview to technicians currently carrying a balance', () => {
+    expect(messageAt('commissions.settings.enforcement.impactNone')).toMatch(
+      /currently carrying a balance/i,
+    );
+    expect(messageAt('commissions.settings.enforcement.impact')).toMatch(
+      /currently carrying a balance/i,
+    );
+  });
+
+  it('states the threshold-order rule as warn below block, matching the client-side check', () => {
+    expect(messageAt('commissions.settings.errors.thresholdOrder')).toMatch(/warn.*below.*block/i);
   });
 });

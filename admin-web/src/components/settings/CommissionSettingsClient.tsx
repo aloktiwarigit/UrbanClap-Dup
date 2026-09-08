@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
-import { formatINR, formatDate, rupeesToPaise } from '@/lib/format/intl';
+import { formatINR, formatDate, rupeesToPaise, paiseToRupeeNumber } from '@/lib/format/intl';
 import {
   fetchCommissionConfig,
   updateCommissionConfig,
@@ -65,6 +65,17 @@ function formatBpsAsPercent(bps: number): string {
 
 function isValidCommissionBps(bps: number): boolean {
   return bps >= MIN_COMMISSION_BPS && bps <= MAX_COMMISSION_BPS;
+}
+
+// Fix round 1 (I-2): same shape as RemittanceDrawer.tsx's AMOUNT_PATTERN — no leading sign (so
+// `rupeesToPaise` can never be handed "-100" and quietly return a negative paise value) and at
+// most 2 decimal places (so "12.345" cannot round to a value the operator never typed). Applied
+// to both threshold inputs before `rupeesToPaise` ever sees them: `rupeesToPaise` itself only
+// guards against non-numeric and blank input, not against a well-formed-looking negative number.
+const RUPEE_AMOUNT_PATTERN = /^\d+(\.\d{1,2})?$/;
+
+function isWellFormedRupeeAmount(raw: string): boolean {
+  return RUPEE_AMOUNT_PATTERN.test(raw.trim());
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -134,10 +145,10 @@ export function CommissionSettingsClient({
 
   const [thresholdsTouched, setThresholdsTouched] = useState(false);
   const [warnRupeesInput, setWarnRupeesInput] = useState(
-    initialConfig !== undefined ? String(initialConfig.warnThresholdPaise / 100) : '',
+    initialConfig !== undefined ? String(paiseToRupeeNumber(initialConfig.warnThresholdPaise)) : '',
   );
   const [blockRupeesInput, setBlockRupeesInput] = useState(
-    initialConfig !== undefined ? String(initialConfig.blockThresholdPaise / 100) : '',
+    initialConfig !== undefined ? String(paiseToRupeeNumber(initialConfig.blockThresholdPaise)) : '',
   );
   const [kycTouched, setKycTouched] = useState(false);
   const [kycChecked, setKycChecked] = useState(initialConfig?.enforceKycInDispatch ?? false);
@@ -241,8 +252,8 @@ export function CommissionSettingsClient({
     if (config === null) return;
     if (!rateTouched) setGlobalRateInput(formatBpsAsPercent(config.defaultCommissionBps));
     if (!thresholdsTouched) {
-      setWarnRupeesInput(String(config.warnThresholdPaise / 100));
-      setBlockRupeesInput(String(config.blockThresholdPaise / 100));
+      setWarnRupeesInput(String(paiseToRupeeNumber(config.warnThresholdPaise)));
+      setBlockRupeesInput(String(paiseToRupeeNumber(config.blockThresholdPaise)));
     }
     if (!kycTouched) setKycChecked(config.enforceKycInDispatch);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -289,6 +300,15 @@ export function CommissionSettingsClient({
 
   async function handleSaveEnforcement() {
     setEnforcementValidationError(null);
+    // Fix round 1 (I-2): `rupeesToPaise` only guards against blank/non-numeric input — it accepts
+    // "-100" (→ a negative paise value that would still pass a naive `warn < block` check) and
+    // silently rounds something like "12.345" to the nearest paise. Both threshold inputs must be
+    // well-formed rupee amounts (no sign, at most 2 decimal places — same shape as
+    // RemittanceDrawer's AMOUNT_PATTERN) before `rupeesToPaise` ever sees them.
+    if (!isWellFormedRupeeAmount(warnRupeesInput) || !isWellFormedRupeeAmount(blockRupeesInput)) {
+      setEnforcementValidationError(t('settings.errors.invalidThresholdAmount'));
+      return;
+    }
     const warnPaise = rupeesToPaise(warnRupeesInput);
     const blockPaise = rupeesToPaise(blockRupeesInput);
     if (warnPaise === undefined || blockPaise === undefined) {
@@ -309,9 +329,15 @@ export function CommissionSettingsClient({
       setConfig(updated);
       show(t('settings.messages.enforcementSaved'), 'success');
     } catch (err) {
-      // Both the client-side pre-check above and a same-shaped 400 from the server (e.g. a race
-      // against a concurrent edit that slipped past the check) must say the identical sentence —
-      // the brief's requirement, satisfied by routing both through the same translation key.
+      // Fix round 1 (I-3): this client always sends both thresholds in one body, and
+      // UpdateCommissionConfigBodySchema's `.refine()` catches a two-field ordering violation as
+      // a generic VALIDATION_ERROR before the request ever reaches the repository — the
+      // repository's THRESHOLD_ORDER throw (what `isThresholdOrderError` matches) only fires on a
+      // *single-field* patch comparing the new value against the already-stored other one. So
+      // this branch is not reachable from this client today; it is defence-in-depth in case a
+      // future single-field save path (or a relaxed API) makes the server-side THRESHOLD_ORDER
+      // throw reachable again, in which case it must still say the identical sentence as the
+      // client-side check above.
       if (isThresholdOrderError(err)) {
         setEnforcementValidationError(t('settings.errors.thresholdOrder'));
       } else {
