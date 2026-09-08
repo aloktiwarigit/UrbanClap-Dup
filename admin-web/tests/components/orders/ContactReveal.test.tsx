@@ -11,11 +11,17 @@ vi.mock('next-intl', () => ({
   },
 }));
 
-const revealOrderContact = vi.fn();
-class RevealContactError extends Error {
-  status: number;
-  constructor(status: number) { super('x'); this.status = status; }
-}
+// vi.mock factories are hoisted above module-scope declarations, so the
+// values they close over must be created inside vi.hoisted() to avoid a
+// "Cannot access before initialization" TDZ error.
+const { revealOrderContact, RevealContactError } = vi.hoisted(() => {
+  const revealOrderContact = vi.fn();
+  class RevealContactError extends Error {
+    status: number;
+    constructor(status: number) { super('x'); this.status = status; }
+  }
+  return { revealOrderContact, RevealContactError };
+});
 vi.mock('@/api/orders', () => ({ revealOrderContact, RevealContactError }));
 
 import { ContactReveal } from '../../../src/components/orders/ContactReveal';
