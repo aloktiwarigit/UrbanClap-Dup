@@ -57,3 +57,22 @@ describe('maskVpa', () => {
     expect(maskVpa(undefined)).toBe(MASK_PLACEHOLDER);
   });
 });
+
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
+
+function walk(dir: string): string[] {
+  return readdirSync(dir).flatMap((entry) => {
+    const full = join(dir, entry);
+    return statSync(full).isDirectory() ? walk(full) : full.endsWith('.ts') ? [full] : [];
+  });
+}
+
+describe('masking is not re-implemented anywhere else', () => {
+  it('declares maskPhone in exactly one source file', () => {
+    const offenders = walk('src')
+      .filter((file) => file !== join('src', 'lib', 'pii', 'mask.ts'))
+      .filter((file) => /function\s+maskPhone|const\s+maskPhone\s*=/.test(readFileSync(file, 'utf8')));
+    expect(offenders).toEqual([]);
+  });
+});
