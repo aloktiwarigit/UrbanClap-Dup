@@ -187,3 +187,6 @@ technician-app/release.keystore
 .claude/
 .gradle-home/
 .gradle-codex/
+
+# Codex raw review transcripts — findings are distilled into the committed *.summary.md
+docs/reviews/*-raw.md
