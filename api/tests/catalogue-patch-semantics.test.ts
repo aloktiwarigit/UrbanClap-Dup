@@ -16,7 +16,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { _setCosmosClientForTest } from '../src/cosmos/client.js';
 import { CatalogueRepository } from '../src/cosmos/catalogue-repository.js';
 import { UpdateServiceBodySchema } from '../src/schemas/service.js';
-import { UpdateCategoryBodySchema } from '../src/schemas/service-category.js';
+import { UpdateCategoryBodySchema, ServiceCategorySchema } from '../src/schemas/service-category.js';
 import type { ServiceCategory } from '../src/schemas/service-category.js';
 import type { Service } from '../src/schemas/service.js';
 
@@ -55,10 +55,19 @@ const richCategory: ServiceCategory = {
   updatedAt: NOW,
 };
 
+// E21-S03 task 9: a category that already carries an explicit commission override, used by the
+// "clear the override" tests below — the "omitted field leaves it unchanged" and "explicit null
+// removes it" cases are only meaningful starting from a category that HAS an override to begin
+// with (richCategory above has none, i.e. is already in the "inherits the global" state).
+const categoryWithOverride: ServiceCategory = {
+  ...richCategory,
+  commissionBps: 2500,
+};
+
 const replaceSpy = vi.fn();
 const catUpsertSpy = vi.fn();
 
-function makeMockClient() {
+function makeMockClient(category: ServiceCategory = richCategory) {
   const svcContainer = {
     item: vi.fn().mockReturnValue({
       read: vi.fn().mockResolvedValue({ resource: richService }),
@@ -74,15 +83,15 @@ function makeMockClient() {
   };
   const catContainer = {
     item: vi.fn().mockReturnValue({
-      read: vi.fn().mockResolvedValue({ resource: richCategory }),
-      replace: vi.fn().mockResolvedValue({ resource: richCategory }),
+      read: vi.fn().mockResolvedValue({ resource: category }),
+      replace: vi.fn().mockResolvedValue({ resource: category }),
     }),
     items: {
       query: vi.fn().mockReturnValue({
-        fetchAll: vi.fn().mockResolvedValue({ resources: [richCategory] }),
+        fetchAll: vi.fn().mockResolvedValue({ resources: [category] }),
       }),
       create: vi.fn(),
-      upsert: catUpsertSpy.mockResolvedValue({ resource: richCategory }),
+      upsert: catUpsertSpy.mockResolvedValue({ resource: category }),
     },
   };
   return {
@@ -120,6 +129,29 @@ describe('P0-3 — update body accepts a partial patch', () => {
   it('still validates the fields that ARE supplied', () => {
     expect(() => UpdateServiceBodySchema.parse({ basePrice: -5 })).toThrow();
     expect(() => UpdateServiceBodySchema.parse({ commissionBps: 9000 })).toThrow();
+  });
+
+  // E21-S03 task 9: `UpdateCategoryBodySchema.commissionBps` is the one field on this schema
+  // widened to `.nullable()` — see the doc comment on the schema for why. The stored
+  // `ServiceCategorySchema` is untouched and still rejects `null` for this field, which the last
+  // assertion below pins so a future edit cannot silently widen the READ shape too.
+  it('UpdateCategoryBodySchema accepts a numeric commissionBps (sets an override)', () => {
+    expect(UpdateCategoryBodySchema.parse({ commissionBps: 2500 })).toEqual({ commissionBps: 2500 });
+  });
+
+  it('UpdateCategoryBodySchema accepts an explicit null commissionBps (clears the override)', () => {
+    expect(UpdateCategoryBodySchema.parse({ commissionBps: null })).toEqual({ commissionBps: null });
+  });
+
+  it('UpdateCategoryBodySchema still range-checks a numeric commissionBps', () => {
+    expect(() => UpdateCategoryBodySchema.parse({ commissionBps: 9000 })).toThrow();
+    expect(() => UpdateCategoryBodySchema.parse({ commissionBps: 1000 })).toThrow();
+  });
+
+  it('the stored ServiceCategorySchema does NOT accept null — only the write body was widened', () => {
+    expect(() =>
+      ServiceCategorySchema.parse({ ...richCategory, commissionBps: null }),
+    ).toThrow();
   });
 });
 
@@ -185,5 +217,47 @@ describe('P0-3 — repository merge preserves untouched content', () => {
     expect(written.name).toBe('AC Service');
     expect(written.heroImageUrl).toBe(richCategory.heroImageUrl);
     expect(written.sortOrder).toBe(richCategory.sortOrder);
+  });
+
+  // E21-S03 task 9 (commission console settings page) — the three-way `commissionBps` contract
+  // `updateCategory` must honour: a number SETS the override, an omitted field LEAVES it
+  // unchanged, and an explicit `null` REMOVES the stored key entirely so the category goes back
+  // to inheriting the global default. See the doc comments on `UpdateCategoryBodySchema` and on
+  // `updateCategory` itself for why `definedOnly` alone cannot express the third case.
+  describe('commissionBps: set / leave-unchanged / clear', () => {
+    it('a numeric commissionBps sets the override', async () => {
+      await repo.updateCategory('ac-repair', { commissionBps: 2750 }, 'admin-1');
+
+      const written = catUpsertSpy.mock.calls[0]?.[0] as ServiceCategory;
+      expect(written.commissionBps).toBe(2750);
+    });
+
+    it('an omitted commissionBps leaves an existing override unchanged', async () => {
+      _setCosmosClientForTest(makeMockClient(categoryWithOverride));
+
+      await repo.updateCategory('ac-repair', { name: 'AC Service' }, 'admin-1');
+
+      const written = catUpsertSpy.mock.calls[0]?.[0] as ServiceCategory;
+      expect(written.commissionBps).toBe(categoryWithOverride.commissionBps);
+    });
+
+    it('an explicit null commissionBps removes the key so the category inherits the global default again', async () => {
+      _setCosmosClientForTest(makeMockClient(categoryWithOverride));
+
+      await repo.updateCategory('ac-repair', { commissionBps: null }, 'admin-1');
+
+      const written = catUpsertSpy.mock.calls[0]?.[0] as ServiceCategory;
+      expect('commissionBps' in written).toBe(false);
+    });
+
+    it('null does not disturb the category name-only fields already covered above', async () => {
+      _setCosmosClientForTest(makeMockClient(categoryWithOverride));
+
+      await repo.updateCategory('ac-repair', { commissionBps: null, name: 'AC Service' }, 'admin-1');
+
+      const written = catUpsertSpy.mock.calls[0]?.[0] as ServiceCategory;
+      expect('commissionBps' in written).toBe(false);
+      expect(written.name).toBe('AC Service');
+    });
   });
 });

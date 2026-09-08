@@ -1910,7 +1910,7 @@ export interface operations {
                     heroImageUrl?: string;
                     sortOrder?: number;
                     safetyTag?: boolean;
-                    commissionBps?: number;
+                    commissionBps?: number | null;
                 };
             };
         };

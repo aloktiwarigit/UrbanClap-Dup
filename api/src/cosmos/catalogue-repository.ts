@@ -61,7 +61,21 @@ export class CatalogueRepository {
   async updateCategory(id: string, body: UpdateCategoryBody, uid: string): Promise<ServiceCategory | null> {
     const existing = await this.getCategoryById(id);
     if (!existing) return null;
-    const updated: ServiceCategory = { ...existing, ...definedOnly(body), id, updatedBy: uid, updatedAt: now() };
+    // `commissionBps` is handled separately from `definedOnly` below: on this one field, the
+    // write body accepts `null` to mean "clear the override" (E21-S03 task 9 — see the doc
+    // comment on `UpdateCategoryBodySchema`). `definedOnly` only ever strips `undefined`, so a
+    // blind spread of the full body would write a literal `commissionBps: null` into the stored
+    // document — a shape `ServiceCategorySchema` (still plain `.optional()`) does not accept, and
+    // which would stop meaning "inherit the global default" the way an absent key does. Pulling
+    // it out here keeps `definedOnly` itself untouched for every other field this repository (and
+    // `updateService` below) merges.
+    const { commissionBps, ...rest } = body;
+    const updated: ServiceCategory = { ...existing, ...definedOnly(rest), id, updatedBy: uid, updatedAt: now() };
+    if (commissionBps === null) {
+      delete updated.commissionBps;
+    } else if (commissionBps !== undefined) {
+      updated.commissionBps = commissionBps;
+    }
     const { resource } = await this.cats.items.upsert<ServiceCategory>(updated);
     return resource!;
   }

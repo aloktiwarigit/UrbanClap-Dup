@@ -38,7 +38,24 @@ export const CreateCategoryBodySchema = rejectPriceInProse(
   }),
 );
 
-/** P0-3: PATCH semantics — see the note on `UpdateServiceBodySchema`. */
+/**
+ * P0-3: PATCH semantics — see the note on `UpdateServiceBodySchema`.
+ *
+ * E21-S03 task 9 (commission console settings page): `commissionBps` is widened to
+ * `.nullable()` on this WRITE body only — `ServiceCategorySchema` above stays plain
+ * `.optional()`, and the read/stored shape is unchanged. This is deliberate, narrowly
+ * scoped surgery, not a blast-radius fix: the settings UI needs a way to say "clear
+ * this category's override and inherit the global rate again", and omission cannot
+ * express that (PATCH semantics treat an absent key as "leave unchanged", not
+ * "remove"). An explicit `null` is the one wire value available to mean "delete this
+ * key" without redefining what omission means for every other field on this schema
+ * or in the sibling `UpdateServiceBodySchema` / commission-config / system-docs patch
+ * bodies that also rely on "absent = unchanged". `CatalogueRepository.updateCategory`
+ * is the only place that interprets this `null` — it deletes the stored key rather
+ * than writing a literal `null`, so a cleared category still parses against the
+ * plain-`.optional()` `ServiceCategorySchema` and "absent" keeps meaning "inherit the
+ * global default" exactly as the field's own doc comment above already promises.
+ */
 export const UpdateCategoryBodySchema = rejectPriceInProse(
   ServiceCategorySchema.omit({
     id: true,
@@ -46,7 +63,11 @@ export const UpdateCategoryBodySchema = rejectPriceInProse(
     updatedBy: true,
     createdAt: true,
     updatedAt: true,
-  }).partial(),
+  })
+    .partial()
+    .extend({
+      commissionBps: z.number().int().min(1500).max(3500).nullable().optional(),
+    }),
 );
 
 export type ServiceCategory = z.infer<typeof ServiceCategorySchema>;

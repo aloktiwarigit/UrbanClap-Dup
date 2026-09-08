@@ -3872,7 +3872,10 @@
                     "type": "boolean"
                   },
                   "commissionBps": {
-                    "type": "integer",
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
                     "minimum": 1500,
                     "maximum": 3500
                   }
