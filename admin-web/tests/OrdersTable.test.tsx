@@ -37,7 +37,7 @@ describe('OrdersTable', () => {
   const baseProps = {
     orders: [sampleOrder], total: 1, page: 1, pageSize: 50,
     totalPages: 1, isLoading: false,
-    onRowClick: vi.fn(), onPageChange: vi.fn(),
+    onRowClick: vi.fn(), onPageChange: vi.fn(), canReveal: false,
   };
 
   it('renders customer name in a row', () => {
@@ -65,6 +65,16 @@ describe('OrdersTable', () => {
   it('Next button is disabled when page equals totalPages', () => {
     render(<OrdersTable {...baseProps} page={1} totalPages={1} />);
     expect((screen.getByLabelText('Next page') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('renders a reveal control for the customer phone when permitted', () => {
+    render(<OrdersTable {...baseProps} canReveal={true} />);
+    expect(screen.getAllByRole('button', { name: /show/i }).length).toBeGreaterThan(0);
+  });
+
+  it('renders no reveal control when the role lacks the capability', () => {
+    render(<OrdersTable {...baseProps} canReveal={false} />);
+    expect(screen.queryByRole('button', { name: /show/i })).toBeNull();
   });
 
   it('uses token classes (not raw gray/white) for table chrome', () => {

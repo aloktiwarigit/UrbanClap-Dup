@@ -11,6 +11,8 @@ vi.mock('next-intl', () => ({
       'detail.sections.status': 'Status',
       'detail.sections.customer': 'Customer',
       'detail.sections.technician': 'Technician',
+      'detail.sections.customerPhone': 'Customer phone',
+      'detail.sections.technicianPhone': 'Technician phone',
       'detail.sections.service': 'Service',
       'detail.sections.location': 'Location',
       'detail.sections.scheduled': 'Scheduled',
@@ -67,6 +69,15 @@ vi.mock('../src/api/orders', () => ({
   fetchOrderById: vi.fn(),
   fetchAllOrdersForExport: vi.fn(),
   fetchTechnicianCandidatesForOrder: vi.fn().mockResolvedValue([]),
+  revealOrderContact: vi.fn(),
+  RevealContactError: class RevealContactError extends Error {
+    status: number;
+    constructor(status: number) {
+      super(`revealOrderContact failed: ${status}`);
+      this.name = 'RevealContactError';
+      this.status = status;
+    }
+  },
 }));
 import type { Order } from '../src/types/order';
 
@@ -107,6 +118,26 @@ describe('OrderSlideOver', () => {
     );
     expect(screen.getByText('Job Photos')).toBeDefined();
     expect(screen.getByAltText('Start trip evidence 1')).toBeDefined();
+  });
+
+  it('shows the masked technician phone', () => {
+    render(
+      <OrderSlideOver
+        order={{ ...order, technicianPhoneMasked: '+91 XXXXX-X4321' }}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(screen.getByText('+91 XXXXX-X4321')).toBeInTheDocument();
+  });
+
+  it('shows the unavailable copy when the technician has no number on file', () => {
+    render(
+      <OrderSlideOver
+        order={{ ...order, technicianPhoneMasked: undefined }}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(screen.getAllByText(/unavailable|नंबर दर्ज नहीं/i).length).toBeGreaterThan(0);
   });
 
   it('close button calls onClose', () => {
