@@ -489,7 +489,13 @@ it('hides Recompute from a role without settle capability', () => { /* canRecomp
 
 `SummaryBand` is a band, not a card — a single hairline rule beneath it, no border box, no nesting. Table follows the house style: `divide-y divide-[var(--color-border)]`, header `bg-[var(--color-surface-alt)]` with `text-[var(--color-text-muted)]`, row hover `hover:bg-[var(--color-surface-alt)]`, money right-aligned in `--font-mono`. Wrap the table in `<div className="overflow-x-auto">` so the page never scrolls sideways. Empty state uses the shared `EmptyState` component. Pagination uses the `continuationStack` idiom from `AuditLogClient.tsx`.
 
-Each row links to `/finance/commissions/[technicianId]`. Gate the Recompute button on `hasCapability(auth?.role, 'finance.settleCommission')`.
+Each row links to `/finance/commissions/[technicianId]`. Gate the Recompute button on `hasCapability(auth?.role, 'settings.manage')`.
+
+> **Corrected 2026-09-08 after the whole-branch review.** This originally said
+> `finance.settleCommission`, which the `finance` role holds — but the recompute endpoint is
+> `requireAdmin(['super-admin'])` per §6, so a finance user would have seen a button the API always
+> refuses. `settings.manage` is the branch's super-admin-only capability and is what the code now
+> uses.
 
 - [ ] **Step 4: Run tests and commit**
 
