@@ -9,6 +9,19 @@ vi.mock('../../src/cosmos/booking-repository.js', () => ({
 
 vi.mock('../../src/cosmos/technician-repository.js', () => ({
   getTechniciansWithinRadius: vi.fn(),
+  countBlockedInRadius: vi.fn().mockResolvedValue(0),
+}));
+
+vi.mock('../../src/services/commission-config.service.js', () => ({
+  getCommissionConfig: vi.fn().mockResolvedValue({
+    defaultCommissionBps: 2200,
+    warnThresholdPaise: 250000,
+    blockThresholdPaise: 500000,
+    holdEnforcementEnabled: false,
+    enforceKycInDispatch: false,
+    updatedBy: 'system',
+    updatedAt: new Date(0).toISOString(),
+  }),
 }));
 
 vi.mock('../../src/cosmos/catalogue-repository.js', () => ({
@@ -257,6 +270,7 @@ describe('dispatcherService.triggerDispatch', () => {
 
     expect(getTechniciansWithinRadius).toHaveBeenCalledWith(
       12.9716, 77.5946, 10, 'svc-plumbing',
+      { excludeBlockedHolds: false, requireKyc: false },
     );
   });
 
@@ -388,6 +402,7 @@ describe('dispatcherService.redispatch', () => {
       noShowBooking.addressLatLng.lng,
       15,
       noShowBooking.serviceId,
+      { excludeBlockedHolds: false, requireKyc: false },
     );
     expect(dispatchContainer.items.create).toHaveBeenCalledOnce();
   });
@@ -470,6 +485,7 @@ describe('dispatcherService.redispatch', () => {
       expect.any(Number),
       15,
       expect.any(String),
+      { excludeBlockedHolds: false, requireKyc: false },
     );
   });
 });
@@ -525,5 +541,102 @@ describe('dispatcherService.continueDispatchAfterOfferOutcome', () => {
     expect(result).toBe(false);
     expect(dispatchAttemptRepo.getAttemptedTechnicianIds).not.toHaveBeenCalled();
     expect(getTechniciansWithinRadius).not.toHaveBeenCalled();
+  });
+});
+
+// ── E21-S04 hold gating ───────────────────────────────────────────────────────
+
+import { countBlockedInRadius } from '../../src/cosmos/technician-repository.js';
+import { getCommissionConfig } from '../../src/services/commission-config.service.js';
+import type { EffectiveCommissionConfig } from '../../src/schemas/commission-config.js';
+
+const cfg = (over: Partial<EffectiveCommissionConfig> = {}): EffectiveCommissionConfig => ({
+  defaultCommissionBps: 2200,
+  warnThresholdPaise: 250000,
+  blockThresholdPaise: 500000,
+  holdEnforcementEnabled: false,
+  enforceKycInDispatch: false,
+  updatedBy: 'system',
+  updatedAt: new Date(0).toISOString(),
+  ...over,
+});
+
+describe('dispatch hold gating', () => {
+  const blockedHold = {
+    outstandingPaise: 600000, dueCount: 3, state: 'BLOCKED' as const,
+    evaluatedAt: '2026-09-08T00:00:00.000Z',
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(bookingRepo.getById).mockResolvedValue({ ...BASE_BOOKING });
+    vi.mocked(updateBookingFields).mockResolvedValue(undefined as never);
+    vi.mocked(catalogueRepo.getServiceByIdCrossPartition).mockResolvedValue(null as never);
+    vi.mocked(getDispatchAttemptsContainer).mockReturnValue(makeDispatchContainer() as never);
+    vi.mocked(getMessaging).mockReturnValue(makeMessaging() as never);
+    vi.mocked(getCommissionConfig).mockResolvedValue(cfg());
+  });
+
+  it('enforcement OFF: queries with excludeBlockedHolds false and shadow-logs the blocked candidate', async () => {
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const t = makeTech('tech-blocked', 0.001);
+    vi.mocked(getTechniciansWithinRadius).mockResolvedValue([{ ...t, commissionHold: blockedHold }]);
+
+    await dispatcherService.triggerDispatch('bk-1');
+
+    expect(getTechniciansWithinRadius).toHaveBeenCalledWith(
+      expect.any(Number), expect.any(Number), expect.any(Number), 'svc-plumbing',
+      { excludeBlockedHolds: false, requireKyc: false },
+    );
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('DISPATCH_HOLD_SHADOW_EXCLUSION'));
+    log.mockRestore();
+  });
+
+  it('enforcement ON: queries with excludeBlockedHolds true and emits no shadow line', async () => {
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.mocked(getCommissionConfig).mockResolvedValue(cfg({ holdEnforcementEnabled: true }));
+    vi.mocked(getTechniciansWithinRadius).mockResolvedValue([makeTech('tech-ok', 0.001)]);
+
+    await dispatcherService.triggerDispatch('bk-1');
+
+    expect(getTechniciansWithinRadius).toHaveBeenCalledWith(
+      expect.any(Number), expect.any(Number), expect.any(Number), 'svc-plumbing',
+      { excludeBlockedHolds: true, requireKyc: false },
+    );
+    expect(log).not.toHaveBeenCalledWith(expect.stringContaining('DISPATCH_HOLD_SHADOW_EXCLUSION'));
+    log.mockRestore();
+  });
+
+  it('zero candidates + enforcement ON + past the slot: counts blocked technicians and logs it', async () => {
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.mocked(getCommissionConfig).mockResolvedValue(cfg({ holdEnforcementEnabled: true }));
+    vi.mocked(bookingRepo.getById).mockResolvedValue({ ...BASE_BOOKING, slotDate: '2020-01-01' });
+    vi.mocked(getTechniciansWithinRadius).mockResolvedValue([]);
+    vi.mocked(countBlockedInRadius).mockResolvedValue(4);
+
+    await dispatcherService.triggerDispatch('bk-1');
+
+    expect(countBlockedInRadius).toHaveBeenCalled();
+    expect(log).toHaveBeenCalledWith('DISPATCH_NO_TECHS bookingId=bk-1 blockedByHold=4');
+    log.mockRestore();
+  });
+
+  it('zero candidates + enforcement OFF: does not issue the extra count query', async () => {
+    vi.mocked(bookingRepo.getById).mockResolvedValue({ ...BASE_BOOKING, slotDate: '2020-01-01' });
+    vi.mocked(getTechniciansWithinRadius).mockResolvedValue([]);
+
+    await dispatcherService.triggerDispatch('bk-1');
+
+    expect(countBlockedInRadius).not.toHaveBeenCalled();
+  });
+
+  it('a count-query failure does not break dispatch', async () => {
+    vi.mocked(getCommissionConfig).mockResolvedValue(cfg({ holdEnforcementEnabled: true }));
+    vi.mocked(bookingRepo.getById).mockResolvedValue({ ...BASE_BOOKING, slotDate: '2020-01-01' });
+    vi.mocked(getTechniciansWithinRadius).mockResolvedValue([]);
+    vi.mocked(countBlockedInRadius).mockRejectedValue(new Error('cosmos down'));
+
+    await expect(dispatcherService.triggerDispatch('bk-1')).resolves.toBeUndefined();
+    expect(updateBookingFields).toHaveBeenCalledWith('bk-1', { status: 'UNFULFILLED' });
   });
 });

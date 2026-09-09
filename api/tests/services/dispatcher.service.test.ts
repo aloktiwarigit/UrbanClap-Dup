@@ -10,6 +10,18 @@ vi.mock('../../src/cosmos/booking-repository.js', () => ({
 }));
 vi.mock('../../src/cosmos/technician-repository.js', () => ({
   getTechniciansWithinRadius: vi.fn(),
+  countBlockedInRadius: vi.fn().mockResolvedValue(0),
+}));
+vi.mock('../../src/services/commission-config.service.js', () => ({
+  getCommissionConfig: vi.fn().mockResolvedValue({
+    defaultCommissionBps: 2200,
+    warnThresholdPaise: 250000,
+    blockThresholdPaise: 500000,
+    holdEnforcementEnabled: false,
+    enforceKycInDispatch: false,
+    updatedBy: 'system',
+    updatedAt: new Date(0).toISOString(),
+  }),
 }));
 vi.mock('firebase-admin/messaging', () => ({
   getMessaging: vi.fn(),
