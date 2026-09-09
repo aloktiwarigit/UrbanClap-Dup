@@ -83,7 +83,13 @@ describe('reassignOrderHandler hold enrichment', () => {
     await reassignOrderHandler(req({ technicianId: 'tech-legacy', reason: 'owner request' }), {} as never, admin);
     expect(appendAuditEntry).toHaveBeenCalledWith(
       expect.objectContaining({
-        payload: expect.objectContaining({ targetHoldState: 'CLEAR', targetOutstandingPaise: 0 }),
+        payload: {
+          technicianId: 'tech-legacy',
+          reason: 'owner request',
+          targetHoldState: 'CLEAR',
+          targetOutstandingPaise: 0,
+          targetSuspended: false,
+        },
       }),
     );
   });
@@ -94,7 +100,11 @@ describe('reassignOrderHandler hold enrichment', () => {
     expect(res.status).toBe(200);
     expect(appendAuditEntry).toHaveBeenCalledWith(
       expect.objectContaining({
-        payload: expect.objectContaining({ technicianId: 'tech-9', targetHoldState: 'UNKNOWN' }),
+        payload: {
+          technicianId: 'tech-9',
+          reason: 'override request',
+          targetHoldState: 'UNKNOWN',
+        },
       }),
     );
   });
