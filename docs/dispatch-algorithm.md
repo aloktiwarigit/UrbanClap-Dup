@@ -50,6 +50,13 @@ The candidate set is filtered by:
   the booking's customer is excluded.
 - **Not already attempted for this booking** — a technician who already held (and lost, declined,
   or timed out on) an offer attempt for the same booking is excluded from a redispatch.
+- **KYC-approved — only when the operator has this enabled.** When enabled
+  (`enforceKycInDispatch` on the `system/commission-config` document), a technician whose
+  KYC status is not `APPROVED` is excluded from the candidate set. **This filter is off by
+  default**, so today it excludes nobody — KYC currently plays no part in dispatch. A technician
+  who has never had a KYC status recorded at all is never excluded by this check, whether the
+  flag is on or off; only a technician with an explicit, non-approved status is affected once the
+  flag is switched on.
 - **Not currently blocked by an unpaid commission balance — only when the operator has this
   enabled.** When enabled (`holdEnforcementEnabled` on the `system/commission-config` document),
   a technician whose cached `commissionHold.state` is `BLOCKED` is excluded from the candidate
