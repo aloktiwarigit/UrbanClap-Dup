@@ -50,28 +50,43 @@ The candidate set is filtered by:
   the booking's customer is excluded.
 - **Not already attempted for this booking** — a technician who already held (and lost, declined,
   or timed out on) an offer attempt for the same booking is excluded from a redispatch.
-- **KYC-verified — only when the operator has this enabled.** When enabled
-  (`enforceKycInDispatch` on the `system/commission-config` document), a technician whose KYC
-  flow has not reached full completion is excluded from the candidate set. "Full completion"
-  means the nested KYC record's status has reached the terminal state of the Aadhaar-then-PAN
-  DigiLocker/OCR flow described in FR-1.2, and the technician's Aadhaar step is not on record as
-  explicitly failed or never done. **This filter is off by default**, so today it excludes
-  nobody — KYC currently plays no part in dispatch. A technician who has never had any KYC
-  information recorded at all is never excluded by this check, whether the flag is on or off;
-  only a technician with an explicit, not-yet-complete KYC status is affected once the flag is
-  switched on. (This bullet was corrected after an external review caught the original
-  implementation reading a different, unmaintained field — see ADR-0032's "Corrected after Codex
-  review" note.)
-  This check reads only the status the system has recorded for each step; it does not itself
-  confirm the two verification steps happened in the correct order. The system's Aadhaar and PAN
-  submission endpoints do not currently enforce that the identity step must be completed before
-  the tax-ID step is accepted, so in principle a technician could reach the PAN-recorded state
-  without the Aadhaar step ever having succeeded. This filter is written to still exclude that
-  specific case — an on-record Aadhaar failure blocks the technician even if the PAN step
-  separately succeeded — but it relies on how today's data happens to be written, not on an
-  enforced order of operations. See ADR-0032 (Consequences — negative) and the runbook for the
-  residual risk and the operational precondition that must be verified before this filter is
-  switched on in production.
+- **Identity checks complete — only when the operator has this enabled.** When enabled
+  (`enforceKycInDispatch` on the `system/commission-config` document), a technician is included in
+  the candidate set only if **both** of the identity checks the platform runs at onboarding have
+  succeeded, as described in FR-1.2:
+  1. the Aadhaar identity check, completed through DigiLocker with the technician's consent, and
+  2. the PAN (tax identification) check, completed by reading the technician's uploaded PAN card.
+
+  Both must have succeeded for the technician to be offered work while this setting is on;
+  completing only one is not enough. The two checks may be completed in either order, and
+  completing the second one does not undo the first. If a technician re-attempts a check and it
+  fails, or a previously accepted PAN reading is later rejected, that check counts as not
+  completed again and the technician stops being offered work until it succeeds — the check
+  reflects the current state of each verification, not the fact that it once passed.
+
+  **This filter is off by default**, so today it excludes nobody — identity status currently plays
+  no part in which technician is offered a job. Two further points about who it affects if it is
+  switched on:
+  - A technician for whom the platform holds **no identity-check record at all** is never excluded
+    by this filter, whether it is on or off. The filter can only exclude a technician about whom
+    the platform holds some identity-check information.
+  - A technician for whom the platform holds only **partial** identity-check information — one
+    check done and not the other, or a record in an older format that predates the current
+    checks — **is** excluded while the filter is on. The platform treats incomplete information as
+    "not verified" rather than assuming completion. Before an operator switches this filter on,
+    they are required to check the platform's records for technicians in that older format, so
+    that nobody is dropped from work allocation because of a record-keeping format rather than a
+    real gap in their verification.
+
+  Neither of the two checks is a human judgement — both are automated results recorded by the
+  verification services the platform uses. The platform does not currently offer a manual override
+  by which staff can mark a technician as verified outside these two checks. A technician who
+  believes they have been wrongly excluded can ask for their verification records to be
+  re-examined; the owner contact for that request is listed in §9.
+
+  (This description was corrected after external technical reviews found that earlier versions of
+  this filter did not match the behaviour described here — see ADR-0032 for the full record of
+  what was wrong and when.)
 - **Not currently blocked by an unpaid commission balance — only when the operator has this
   enabled.** When enabled (`holdEnforcementEnabled` on the `system/commission-config` document),
   a technician whose cached `commissionHold.state` is `BLOCKED` is excluded from the candidate

@@ -55,83 +55,147 @@ describe('getTechniciansWithinRadius predicates', () => {
     );
   });
 
-  it('omits the kyc predicate by default and adds a fail-open one when requireKyc is set', async () => {
+  it('omits the kyc predicate by default and adds a two-fact one when requireKyc is set', async () => {
     const off = mockQuery([]);
     await getTechniciansWithinRadius(12.97, 77.59, 10, 'svc-plumbing');
-    expect(off.query).not.toContain('kycStatus');
+    expect(off.query).not.toContain('c.kyc');
 
     const on = mockQuery([]);
     await getTechniciansWithinRadius(12.97, 77.59, 10, 'svc-plumbing', { requireKyc: true });
-    // Nested field the KYC flow actually maintains (upsertKycStatus writes kyc.kycStatus, never
-    // the top-level c.kycStatus — see the KYC_VERIFIED_PREDICATE comment in
-    // technician-repository.ts for the full derivation). Codex E21-S04 round-1 finding.
-    expect(on.query).toContain("NOT IS_DEFINED(c.kyc.kycStatus)");
-    expect(on.query).toContain("c.kyc.kycStatus IN ('PAN_DONE', 'COMPLETE')");
-    // Re-review fix: kycStatus alone is not proof the Aadhaar step happened (submit-pan-ocr.ts
-    // writes PAN_DONE unconditionally). The predicate must also gate on aadhaarVerified, fail-open
-    // on absence and fail-closed on an explicit false.
-    expect(on.query).toContain('NOT IS_DEFINED(c.kyc.aadhaarVerified) OR c.kyc.aadhaarVerified = true');
-    // Guard against regressing back to the wrong (unmaintained, dead) top-level field.
+
+    // Fail-open disjunct keys on the WHOLE kyc sub-object, not on the two fields: upsertKycStatus
+    // is the only writer of c.kyc and always defaults both keys in, so a doc carrying a kyc object
+    // written any other way holds PARTIAL KYC info and must fail closed.
+    expect(on.query).toContain('NOT IS_DEFINED(c.kyc)');
+    // Fact 1 - DigiLocker Aadhaar succeeded. An equality on true, NOT a fail-open IS_DEFINED
+    // disjunct: an absent aadhaarVerified is not proof the Aadhaar step ever ran.
+    expect(on.query).toContain('c.kyc.aadhaarVerified = true');
+    // Fact 2 - PAN OCR succeeded. IS_DEFINED alone is insufficient because upsertKycStatus
+    // defaults `panHash: null` and submit-pan-ocr.ts writes an explicit null on rejection, and
+    // Cosmos's IS_DEFINED is true for a null-valued property. NOT IS_NULL alone is insufficient
+    // because IS_NULL is false for an undefined path too. Both halves are load-bearing.
+    expect(on.query).toContain('IS_DEFINED(c.kyc.panHash) AND NOT IS_NULL(c.kyc.panHash)');
+
+    // Round-1 regression guard: the dead, unmaintained top-level field.
     expect(on.query).not.toContain("c.kycStatus = 'APPROVED'");
+    // Round-2 and round-3 regression guard: `kyc.kycStatus` is a single progress marker for a
+    // two-step process completable in either order. It cannot express "both done" (nothing writes
+    // COMPLETE), so reading it is either too loose (PAN_DONE admits PAN-only) or too strict (a
+    // PAN-then-Aadhaar technician ends on AADHAAR_DONE). The predicate must not read it at all.
+    expect(on.query).not.toContain('c.kyc.kycStatus');
+    expect(on.query).not.toContain('PAN_DONE');
+    expect(on.query).not.toContain('COMPLETE');
   });
 
-  describe('KYC predicate fail-open semantics (mirrors Cosmos evaluation of the SQL text above)', () => {
+  describe('KYC predicate semantics (mirrors Cosmos evaluation of the SQL text above)', () => {
     /**
-     * Cosmos evaluates `(NOT IS_DEFINED(path) OR path IN (...))` by short-circuiting: an absent
-     * path makes `IS_DEFINED` false, so `NOT IS_DEFINED` is true and the row passes regardless
-     * of the second disjunct. A present path must satisfy the IN-list. This mirrors that exact
-     * boolean shape in JS so the fail-open/fail-closed behaviour has a real assertion beyond
-     * string-containment on the SQL text above — it is not a re-implementation of business
-     * logic, just the boolean Cosmos itself evaluates, including the aadhaarVerified gate added
-     * by the E21-S04 re-review (PAN-without-Aadhaar sequencing gap).
+     * Mirrors, in JS, the exact boolean Cosmos evaluates for the SQL above - including Cosmos's
+     * three-valued logic, where a comparison against an undefined path yields `undefined` and
+     * `false OR undefined` is `undefined`, which DROPS the row. `undefined` is modelled explicitly
+     * and collapsed to "excluded" only at the end, rather than being conflated with `false`.
+     *
+     * This is not a re-implementation of business logic; it is the parenthesisation of the SQL
+     * string, so that the admitted/excluded classification of every document shape has a real
+     * assertion beyond string-containment on the SQL text.
      */
-    function kycPredicatePasses(doc: { kyc?: { kycStatus?: string; aadhaarVerified?: boolean } }): boolean {
-      const status = doc.kyc?.kycStatus;
-      if (status === undefined) return true;
-      if (status !== 'PAN_DONE' && status !== 'COMPLETE') return false;
-      const aadhaar = doc.kyc?.aadhaarVerified;
-      return aadhaar === undefined || aadhaar === true;
+    type Tri = boolean | undefined;
+
+    function or(a: Tri, b: () => Tri): Tri {
+      if (a === true) return true; // short-circuits, even over an undefined right side
+      const r = b();
+      if (r === true) return true;
+      if (a === undefined || r === undefined) return undefined;
+      return false;
+    }
+    function and(a: Tri, b: () => Tri): Tri {
+      if (a === false) return false; // short-circuits
+      const r = b();
+      if (r === false) return false;
+      if (a === undefined || r === undefined) return undefined;
+      return true;
     }
 
-    it('dispatches a technician verified via the nested field (PAN_DONE, aadhaarVerified true)', () => {
-      expect(kycPredicatePasses({ kyc: { kycStatus: 'PAN_DONE', aadhaarVerified: true } })).toBe(true);
+    interface Kyc {
+      aadhaarVerified?: boolean;
+      panHash?: string | null;
+      kycStatus?: string;
+    }
+    interface Doc {
+      kyc?: Kyc;
+    }
+
+    /** ADMITTED only when the whole expression evaluates to exactly `true`. */
+    function kycPredicateAdmits(doc: Doc): boolean {
+      const kyc = doc.kyc;
+      // `c.kyc.aadhaarVerified = true` over an absent path -> undefined, per Cosmos.
+      const aadhaarEqTrue: Tri =
+        kyc === undefined || kyc.aadhaarVerified === undefined ? undefined : kyc.aadhaarVerified === true;
+      const panDefined: Tri = kyc !== undefined && 'panHash' in kyc;
+      const panNotNull: Tri = panDefined === true ? kyc?.panHash !== null : true;
+      const result = or(
+        kyc === undefined,
+        () => and(aadhaarEqTrue, () => and(panDefined, () => panNotNull)),
+      );
+      return result === true;
+    }
+
+    /** The document shape upsertKycStatus() persists: defaults first, then whichever steps ran. */
+    function afterUpserts(...patches: Kyc[]): Doc {
+      const kyc: Kyc = { aadhaarVerified: false, panHash: null };
+      for (const patch of patches) Object.assign(kyc, patch);
+      return { kyc };
+    }
+
+    const AADHAAR_OK: Kyc = { aadhaarVerified: true, kycStatus: 'AADHAAR_DONE' };
+    const AADHAAR_FAIL: Kyc = { aadhaarVerified: false, kycStatus: 'PENDING_MANUAL' };
+    const PAN_OK: Kyc = { panHash: 'a'.repeat(64), kycStatus: 'PAN_DONE' };
+    const PAN_REJECTED: Kyc = { panHash: null, kycStatus: 'MANUAL_REVIEW' };
+
+    it('FAIL-OPEN: dispatches a technician with no kyc sub-object at all', () => {
+      expect(kycPredicateAdmits({})).toBe(true);
     });
 
-    it('dispatches a technician verified via the nested field (COMPLETE, aadhaarVerified true)', () => {
-      expect(kycPredicatePasses({ kyc: { kycStatus: 'COMPLETE', aadhaarVerified: true } })).toBe(true);
+    it('excludes a kyc sub-object carrying no verification fields at all - partial/unknown KYC '
+      + 'info fails closed; only total absence of the sub-object fails open', () => {
+      expect(kycPredicateAdmits({ kyc: {} })).toBe(false);
     });
 
-    it('excludes a technician explicitly not yet verified (MANUAL_REVIEW)', () => {
-      expect(kycPredicatePasses({ kyc: { kycStatus: 'MANUAL_REVIEW' } })).toBe(false);
+    it('excludes Aadhaar-only (aadhaarVerified true, panHash still at its null default)', () => {
+      expect(kycPredicateAdmits(afterUpserts(AADHAAR_OK))).toBe(false);
     });
 
-    it('excludes a technician who has only completed the Aadhaar step (AADHAAR_DONE)', () => {
-      expect(kycPredicatePasses({ kyc: { kycStatus: 'AADHAAR_DONE' } })).toBe(false);
+    it('excludes PAN-only (panHash set, aadhaarVerified still false) - the round-2 gap', () => {
+      expect(kycPredicateAdmits(afterUpserts(PAN_OK))).toBe(false);
     });
 
-    it('excludes a technician who has not started KYC (PENDING)', () => {
-      expect(kycPredicatePasses({ kyc: { kycStatus: 'PENDING' } })).toBe(false);
+    it('ADMITS both steps done, Aadhaar then PAN', () => {
+      expect(kycPredicateAdmits(afterUpserts(AADHAAR_OK, PAN_OK))).toBe(true);
     });
 
-    it('FAIL-OPEN: dispatches a technician with no kyc information at all', () => {
-      expect(kycPredicatePasses({})).toBe(true);
+    it('ADMITS both steps done, PAN then Aadhaar - the round-3 gap: the Aadhaar write moves '
+      + 'kycStatus back to AADHAAR_DONE, so any status-based predicate excludes this technician',
+      () => {
+        const doc = afterUpserts(PAN_OK, AADHAAR_OK);
+        expect(doc.kyc?.kycStatus).toBe('AADHAAR_DONE'); // the progress marker really is backwards
+        expect(doc.kyc?.panHash).toBe('a'.repeat(64)); // ...while the PAN fact survives intact
+        expect(kycPredicateAdmits(doc)).toBe(true);
+      });
+
+    it('ADMITS Aadhaar retried after a failure, then PAN', () => {
+      expect(kycPredicateAdmits(afterUpserts(AADHAAR_FAIL, AADHAAR_OK, PAN_OK))).toBe(true);
     });
 
-    it('FAIL-OPEN: dispatches a technician with a kyc sub-object but no kycStatus field', () => {
-      expect(kycPredicatePasses({ kyc: {} })).toBe(true);
+    it('excludes a PAN rejected after a prior success (submit-pan-ocr.ts nulls panHash back out)', () => {
+      expect(kycPredicateAdmits(afterUpserts(AADHAAR_OK, PAN_OK, PAN_REJECTED))).toBe(false);
     });
 
-    it('FAIL-CLOSED (E21-S04 re-review): excludes PAN_DONE with aadhaarVerified explicitly false '
-      + '(submit-pan-ocr.ts called without ever completing Aadhaar)', () => {
-      expect(kycPredicatePasses({ kyc: { kycStatus: 'PAN_DONE', aadhaarVerified: false } })).toBe(false);
+    it('excludes a failed Aadhaar even with a good PAN already on file', () => {
+      expect(kycPredicateAdmits(afterUpserts(PAN_OK, AADHAAR_FAIL))).toBe(false);
     });
 
-    it('FAIL-OPEN (E21-S04 re-review): admits PAN_DONE with aadhaarVerified absent (legacy doc)', () => {
-      expect(kycPredicatePasses({ kyc: { kycStatus: 'PAN_DONE' } })).toBe(true);
-    });
-
-    it('FAIL-OPEN (E21-S04 re-review): admits COMPLETE with aadhaarVerified absent (legacy doc)', () => {
-      expect(kycPredicatePasses({ kyc: { kycStatus: 'COMPLETE' } })).toBe(true);
+    it('excludes a legacy doc holding only a status and the pre-E19 PAN fields (no panHash, no '
+      + 'aadhaarVerified) - partial info; the runbook precondition query is what finds these', () => {
+      expect(kycPredicateAdmits({ kyc: { kycStatus: 'PAN_DONE' } })).toBe(false);
     });
   });
 
@@ -142,7 +206,8 @@ describe('getTechniciansWithinRadius predicates', () => {
       requireKyc: true,
     });
     expect(c.query).toContain('commissionHold.state');
-    expect(c.query).toContain('kycStatus');
+    expect(c.query).toContain('c.kyc.aadhaarVerified = true');
+    expect(c.query).toContain('c.kyc.panHash');
     expect(c.query).toContain('c.suspended');
   });
 

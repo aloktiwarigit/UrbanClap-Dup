@@ -226,9 +226,9 @@ export interface DispatchPredicateOptions {
    */
   excludeBlockedHolds?: boolean;
   /**
-   * Require the technician's KYC flow to report full completion. Driven by
-   * `enforceKycInDispatch`; off = today's behaviour. See `KYC_VERIFIED_PREDICATE` below for
-   * which field and values this actually checks, and why.
+   * Require both automated KYC steps (DigiLocker Aadhaar + PAN OCR) to have succeeded. Driven by
+   * `enforceKycInDispatch`; off = today's behaviour. See `KYC_VERIFIED_PREDICATE` below for the
+   * two facts this actually checks, and why it does not read `kyc.kycStatus`.
    */
   requireKyc?: boolean;
 }
@@ -254,64 +254,86 @@ const HOLD_NOT_BLOCKED_PREDICATE =
   `(NOT IS_DEFINED(c.commissionHold.state) OR c.commissionHold.state != 'BLOCKED')`;
 
 /**
- * KYC-verified means the technician's KYC flow reports full completion — both the Aadhaar and
- * PAN steps PRD FR-1.2/FR-3.1 require ("no half-verified dispatches").
+ * KYC-verified means BOTH automated KYC steps have succeeded — the DigiLocker Aadhaar step and
+ * the PAN OCR step — as PRD FR-1.2/FR-3.1 require ("no half-verified dispatches").
  *
- * The field: `c.kyc.kycStatus` (nested), NOT the top-level `c.kycStatus`. `upsertKycStatus()` —
- * the only function the KYC flow calls (`POST /v1/kyc/aadhaar`, `POST /v1/kyc/pan-ocr`; see
- * `functions/kyc/submit-aadhaar.ts`, `functions/kyc/submit-pan-ocr.ts`) — writes exclusively to
- * the nested `kyc` sub-object. The sibling top-level `c.kycStatus` field is set only
- * incidentally, by `patchTechnicianServiceProfile()` above, which copies whatever raw nested
- * value happens to exist through unmodified (or defaults to `'PENDING'`) every time a technician
- * patches their skills/location — it never performs the APPROVED/PENDING/REJECTED translation
- * its own schema (`TechnicianKycStatusSchema`) implies. No code path anywhere ever writes the
- * literal `'APPROVED'` to either field (grep confirms `mapKycStatus()` in
- * `functions/admin/technicians/list.ts` is the only place that string appears outside a schema
- * enum, and it's a read-side display mapping, not a writer). A predicate that reads the
- * top-level field for `= 'APPROVED'` therefore never matches anything: once a technician who has
- * made real KYC progress (`kyc.kycStatus` = `AADHAAR_DONE`/`PAN_DONE`/etc.) does any profile
- * patch, their top-level `kycStatus` becomes DEFINED with that same non-'APPROVED' string, and
- * they are silently excluded from dispatch forever — the exact bug Codex's E21-S04 round-1
- * review caught. Fixed by reading the field the KYC flow actually maintains.
+ * ── Why this reads two facts and not a status ────────────────────────────────────────────────
+ * The obvious implementation is to test `kyc.kycStatus`. Do not. That field is a *progress
+ * marker for a two-step process that is completable in either order*, and a single scalar cannot
+ * express "both done". `submit-aadhaar.ts` sets it to `AADHAAR_DONE`; `submit-pan-ocr.ts` sets it
+ * to `PAN_DONE`; whichever runs LAST wins, and neither endpoint checks that the other has run.
+ * `COMPLETE` — the one value in `KycStatusSchema` that could mean "both done" — has no writer
+ * anywhere in this codebase. So:
+ *   - `kycStatus = 'PAN_DONE'`  admits PAN-only (Aadhaar never done)          → too loose
+ *   - `kycStatus = 'AADHAAR_DONE'` is reached by a fully-verified technician who did PAN first
+ *     and Aadhaar second, because the Aadhaar write overwrote the marker      → too strict
+ * Three consecutive Codex review rounds on this predicate (E21-S04) each found a real defect,
+ * in opposite directions, because each attempt was reading that scalar. Any fourth attempt to
+ * "simplify" this back to a status comparison reintroduces one of those two bugs. Don't.
  *
- * The vocabulary: `KycStatusSchema` (`schemas/kyc.ts`) — PENDING, AADHAAR_DONE, PAN_DONE,
- * COMPLETE, PENDING_MANUAL, MANUAL_REVIEW — not the narrower `TechnicianKycStatusSchema`
- * (`schemas/technician.ts`) that the (dead) top-level field's type implies. `PAN_DONE` is the
- * terminal status of today's two-step Aadhaar-then-PAN flow (`submit-pan-ocr.ts`); `COMPLETE` is
- * reserved for a future fully-approved terminal state and is included for forward compatibility
- * even though nothing writes it yet. Every other status means at least one step is outstanding
- * or needs manual review, matching the PRD's "no half-verified dispatches" requirement.
+ * ── The two facts ────────────────────────────────────────────────────────────────────────────
+ * Instead, read one independent, per-step fact for each step. Each is written by exactly one
+ * endpoint, and neither endpoint's patch carries the other's keys:
+ *   - `kyc.aadhaarVerified === true` — `submit-aadhaar.ts` writes `true` ONLY after
+ *     `exchangeCodeForAadhaar()` returns a DigiLocker result, and explicitly `false` on failure.
+ *   - `kyc.panHash` present and non-null — `submit-pan-ocr.ts` writes `panHash` ONLY when the
+ *     Form Recognizer read succeeds, and explicitly sets it back to `null` on rejection (so a
+ *     later failed submission revokes an earlier pass; see the "stale masked number" comment
+ *     there). `panHash` rather than `panMaskedNumber` because it is a SHA-256 of a successfully
+ *     extracted PAN and has no legacy predecessor — the legacy fields are `panNumber` /
+ *     `panNumberEncrypted`, which this predicate deliberately does NOT accept as proof.
+ * `upsertKycStatus()` merges `defaults → ...(base.kyc ?? {}) → ...patch`, so each step's fields
+ * survive the other step's write. THAT is what makes this predicate order-independent by
+ * construction rather than by luck — it is true iff both steps have succeeded, in either order,
+ * with retries, and it goes false again if either step is later rejected.
  *
- * Fail-open unchanged: `NOT IS_DEFINED(c.kyc.kycStatus)` is true both when a technician document
- * has no `kyc` sub-object at all and when it has one but `kycStatus` is absent from it — either
- * way, a technician with zero KYC information on file is still dispatched, exactly like the
- * hold and suspended predicates above.
+ * ── The null trap ────────────────────────────────────────────────────────────────────────────
+ * `IS_DEFINED(c.kyc.panHash)` alone is NOT enough. `upsertKycStatus()` defaults `panHash: null`
+ * into every write, and `submit-pan-ocr.ts` writes an explicit `null` on rejection. Cosmos's
+ * `IS_DEFINED` returns true for a property whose value is `null`, so every technician who has
+ * ever touched the KYC flow — including one whose PAN was rejected — has `panHash` DEFINED.
+ * `NOT IS_NULL(...)` is the clause that actually tests "a PAN was successfully read". Both
+ * halves are load-bearing: `IS_NULL` is false for an *undefined* path too, so `NOT IS_NULL`
+ * alone would admit a technician with no `panHash` key at all.
  *
- * Second clause (E21-S04 re-review fix): `kycStatus IN ('PAN_DONE', 'COMPLETE')` alone is not
- * proof both steps happened. `submit-pan-ocr.ts` writes `kyc.kycStatus = 'PAN_DONE'` on OCR
- * success unconditionally — it never checks that `kyc.aadhaarVerified` was already `true`, so a
- * technician who calls the PAN endpoint without ever completing Aadhaar reaches `PAN_DONE` with
- * `aadhaarVerified` still `false`. This predicate additionally requires
- * `NOT IS_DEFINED(c.kyc.aadhaarVerified) OR c.kyc.aadhaarVerified = true`, i.e. it excludes a
- * technician whose Aadhaar step is *explicitly* `false` but admits one where the field is simply
- * absent. Absence is not a real production case today — `upsertKycStatus()` has defaulted
- * `aadhaarVerified: false` into every write since the KYC feature's first commit, so any document
- * with `kyc.kycStatus` defined also has `kyc.aadhaarVerified` defined — but the disjunct is kept
- * for the same fail-open reason as every other predicate here: a legacy or future document
- * missing the field must not be silently dropped from dispatch.
+ * ── Fail-open boundary ───────────────────────────────────────────────────────────────────────
+ * The disjunct is `NOT IS_DEFINED(c.kyc)` — the absence of the WHOLE `kyc` sub-object, not the
+ * absence of the two fields. `upsertKycStatus()` is the only writer of `c.kyc` in the codebase,
+ * and it reconstructs from defaults that always include `aadhaarVerified: false` and
+ * `panHash: null`; so any document the KYC flow has ever touched carries both keys, and the two
+ * choices differ only for a document with a `kyc` object written some other way — i.e. a legacy
+ * doc holding, say, `panNumberEncrypted` and nothing else. Such a document carries PARTIAL KYC
+ * information (one step's worth), and partial information must fail CLOSED once the flag is on:
+ * keying on the whole object excludes it, keying on the two fields would wrongly admit it.
+ * A technician with no KYC information at all is still dispatched, exactly like the suspended
+ * and hold predicates above. `docs/runbook.md` carries the precondition query that checks a
+ * target environment for such legacy documents before `enforceKycInDispatch` is switched on.
  *
- * This predicate does NOT rely on the KYC endpoints enforcing step order, because they don't:
- * `submit-pan-ocr.ts` has no dependency on `submit-aadhaar.ts` having run first. The exclusion
- * above works only because `aadhaarVerified` happens to still read `false` in that case — it is
- * a data-shape check, not a guarantee that the two steps were completed in sequence. See
- * `docs/adr/0032-commission-hold-is-an-eligibility-gate.md` (Consequences — negative) and
- * `docs/runbook.md` for the residual risk and the operational precondition before
- * `enforceKycInDispatch` goes live.
+ * ── Cosmos evaluation, hand-traced ───────────────────────────────────────────────────────────
+ * A comparison against an undefined path evaluates to `undefined`, which DROPS the row, and
+ * `false OR undefined` is `undefined` — so the parenthesisation below is what decides whether a
+ * whole class of technicians silently vanishes from dispatch:
+ *   no `kyc` at all                    → true OR …                     → ADMITTED (fail-open)
+ *   `kyc` present, neither field       → false OR (undefined AND false)→ EXCLUDED
+ *   Aadhaar only (panHash null)        → false OR (true AND false)     → EXCLUDED
+ *   PAN only (aadhaarVerified false)   → false OR (false AND …)        → EXCLUDED
+ *   both, either order                 → false OR (true AND true)      → ADMITTED
+ *   PAN rejected after a prior success → panHash back to null          → EXCLUDED
+ *   Aadhaar failed                     → aadhaarVerified false         → EXCLUDED
+ * (Cosmos's ternary table gives `undefined AND false` = `false`, so the second row lands on
+ * EXCLUDED whichever side the engine evaluates first — but `false OR undefined` would be
+ * `undefined`, which also drops the row. Both routes exclude; neither admits.)
+ *
+ * This predicate still does not depend on the KYC endpoints enforcing step order — it does not
+ * need to, because it asserts the two outcomes directly rather than inferring them from a
+ * sequence. Adding step-order enforcement to `submit-pan-ocr.ts` remains a separate follow-up.
+ * See `docs/adr/0032-commission-hold-is-an-eligibility-gate.md` (Consequences — negative) for why
+ * dispatch is the component that ends up defining "KYC verified" for this system at all.
  */
 const KYC_VERIFIED_PREDICATE =
-  `(NOT IS_DEFINED(c.kyc.kycStatus)
-    OR (c.kyc.kycStatus IN ('PAN_DONE', 'COMPLETE')
-        AND (NOT IS_DEFINED(c.kyc.aadhaarVerified) OR c.kyc.aadhaarVerified = true)))`;
+  `(NOT IS_DEFINED(c.kyc)
+    OR (c.kyc.aadhaarVerified = true
+        AND IS_DEFINED(c.kyc.panHash) AND NOT IS_NULL(c.kyc.panHash)))`;
 
 export async function getTechniciansWithinRadius(
   lat: number,

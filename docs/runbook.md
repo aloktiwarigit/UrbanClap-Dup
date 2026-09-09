@@ -1497,7 +1497,7 @@ See ADR-0032, Consequences (negative).
 | Flag | Doc | Default | Effect when on |
 |---|---|---|---|
 | `holdEnforcementEnabled` | `system/commission-config` | `false` | Technician-app actually gates job acceptance/dispatch on `commissionHold.state === 'BLOCKED'` (enforcement, not just visibility) |
-| `enforceKycInDispatch` | `system/commission-config` | `false` | Dispatch also gates on KYC status, independent of the commission hold |
+| `enforceKycInDispatch` | `system/commission-config` | `false` | Dispatch also requires both automated KYC steps (DigiLocker Aadhaar + PAN OCR) to have succeeded, independent of the commission hold. See the precondition below. |
 | `features.wallet` / `duesBanner` / `upiQr` / `incentives` / `addOnRequests` | `system/technician-client-config` | all `false` | Technician-app UI surfaces for the wallet screen, dues banner, UPI QR collection flow, incentive milestones, and add-on requests respectively |
 
 Change the commission-config flags/thresholds: `PUT /v1/admin/catalogue/commission-config`
@@ -1658,33 +1658,80 @@ accept refusal), not the ledger math.
 
 ### Precondition before flipping `enforceKycInDispatch`
 
-`enforceKycInDispatch` gates dispatch on `kyc.kycStatus` reaching `PAN_DONE`/`COMPLETE` with
-`kyc.aadhaarVerified` not on record as explicitly `false` (see ADR-0032, "Re-review finding" in
-the asymmetric-fail-directions section). **This is a data-shape check, not an enforced
-Aadhaar-then-PAN sequence.** `api/src/functions/kyc/submit-pan-ocr.ts` writes
-`kyc.kycStatus = 'PAN_DONE'` on a successful OCR read unconditionally — it does not check that
-`submit-aadhaar.ts` was ever called for that technician first. The dispatch predicate closes the
-one exploitable case this produces today only because `upsertKycStatus()` happens to default
-`aadhaarVerified` to `false` on every write; it is not a guarantee that KYC steps happen in
-order, because the KYC endpoints don't enforce that order.
+**Status: checked and clear in production as of 2026-09-09.** Re-run the query below in any new
+environment before flipping the flag there; the check is per-environment, not once-and-done.
 
-**Before flipping `enforceKycInDispatch` to `true` in production, one of the following must be
-true:**
+`enforceKycInDispatch` gates dispatch on **two independent facts**, both of which must hold:
 
-- Step-order enforcement has been added to `submit-pan-ocr.ts` (rejecting a PAN submission unless
-  `kyc.aadhaarVerified === true` already), closing the gap at the source instead of relying on the
-  dispatch-side data-shape check; **or**
-- An explicit owner decision accepts the residual risk as-is, having confirmed (query the
-  `technicians` container) that no technician in the target environment currently has
-  `kyc.kycStatus IN ('PAN_DONE', 'COMPLETE')` with `kyc.aadhaarVerified` absent or `true` despite
-  never having a successful `AADHAAR` entry in the KYC audit log
-  (`kycAuditEntry(technicianId, 'AADHAAR', 'VERIFIED')` — see `services/kycAudit.service.ts`) —
-  i.e. that today's data does not already contain a PAN-without-Aadhaar technician who would be
-  wrongly admitted.
+| Fact | Field | Written by | Meaning |
+|---|---|---|---|
+| Aadhaar step succeeded | `kyc.aadhaarVerified === true` | `POST /v1/kyc/aadhaar` | DigiLocker returned a result; explicitly `false` on failure |
+| PAN step succeeded | `kyc.panHash` present **and non-null** | `POST /v1/kyc/pan-ocr` | Form Recognizer read the card; explicitly nulled back out on rejection |
 
-This precondition was not fixed as part of E21-S04 — enforcing step order inside
-`submit-pan-ocr.ts` is a behaviour change to a different endpoint and was ruled out of scope for
-that story. Treat it as an open item for whoever next scopes `enforceKycInDispatch`'s rollout.
+It deliberately does **not** read `kyc.kycStatus`. That field is a progress marker for a two-step
+process that can be completed in either order, so it cannot express "both done" — whichever step
+ran last wins, and the one value that could mean "both done" (`COMPLETE`) has no writer. Three
+consecutive Codex review rounds on E21-S04 each found a real defect in a status-based version of
+this predicate, in opposite directions. See ADR-0032 and the `KYC_VERIFIED_PREDICATE` comment in
+`api/src/cosmos/technician-repository.ts`.
+
+Because it reads the two outcomes directly, the predicate is correct regardless of the order the
+technician completed the steps in, across retries, and it goes false again if either step is later
+rejected. It therefore no longer depends on `submit-pan-ocr.ts` enforcing step order (it still
+doesn't — that remains an open follow-up, but it is no longer a dispatch-correctness issue).
+
+**The residual risk is legacy data, and it fails CLOSED.** The fail-open disjunct is
+`NOT IS_DEFINED(c.kyc)` — the absence of the *whole* `kyc` sub-object. A technician document that
+carries a `kyc` object holding only pre-E19-S01 fields (`kyc.panNumber` or
+`kyc.panNumberEncrypted`, with no `kyc.panHash`) is holding partial information and will be
+**excluded** from dispatch once the flag is on — even if that technician was in fact fully
+verified under the old shape. That is the intended behaviour (partial information must not read as
+completion), but it means such technicians must be identified and re-verified *before* the flip,
+not discovered afterwards as a silent drop in dispatch volume.
+
+**Precondition query — run against the `technicians` container in the target environment.** It
+returns every technician who carries a `kyc` sub-object, and flags the legacy shape:
+
+```sql
+SELECT c.id,
+       c.kyc.kycStatus,
+       c.kyc.aadhaarVerified,
+       IS_DEFINED(c.kyc.panHash) AND NOT IS_NULL(c.kyc.panHash) AS hasPanHash,
+       IS_DEFINED(c.kyc.panNumber) AND NOT IS_NULL(c.kyc.panNumber) AS hasLegacyPanNumber,
+       IS_DEFINED(c.kyc.panNumberEncrypted) AS hasLegacyPanEncrypted
+FROM c
+WHERE IS_DEFINED(c.kyc)
+```
+
+Read the result as follows:
+
+- **Zero rows** → nothing to do; every technician fails open and the flip is safe from a
+  legacy-data standpoint.
+- A row with `hasLegacyPanNumber` or `hasLegacyPanEncrypted` true but `hasPanHash` false → this
+  technician **will be dropped from dispatch** by the flip. Either re-run their PAN step through
+  `POST /v1/kyc/pan-ocr` so a `panHash` is written, or accept the exclusion knowingly.
+- A row with `hasPanHash` true but `aadhaarVerified` not `true` (or vice versa) → half-verified;
+  exclusion is correct and intended.
+
+**Production result, 2026-09-09:** the query returned **zero rows** across all **16** technician
+documents — no technician in production carries a `kyc` sub-object at all, therefore zero carry
+legacy `panNumber` / `panNumberEncrypted` without a `panHash`. Every production technician
+currently fails open on this predicate.
+
+**The gate is inert in production today regardless of the flag.** The corollary of that result is
+that **the KYC flow has never been completed by anyone in production** — no technician has ever
+called `POST /v1/kyc/aadhaar` or `POST /v1/kyc/pan-ocr` successfully, since either call would have
+created a `kyc` sub-object. So flipping `enforceKycInDispatch` to `true` today would change
+nothing: all 16 technicians would still be dispatched via the fail-open disjunct. The flag becomes
+meaningful only once technicians actually start completing KYC — at which point *every* technician
+who has started but not finished KYC begins to be excluded. **Re-run the query at that point**,
+not just before the first flip.
+
+**A manual/offline KYC path would not satisfy this gate.** The predicate accepts only the two
+automated outcomes; there is no admin field an operator can set to admit a technician verified by
+other means. If such a path is added, add a real completion fact for the predicate to read — do not
+loosen it back toward `kyc.kycStatus` (see ADR-0032, Consequences — negative).
+
 
 ### Timers
 
