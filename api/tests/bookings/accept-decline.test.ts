@@ -42,6 +42,13 @@ vi.mock('../../src/services/fcm.service.js', () => ({
   sendBookingStatusUpdatePush: vi.fn().mockResolvedValue(undefined),
 }));
 
+// E21-S04: the accept handler now consults the dues gate. Unmocked it would reach the real
+// Cosmos-backed commission config (returning ALLOW only because that read happens to fail here),
+// so pin it to ALLOW explicitly — these cases are about dispatch, not about commission holds.
+vi.mock('../../src/services/commission-hold.service.js', () => ({
+  assertCanAccept: vi.fn().mockResolvedValue({ decision: 'ALLOW' }),
+}));
+
 function makeReq(bookingId: string, suffix: string): HttpRequest {
   const req = new HttpRequest({
     url: `http://localhost/api/v1/technicians/job-offers/${bookingId}/${suffix}`,
