@@ -14,11 +14,21 @@ on:
     paths:
       - 'docs/**'
       - '.github/workflows/docs-ship.yml'
+      # Root-level config files belong to no sub-project, so no other
+      # *-ship.yml matches them either — a .gitignore-only PR could satisfy
+      # no required check and stalled indefinitely (PR #331). Same deadlock
+      # this workflow was created for, one filter-gap over.
+      - '.gitignore'
   push:
     branches: [main]
     paths:
       - 'docs/**'
       - '.github/workflows/docs-ship.yml'
+      # Root-level config files belong to no sub-project, so no other
+      # *-ship.yml matches them either — a .gitignore-only PR could satisfy
+      # no required check and stalled indefinitely (PR #331). Same deadlock
+      # this workflow was created for, one filter-gap over.
+      - '.gitignore'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

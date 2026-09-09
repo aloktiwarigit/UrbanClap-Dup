@@ -189,4 +189,13 @@ technician-app/release.keystore
 .gradle-codex/
 
 # Codex raw review transcripts — findings are distilled into the committed *.summary.md
-docs/reviews/*-raw.md
+# Codex review transcripts. Each raw transcript is 0.4-3.5 MB; 149 are already
+# tracked here totalling ~97 MB, while the 4 `.summary.md` distillations that
+# carry the actual review value total 8.9 KB. The previous rule matched only a
+# `-raw.md` suffix that no file in this repo has ever used, so it ignored
+# nothing. Ignore the directory by default; keeping a file is now the explicit
+# act. Note this does NOT untrack the 149 already committed — gitignore does not
+# apply to tracked files.
+docs/reviews/*
+!docs/reviews/README.md
+!docs/reviews/*.summary.md
