@@ -8,6 +8,7 @@ process.env.JWT_SECRET = 'test-secret-that-is-long-enough-for-hs256-minimum-32-c
 
 const getOrderById = vi.fn();
 const getTechniciansByIds = vi.fn();
+const bookingRepoGetById = vi.fn();
 const appendAuditEntry = vi.fn().mockResolvedValue(undefined);
 const consumeStrict = vi.fn().mockResolvedValue({ allowed: true });
 const getUsers = vi.fn();
@@ -15,6 +16,9 @@ const touchAndGetSession = vi.fn();
 
 vi.mock('../../../../src/cosmos/orders-repository.js', () => ({ getOrderById }));
 vi.mock('../../../../src/cosmos/technician-repository.js', () => ({ getTechniciansByIds }));
+vi.mock('../../../../src/cosmos/booking-repository.js', () => ({
+  bookingRepo: { getById: bookingRepoGetById },
+}));
 vi.mock('../../../../src/cosmos/audit-log-repository.js', () => ({ appendAuditEntry }));
 vi.mock('../../../../src/cosmos/rate-limit-repository.js', () => ({ consumeStrict }));
 vi.mock('../../../../src/services/firebaseAdmin.js', () => ({
@@ -65,6 +69,10 @@ beforeEach(() => {
     customerPhone: '+91 XXXXX-X9999',
     technicianId: 'tech_1',
   });
+  // Default: no raw booking phone on file, so the customer path falls
+  // through to phoneForUid(order.customerId) exactly as before Finding 1's
+  // fix — this keeps every pre-existing customer-reveal test unaffected.
+  bookingRepoGetById.mockResolvedValue({ id: 'ord_1', customerId: 'cust_1', customerPhone: undefined });
   getTechniciansByIds.mockResolvedValue([{ id: 'tech_1', technicianId: 'tech_1' }]);
   // The mock must honour the requested uid: the handler resolves one subject
   // at a time via getUsers([{ uid }]) and reads users[0]. A mock that always
@@ -228,6 +236,36 @@ describe('POST /v1/admin/orders/{id}/reveal-contact', () => {
       expect(res.status).toBe(404);
       expect((res.jsonBody as { code: string }).code).toBe('PARTY_NOT_AVAILABLE');
       expect(appendAuditEntry).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Finding 1 — customer reveal must fall back to the booking-persisted phone', () => {
+    it('returns the booking-persisted number when Auth holds none for the customer', async () => {
+      bookingRepoGetById.mockResolvedValue({
+        id: 'ord_1',
+        customerId: 'cust_1',
+        customerPhone: '+919888888888',
+      });
+      getUsers.mockImplementation(async () => ({ users: [] })); // Auth has no phone
+      const res = await revealContactHandler(request({ party: 'CUSTOMER' }), ctx, admin);
+      expect(res.status).toBe(200);
+      expect((res.jsonBody as { phone: string }).phone).toBe('+919888888888');
+    });
+
+    it('returns the Auth-sourced number when the booking holds none', async () => {
+      bookingRepoGetById.mockResolvedValue({ id: 'ord_1', customerId: 'cust_1', customerPhone: undefined });
+      // getUsers directory (set in the outer beforeEach) already resolves cust_1.
+      const res = await revealContactHandler(request({ party: 'CUSTOMER' }), ctx, admin);
+      expect(res.status).toBe(200);
+      expect((res.jsonBody as { phone: string }).phone).toBe('+919999999999');
+    });
+
+    it('returns 404 PHONE_UNAVAILABLE only when both the booking and Auth have no number', async () => {
+      bookingRepoGetById.mockResolvedValue({ id: 'ord_1', customerId: 'cust_1', customerPhone: undefined });
+      getUsers.mockImplementation(async () => ({ users: [] }));
+      const res = await revealContactHandler(request({ party: 'CUSTOMER' }), ctx, admin);
+      expect(res.status).toBe(404);
+      expect((res.jsonBody as { code: string }).code).toBe('PHONE_UNAVAILABLE');
     });
   });
 });

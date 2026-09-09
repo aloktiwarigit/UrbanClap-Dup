@@ -5,6 +5,7 @@ import * as Sentry from '@sentry/node';
 import { requireAdmin } from '../../../middleware/requireAdmin.js';
 import type { AdminContext } from '../../../types/admin.js';
 import { getOrderById } from '../../../cosmos/orders-repository.js';
+import { bookingRepo } from '../../../cosmos/booking-repository.js';
 import { getTechniciansByIds } from '../../../cosmos/technician-repository.js';
 import { appendAuditEntry } from '../../../cosmos/audit-log-repository.js';
 import { consumeStrict } from '../../../cosmos/rate-limit-repository.js';
@@ -114,8 +115,17 @@ export async function revealContactHandler(
   if (!order) return { status: 404, jsonBody: { code: 'ORDER_NOT_FOUND' } };
 
   let subjectId: string | undefined;
+  let bookingCustomerPhone: string | undefined;
   if (party === 'CUSTOMER') {
     subjectId = order.customerId;
+    // hydrateOrders() masks order.customerPhone || customerProfile?.phoneNumber,
+    // so the list can display a masked number sourced from the booking
+    // document even when Firebase Auth no longer holds one for this
+    // customer. bookings.ts persists customerPhone at booking creation, so
+    // this is common for historical bookings — read the raw booking here so
+    // the reveal can still succeed instead of a false 404 PHONE_UNAVAILABLE.
+    const booking = await bookingRepo.getById(id);
+    bookingCustomerPhone = booking?.customerPhone || undefined;
   } else {
     if (!order.technicianId) return { status: 404, jsonBody: { code: 'PARTY_NOT_AVAILABLE' } };
     subjectId = await technicianUid(order.technicianId);
@@ -123,11 +133,18 @@ export async function revealContactHandler(
   if (!subjectId) return { status: 404, jsonBody: { code: 'PARTY_NOT_AVAILABLE' } };
 
   let phone: string | undefined;
-  try {
-    phone = await phoneForUid(subjectId);
-  } catch (err: unknown) {
-    Sentry.captureException(err);
-    return { status: 502, jsonBody: { code: 'CONTACT_LOOKUP_FAILED' } };
+  if (bookingCustomerPhone) {
+    // The booking's persisted number wins outright when present — no need
+    // to hit Firebase Auth at all, and no risk of a spurious 502 masking a
+    // number we already have.
+    phone = bookingCustomerPhone;
+  } else {
+    try {
+      phone = await phoneForUid(subjectId);
+    } catch (err: unknown) {
+      Sentry.captureException(err);
+      return { status: 502, jsonBody: { code: 'CONTACT_LOOKUP_FAILED' } };
+    }
   }
   if (!phone) return { status: 404, jsonBody: { code: 'PHONE_UNAVAILABLE' } };
 
