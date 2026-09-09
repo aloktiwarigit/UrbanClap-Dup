@@ -409,3 +409,45 @@ Convention for `Status` column: `mitigated` | `partial` | `not-yet-mitigated` | 
 4. Update `docs/dpdp-data-inventory.md` with vendor retention periods and legal basis.
 
 **Addendum 2026-05-21 complete. New STRIDE entries: I-CB1 (cross-border PostHog), I-CB2 (cross-border Sentry), I-CB3 (Azure Monitor region unverified).**
+
+---
+
+## Addendum 2026-09-08 — E09-S08 PII-safe phones + audited reveal
+
+**Author:** Alok Tiwari + Claude Opus 5 (architect persona)
+**Trigger:** E09-S08 masked the customer phone number (previously unmasked in the admin orders
+list, drawer, and CSV export) and added a technician phone number to the same surfaces, behind a
+role-gated, rate-limited, audit-logged reveal endpoint. See
+`docs/adr/0034-pii-masking-default-and-audited-reveal.md` for the design rationale.
+
+Convention for `Status` column: `mitigated` | `partial` | `not-yet-mitigated` | `accepted`.
+
+### Contact-data inventory
+
+| What | Where it lives | Who reads the masked form | Who reads the full form | Retention of reveal events |
+|---|---|---|---|---|
+| Customer phone number | Firebase Auth (`phoneNumber`); denormalized as `bookings.customerPhone` in Cosmos | Every role with `orders.read` (`super-admin`, `ops-manager`, `finance`) | `super-admin`, `ops-manager` only, via `POST /v1/admin/orders/{id}/reveal-contact` | `audit_log` container's existing retention (5y minimum, DPDP §8(7) accountability — see `docs/dpdp-data-inventory.md`) |
+| Technician phone number | Firebase Auth (`phoneNumber`), resolved per-order via `technicianId` | Every role with `orders.read` | `super-admin`, `ops-manager` only, via the same endpoint | Same as above |
+
+**Two accepted residuals from this inventory:**
+
+1. The last four digits of both numbers remain visible to every role that can read orders (see
+   I-PII1 below).
+2. `customerName` still falls back to rendering the customer's phone number when a booking
+   carries no display name — a **pre-existing** display-name behaviour, tracked separately and
+   not introduced by this story. This story's contribution is that the fallback is now masked
+   (`maskPhone(customerProfile.phoneNumber)`) wherever it previously would have rendered the raw
+   number, including in the CSV export's `customerName` column.
+
+### New/Confirmed Threats
+
+| # | Threat | Code path | Likelihood | Impact | Mitigation | Residual risk | Status |
+|---|---|---|---|---|---|---|---|
+| **I-PII1** | **Last-four-digit disclosure to every `orders.read` role.** `maskPhone` always keeps the last four digits (e.g. `+91 XXXXX-X4821`), so `finance` and any future `orders.read`-only role can see them without ever calling reveal. | `api/src/lib/pii/mask.ts` → `maskPhone` | — | L (1) — four digits alone do not identify a person | Deliberate design choice: the operator matches the last four against their own call log. Full number remains behind the reveal gate. | Low — accepted. | accepted |
+| **I-PII2** | **VPA PSP suffix disclosure.** `maskVpa` leaves the bank/PSP suffix (e.g. `@okhdfcbank`) readable for every VPA it masks. | `api/src/lib/pii/mask.ts` → `maskVpa` | — | L (1) — which bank a technician uses is low-sensitivity | Deliberate: lets an admin confirm the payout channel without exposing the handle. | Low — accepted. | accepted |
+| **I-PII3** | **Denied and failed reveal attempts are not audited.** Only a successful `200` reveal writes `PII_CONTACT_REVEALED`. A 403 (wrong role), 404 (party/phone unavailable), or 429 (rate-limited) attempt leaves no trace. An `ops-manager` sweeping orders to map which have reachable numbers, or a `finance` user probing the endpoint out of curiosity or malice, is invisible to a breach investigation. | `api/src/functions/admin/orders/reveal-contact.ts` — `appendAuditEntry` is called only on the success path | M (2) — trivial to attempt, requires no special access beyond an existing admin session | M (2) — undermines the audit trail's completeness for exactly the access patterns an investigation would look for | None yet. | Medium — deferred because closing it means expanding the `AuditAction` enum the spec defines as closed for this story, and hooking auditing into shared `requireAdmin` middleware (which currently returns early on 401/403 before the handler runs at all). **Recommended fix:** add `PII_CONTACT_REVEAL_DENIED` to `AuditAction` and audit-log every 401/403/404/429 outcome from this endpoint, not only the 200 path. | not-yet-mitigated |
+| **I-PII4** | **Reveal-volume exfiltration by a compromised or malicious `ops-manager`/`super-admin` session.** 30 reveals/minute/admin is 43,200/day. There is no per-subject limit (the same admin can reveal the same number repeatedly), no daily cap, and no alerting on reveal volume — while the same role can already page the full orders list for ids with no additional gate. A compromised session, or a malicious insider, could exfiltrate the customer/technician phone book over days. The audit log would record every reveal perfectly, but nobody currently reads it for volume anomalies. | `api/src/functions/admin/orders/reveal-contact.ts` — `REVEAL_CAPACITY = 30`, `REVEAL_REFILL_PER_SEC = 0.5`; `api/src/cosmos/audit-log-repository.ts` — no query is run over this data proactively | L (2) — requires either credential compromise or an insider with `ops-manager`/`super-admin` access | H (3) — a full customer/technician phone book leaving the platform is a DPDP-reportable breach at scale, and the pilot has no automated detection for it | Rate limit caps the *rate*, not the *total*. Audit log gives a perfect forensic record after the fact, but only if someone queries it. | **This is the most important open item from this story.** A daily-cap-plus-anomaly-threshold control is the one that actually matters under DPDP — recommended: a per-admin daily reveal cap (e.g. 100–200/day) that fails closed like the per-minute limiter, plus a scheduled query (daily) alerting the owner when any admin's `PII_CONTACT_REVEALED` count for the day crosses a threshold. **Choosing the specific numbers is an owner decision**, not an engineering one — it trades pilot-scale operator friction against breach blast radius. | not-yet-mitigated |
+| **I-PII5** | **`OrderSchema` not registered in the OpenAPI contract.** Pre-existing condition, not introduced by this story: the masked read shape (including the new `technicianPhoneMasked` field) is undocumented in `api/openapi.json`'s schema registry, even though the reveal endpoint itself is registered (Task 9). | `api/src/openapi/registry.ts` | — | L (1) — documentation gap, not an access-control gap | None. | Low — pre-existing, out of scope for this story. Track separately if the OpenAPI contract becomes the source of truth for a generated client that needs the full order shape. | accepted |
+| **I-PII6** | **No automated accessibility coverage for the reveal affordance.** `tests/a11y/orders.a11y.spec.ts` is a Playwright spec excluded from the Vitest config that `tools/pre-codex-smoke-web.sh` runs, so the "Show number" / "Hide now" control has no CI-enforced a11y check. Pre-existing gate condition. | `admin-web/tests/a11y/orders.a11y.spec.ts` (excluded), `tools/pre-codex-smoke-web.sh` | — | L (1) — the component was hand-audited against `DESIGN.md` (labelled text control, keyboard-reachable, `aria-label`s on both states) as a substitute | None automated. | Low — accepted for this story; hand-audit substitutes until Playwright a11y specs run in the smoke gate generally (a pre-existing gap, not specific to PII reveal). | accepted |
+
+**Addendum 2026-09-08 complete. New STRIDE entries: I-PII1 (accepted), I-PII2 (accepted), I-PII3 (not-yet-mitigated), I-PII4 (not-yet-mitigated, most important open item), I-PII5 (accepted, pre-existing), I-PII6 (accepted, pre-existing).**

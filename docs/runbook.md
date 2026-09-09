@@ -1505,3 +1505,51 @@ moved and every cached hold needs re-evaluating against them.
 Change the technician-app feature flags: `PUT` on the technician-client-config doc (E21-S03 admin
 UI; until that ships, edit the `system/technician-client-config` doc directly via the Cosmos data
 explorer for a controlled pilot rollout to a specific cohort).
+
+## Contact reveal (E09-S08)
+
+Customer and technician phone numbers are masked everywhere in admin orders (list, drawer, CSV
+export) by default. The only way to see a full number is
+`POST /v1/admin/orders/{id}/reveal-contact` (`super-admin` or `ops-manager` only), which is
+rate-limited and audit-logged. See `docs/adr/0034-pii-masking-default-and-audited-reveal.md` for
+the design rationale and `docs/threat-model.md` → Addendum 2026-09-08 for the accepted residuals
+and open gaps (denied/failed reveals are not audited; no daily reveal cap yet).
+
+### Audit who revealed which contact
+
+Every successful reveal writes a `PII_CONTACT_REVEALED` entry to `audit_log`, partition key
+`YYYY-MM` (the month of the reveal, `revealedAt.slice(0, 7)`). The payload carries:
+
+```json
+{ "party": "CUSTOMER", "subjectId": "<firebase uid>", "phoneMasked": "+91 XXXXX-X4821", "phoneLast4": "4821" }
+```
+
+Query it directly via `queryAuditLog({ action: 'PII_CONTACT_REVEALED', dateFrom, dateTo })` (same
+helper OP-A7 uses), or filter on the admin-web Audit Log page by action. There is no raw phone
+number anywhere in this entry — `phoneMasked` and `phoneLast4` are the only representations of
+the number that ever reach the audit log, deliberately, since `audit_log` is readable by any role
+holding `audit.read` (broader than the two roles allowed to reveal).
+
+**Known gap:** only successful (`200`) reveals are audited. A denied (401/403), missing-party
+(404), or rate-limited (429) attempt writes nothing. If you're investigating a suspected PII
+probe and the audit log looks clean, that does not mean nothing was attempted — check
+Application Insights / Sentry request logs for the endpoint in the relevant window instead. See
+`docs/threat-model.md` I-PII3 for the recommended fix (`PII_CONTACT_REVEAL_DENIED`).
+
+### What each reveal failure means
+
+| Status | Code | What it means for an operator |
+|---|---|---|
+| 429 | `RATE_LIMITED` | That admin's 30/min budget is spent. Refills at 0.5/sec (one token every 2 seconds) — a fresh full budget takes 60s from empty. `Retry-After` header tells the caller exactly how long to wait. Normal under heavy legitimate use; if one admin hits this repeatedly every session, that's also the first signal worth checking against I-PII4 (reveal-volume exfiltration risk) below. |
+| 503 | `RATE_LIMIT_UNAVAILABLE` | The rate-limit store (Cosmos) is unreachable, and the endpoint is failing **closed on purpose** — no reveal is granted when the limiter can't establish a budget. Investigate Cosmos (connectivity, throttling, an outage) via the usual Cosmos triage (see the Disaster Recovery Drill section). **Do not "fix" this by making the endpoint fail open** — that would silently remove the only rate limit standing between an admin session and unlimited PII reveals. |
+| 502 | `CONTACT_LOOKUP_FAILED` | The Firebase Auth `getUsers` call threw. Check Sentry for the captured exception first (see "Firebase Auth outage" in the Disaster Recovery Drill section if it's a full outage, not a single bad lookup). |
+| 404 | `PHONE_UNAVAILABLE` | The subject genuinely has no `phoneNumber` set on their Firebase Auth user. Not a bug — some customers/technicians sign in via a channel that never populated a phone number. Nothing to fix on the API side; the admin should look for an alternate contact channel. |
+| 404 | `PARTY_NOT_AVAILABLE` | Either no technician is assigned to the order yet, or the technician-id lookup was ambiguous (`getTechniciansByIds` returned more than one candidate doc and neither the exact-`id` nor the unique-`technicianId` disambiguation rule could resolve it) — the endpoint refuses to guess rather than risk disclosing an unrelated person's number. If this recurs for a specific technician, check for duplicate technician documents sharing a `technicianId`. |
+
+### Reveal-volume monitoring (not yet automated)
+
+There is no scheduled query or alert on `PII_CONTACT_REVEALED` volume today (see
+`docs/threat-model.md` I-PII4). Until that ships, a manual spot-check during any security review
+or incident: `queryAuditLog({ action: 'PII_CONTACT_REVEALED', adminId, dateFrom, dateTo })` per
+admin, and flag any admin whose daily count looks disproportionate to their normal order-review
+workload.
