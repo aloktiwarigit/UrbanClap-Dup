@@ -437,3 +437,58 @@ describe('PII masking at the orders serialization boundary', () => {
     expect(order?.customerName).toBe('Customer firebase');
   });
 });
+
+describe('Finding 4 — fetchTechnicianContacts: exact id match must win over a technicianId alias', () => {
+  // getTechniciansByIds queries `id OR technicianId` with no ORDER BY. For
+  // docs [{id:'X'}, {id:'Y', technicianId:'X'}], naively registering both an
+  // exact-id entry AND an alias entry per doc in document order lets the
+  // alias write for 'X' (from doc Y) clobber the exact entry for 'X' (from
+  // doc X) — the order list then shows doc Y's name/phone under doc X's id.
+  // Both document orderings must resolve identically so the test cannot
+  // pass by accident of ordering.
+  const orderWithTechX = {
+    id: 'ord_x', customerId: 'cust_1', customerName: 'Rahul', customerPhone: '9999999999',
+    technicianId: 'X',
+    status: 'ASSIGNED', city: 'Bengaluru',
+    scheduledAt: new Date().toISOString(), amount: 599, createdAt: new Date().toISOString(),
+  };
+
+  const docX = { id: 'X', displayName: 'Doc X (exact match)' };
+  const docY = { id: 'Y', technicianId: 'X', displayName: 'Doc Y (alias only)' };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(catalogueRepo.getServiceByIdCrossPartition).mockResolvedValue(null);
+    vi.mocked(getFirebaseAdmin).mockReturnValue({
+      auth: () => ({
+        getUsers: vi.fn().mockResolvedValue({
+          users: [
+            { uid: 'X', phoneNumber: '+911111111111' },
+            { uid: 'Y', phoneNumber: '+912222222222' },
+          ],
+        }),
+      }),
+    } as never);
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({
+        container: () => ({
+          items: { query: () => ({ fetchAll: vi.fn().mockResolvedValue({ resources: [orderWithTechX] }) }) },
+        }),
+      }),
+    });
+  });
+
+  it('doc order [X, Y]: technicianId "X" resolves to doc X, not doc Y', async () => {
+    vi.mocked(getTechniciansByIds).mockResolvedValue([docX, docY] as never);
+    const order = await getOrderById('ord_x');
+    expect(order?.technicianName).toBe('Doc X (exact match)');
+    expect(order?.technicianPhoneMasked).toBe('+91 XXXXX-X1111');
+  });
+
+  it('doc order [Y, X]: technicianId "X" still resolves to doc X, not doc Y', async () => {
+    vi.mocked(getTechniciansByIds).mockResolvedValue([docY, docX] as never);
+    const order = await getOrderById('ord_x');
+    expect(order?.technicianName).toBe('Doc X (exact match)');
+    expect(order?.technicianPhoneMasked).toBe('+91 XXXXX-X1111');
+  });
+});

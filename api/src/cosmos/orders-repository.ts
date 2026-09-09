@@ -172,15 +172,28 @@ async function fetchTechnicianContacts(
     }
   }
 
-  for (const tech of techs) {
+  const entries = techs.map((tech) => {
     const displayName = tech.displayName?.trim() || tech.name?.trim() || tech.technicianId || tech.id;
     const phoneNumber = tech.id ? phones.get(tech.id) : undefined;
     const contact: TechnicianContact = {
       displayName,
       ...(phoneNumber ? { phoneNumber } : {}),
     };
-    if (tech.id) contacts.set(tech.id, contact);
+    return { tech, contact };
+  });
+
+  // getTechniciansByIds matches `id OR technicianId` with no ORDER BY, so for
+  // docs [{id:'X'}, {id:'Y', technicianId:'X'}] a single document-order pass
+  // that writes both keys per doc lets doc Y's alias write for 'X' clobber
+  // doc X's own exact entry — the same root cause fixed in technicianUid()
+  // (reveal-contact.ts). Register every alias (technicianId) entry first,
+  // then every exact (id) entry second, so an exact match always wins
+  // regardless of document order.
+  for (const { tech, contact } of entries) {
     if (tech.technicianId) contacts.set(tech.technicianId, contact);
+  }
+  for (const { tech, contact } of entries) {
+    if (tech.id) contacts.set(tech.id, contact);
   }
   return contacts;
 }
