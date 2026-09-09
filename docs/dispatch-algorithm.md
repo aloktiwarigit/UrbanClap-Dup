@@ -1,9 +1,9 @@
 # Dispatch Algorithm — Public Transparency Document
 
 **Owner:** Alok Tiwari
-**Last reviewed:** 2026-04-26
+**Last reviewed:** 2026-09-09
 **Authority:** Karnataka Platform Based Gig Workers (Social Security and Welfare) Act 2025, FR-9.1, NFR-C-1.
-**Companion artifacts:** `docs/adr/0006-dispatch-algorithm.md`, `docs/adr/0011-karnataka-decline-history-isolation.md`, `api/src/services/dispatcher.service.ts`, `api/.semgrep.yml`, `api/tests/integration/dispatcher-up-ranking.test.ts`, `api/tests/integration/dispatcher-data-isolation.test.ts`.
+**Companion artifacts:** `docs/adr/0006-dispatch-algorithm.md`, `docs/adr/0011-karnataka-decline-history-isolation.md`, `docs/adr/0032-commission-hold-is-an-eligibility-gate.md`, `api/src/services/dispatcher.service.ts`, `api/src/services/dispatch-eligibility.ts`, `api/.semgrep.yml`, `api/tests/integration/dispatcher-up-ranking.test.ts`, `api/tests/integration/dispatcher-data-isolation.test.ts`, `api/tests/unit/dispatch-ranking-invariance.test.ts`.
 
 ## 1. Purpose
 
@@ -15,7 +15,7 @@ This document is the artifact handed to such an auditor. It describes — with n
 
 `rankTechnicians(candidates, bookingLat, bookingLng)` is a pure function in `api/src/services/dispatcher.service.ts`. It is invoked by `dispatchBookingToTechs` after Cosmos has returned a candidate set within the active dispatch radius (10 km, expanding to 15 km on no-show redispatch).
 
-The top-3 ranked technicians receive a 30-second FCM job offer simultaneously. The first to accept wins; the others receive a "no longer available" message. This document covers the **ranking** step only.
+Only the single nearest-ranked eligible technician receives the job offer, as a 90-second push notification. If that technician declines, or the offer expires without a response, the booking moves on to the next-nearest eligible technician on the ranked list, and so on until someone accepts or the candidate set is exhausted. No two technicians are ever offered the same booking at the same time. This document covers the **ranking** step only.
 
 ## 3. Input features actually used by `rankTechnicians`
 
@@ -26,17 +26,94 @@ The top-3 ranked technicians receive a 30-second FCM job offer simultaneously. T
 
 That is the complete list. No other field on `TechnicianProfile` is read by the ranking function.
 
-## 4. Implicit prerequisite filters (not ranking inputs)
+## 4. Eligibility filters (not ranking inputs)
 
-These are applied by the Cosmos query in `getTechniciansWithinRadius` **before** ranking, so they never participate in scoring:
+Before `rankTechnicians` ever runs, the candidate set for a booking is narrowed down to
+technicians who are actually eligible for the job. None of these checks influence a
+technician's **position** within the ranked list — they only decide whether a technician
+appears in it at all. A technician is either offered the job in their normal ranked position,
+or not offered it at all; there is no "offered, but lower down" outcome for any of these filters.
 
-- `tech.skills` — must contain the booking's `serviceId`
-- `tech.kycStatus` — must equal `'APPROVED'`
-- `tech.isOnline` — must be `true`
-- `tech.isAvailable` — must be `true`
-- Geographic bounding-box predicate `ST_WITHIN`
+The candidate set is filtered by:
 
-Plus a service-side circle filter on the haversine distance (square → circle), and exclusion of the no-show technician on redispatch.
+- **Service area and radius** — the booking's location must fall within the technician's
+  service-area polygon and the active dispatch radius (10 km, expanding to 15 km on a no-show
+  redispatch).
+- **Skill match** — `tech.skills` must contain the booking's `serviceId`.
+- **Online and available** — `tech.isOnline` and `tech.isAvailable` must both be `true`.
+- **Not suspended** — an admin-suspended technician (`tech.suspended`) is excluded
+  unconditionally, regardless of their online/available status. (Suspension previously only took
+  effect as a side effect of an admin action also setting the technician offline; a technician
+  who later toggled themselves back online could silently re-enter the candidate pool. Fixed as
+  part of E21-S04; see ADR-0032.)
+- **Not blocked by the customer** — a technician on that customer's `blockedCustomerIds` list for
+  the booking's customer is excluded.
+- **Not already attempted for this booking** — a technician who already held (and lost, declined,
+  or timed out on) an offer attempt for the same booking is excluded from a redispatch.
+- **Identity checks complete — only when the operator has this enabled.** When enabled
+  (`enforceKycInDispatch` on the `system/commission-config` document), a technician is included in
+  the candidate set only if **both** of the identity checks the platform runs at onboarding have
+  succeeded, as described in FR-1.2:
+  1. the Aadhaar identity check, completed through DigiLocker with the technician's consent, and
+  2. the PAN (tax identification) check, completed by reading the technician's uploaded PAN card.
+
+  Both must have succeeded for the technician to be offered work while this setting is on;
+  completing only one is not enough. The two checks may be completed in either order, and
+  completing the second one does not undo the first. If a technician re-attempts a check and it
+  fails, or a previously accepted PAN reading is later rejected, that check counts as not
+  completed again and the technician stops being offered work until it succeeds — the check
+  reflects the current state of each verification, not the fact that it once passed.
+
+  **This filter is off by default**, so today it excludes nobody — identity status currently plays
+  no part in which technician is offered a job. Two further points about who it affects if it is
+  switched on:
+  - A technician for whom the platform holds **no identity-check record at all** is never excluded
+    by this filter, whether it is on or off. The filter can only exclude a technician about whom
+    the platform holds some identity-check information.
+  - A technician for whom the platform holds only **partial** identity-check information — one
+    check done and not the other, or a record in an older format that predates the current
+    checks — **is** excluded while the filter is on. The platform treats incomplete information as
+    "not verified" rather than assuming completion. Before an operator switches this filter on,
+    they are required to check the platform's records for technicians in that older format, so
+    that nobody is dropped from work allocation because of a record-keeping format rather than a
+    real gap in their verification.
+
+  Neither of the two checks is a human judgement — both are automated results recorded by the
+  verification services the platform uses. The platform does not currently offer a manual override
+  by which staff can mark a technician as verified outside these two checks. A technician who
+  believes they have been wrongly excluded can ask for their verification records to be
+  re-examined; the owner contact for that request is listed in §9.
+
+  (This description was corrected after external technical reviews found that earlier versions of
+  this filter did not match the behaviour described here — see ADR-0032 for the full record of
+  what was wrong and when.)
+- **Not currently blocked by an unpaid commission balance — only when the operator has this
+  enabled.** When enabled (`holdEnforcementEnabled` on the `system/commission-config` document),
+  a technician whose cached `commissionHold.state` is `BLOCKED` is excluded from the candidate
+  set for new job offers. **This filter is off by default and is a per-deployment operator
+  setting** — see §7 and ADR-0032 for the enforcement mechanics, the shadow-mode readout
+  procedure, and why the underlying predicate is written to fail open on a technician document
+  that has never had a hold computed.
+
+  To be plain about what happens while this setting is switched **off**: no technician is left out
+  of a job offer, and no technician is refused a job they accept, because of money they owe. The
+  system does two related things anyway. It recalculates every technician's outstanding balance on
+  a regular timer, so the figures the operator sees are current. And when a technician accepts a
+  job, it looks that balance up and writes an internal operator log recording that the technician
+  would have been affected had the setting been on. Neither changes the outcome for the technician
+  or the customer: the offer is still sent, and the job is still accepted. The logs exist so the
+  operator can see the real effect a change would have before making it, rather than switching it
+  on and finding out.
+- Geographic bounding-box predicate `ST_WITHIN` (a square, refined to the true circular radius by
+  an in-process haversine filter after the Cosmos query returns).
+
+**The ranked order is distance, then rating. Nothing else.** Neither decline history (ADR-0011)
+nor commission-hold state (ADR-0032) may influence a technician's position within the candidate
+list — both are eligibility filters applied before ranking, never ranking inputs. A technician
+who owes money above the block threshold, like a technician with a large but compliant decline
+history, is either offered the job in their normal position or excluded from the candidate set
+entirely; neither is ever sorted lower within it. This is enforced structurally, mechanically
+(Semgrep), and at runtime (an invariance test) for both fields — see §7.
 
 ## 5. Input features deliberately NOT used
 
@@ -90,6 +167,20 @@ The compliance invariant is enforced at four independent layers so that any sing
    - `dispatcher-up-ranking.test.ts` — asserts ranking is invariant to phantom decline fields and stable across all input permutations.
    - `dispatcher-data-isolation.test.ts` — file-scans the dispatcher source for forbidden tokens and inspects schema shapes.
 4. **Process layer.** ADR-0011 requires explicit owner approval to relax this invariant.
+
+**Commission-hold state is held to the same gate-not-ranking standard (ADR-0032), enforced at
+three layers** (no schema layer is needed here — the risk is an existing field, `commissionHold`,
+leaking into the wrong function, not a new field needing to be kept off a schema):
+
+1. **Structural layer.** `api/src/services/dispatch-eligibility.ts` is the only module allowed to
+   turn hold/config state into anything the dispatcher acts on, and it only ever produces a
+   boolean pair of predicate options or a logging side effect — never an ordering.
+2. **Source-code lint layer.** `api/.semgrep.yml` rule `no-commission-hold-in-ranking` blocks
+   merges that reference `commissionHold`, `outstandingPaise`, `dueCount`, or `holdState` inside a
+   `.sort()` comparator or the body of `rankTechnicians`.
+3. **Runtime test layer.** `api/tests/unit/dispatch-ranking-invariance.test.ts` asserts
+   `rankTechnicians`'s output order is unchanged under arbitrary mutation of `commissionHold`
+   across the candidate set.
 
 ## 8. Audit response procedure
 

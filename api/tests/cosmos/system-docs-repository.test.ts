@@ -8,10 +8,15 @@ vi.mock('../../src/cosmos/client.js', () => ({
 
 import { systemDocsRepo } from '../../src/cosmos/system-docs-repository.js';
 import { getSystemContainer } from '../../src/cosmos/client.js';
+import {
+  HOLD_RECONCILIATION_SUMMARY_DOC_ID,
+  type HoldReconciliationSummaryDoc,
+} from '../../src/schemas/hold-reconciliation-summary.js';
 
 const mockRead = vi.fn();
 const mockReplace = vi.fn();
 const mockCreate = vi.fn();
+const mockUpsert = vi.fn();
 
 function makeContainer() {
   return {
@@ -19,7 +24,7 @@ function makeContainer() {
       read: mockRead,
       replace: mockReplace,
     }),
-    items: { create: mockCreate },
+    items: { create: mockCreate, upsert: mockUpsert },
   };
 }
 
@@ -171,5 +176,38 @@ describe('systemDocsRepo.drainHoldRepair', () => {
 
     expect(drained).toEqual({ technicianIds: [], all: false });
     expect(mockReplace).not.toHaveBeenCalled();
+  });
+});
+
+// ── E21-S04 hold reconciliation summary ──────────────────────────────────────
+
+describe('systemDocsRepo.getHoldReconciliationSummary / putHoldReconciliationSummary', () => {
+  const doc: HoldReconciliationSummaryDoc = {
+    id: HOLD_RECONCILIATION_SUMMARY_DOC_ID,
+    computedAt: '2026-09-08T12:00:00.000Z',
+    totalTechnicianCount: 3,
+    totalOutstandingPaise: 1234,
+    unreconciledTechnicianCount: 1,
+    topN: 100,
+    top: [{
+      technicianId: 't1', outstandingPaise: 1234, dueCount: 2,
+      state: 'BLOCKED', evaluatedAt: '2026-09-08T11:59:00.000Z',
+    }],
+  };
+
+  it('getHoldReconciliationSummary returns null when the document is absent', async () => {
+    mockRead.mockResolvedValue({ resource: undefined, etag: undefined });
+    expect(await systemDocsRepo.getHoldReconciliationSummary()).toBeNull();
+  });
+
+  it('getHoldReconciliationSummary returns the stored document', async () => {
+    mockRead.mockResolvedValue({ resource: doc, etag: '"1"' });
+    expect(await systemDocsRepo.getHoldReconciliationSummary()).toEqual(doc);
+  });
+
+  it('putHoldReconciliationSummary upserts by id (last writer wins — one system writer)', async () => {
+    mockUpsert.mockResolvedValue({});
+    await systemDocsRepo.putHoldReconciliationSummary(doc);
+    expect(mockUpsert).toHaveBeenCalledWith(doc);
   });
 });

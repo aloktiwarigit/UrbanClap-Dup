@@ -6,6 +6,7 @@ import type { AdminContext } from '../../../types/admin.js';
 import { getOrderById } from '../../../cosmos/orders-repository.js';
 import { updateBookingFields, bookingRepo } from '../../../cosmos/booking-repository.js';
 import { appendAuditEntry } from '../../../cosmos/audit-log-repository.js';
+import { readTechnicianGateState } from '../../../cosmos/technician-repository.js';
 import {
   ReassignBodySchema,
   CompleteBodySchema,
@@ -41,6 +42,30 @@ export async function reassignOrderHandler(
     return { status: 404, jsonBody: { code: 'ORDER_NOT_FOUND' } };
   }
 
+  // E21-S04: reassignment is a SANCTIONED bypass of the dues gate — an owner may deliberately
+  // send work to a technician who owes money. It is never blocked, only recorded, so the audit
+  // trail shows what the owner was overriding at the time. Best-effort: an enrichment failure
+  // must not fail the reassign.
+  let targetHoldState = 'UNKNOWN';
+  let targetOutstandingPaise: number | null = null;
+  let targetSuspended: boolean | null = null;
+  try {
+    const gateState = await readTechnicianGateState(parsed.data.technicianId);
+    if (!gateState.exists) {
+      // No technician exists at this id — a mistyped or non-existent technicianId. 'CLEAR'
+      // would falsely assert the target was solvent when there is no such technician at all;
+      // this audit entry is the only record that an owner knowingly dispatched work to an
+      // indebted technician, so numeric fields are omitted rather than defaulted to 0/false.
+      targetHoldState = 'TECHNICIAN_NOT_FOUND';
+    } else {
+      targetHoldState = gateState.hold?.state ?? 'CLEAR';
+      targetOutstandingPaise = gateState.hold?.outstandingPaise ?? 0;
+      targetSuspended = gateState.suspended;
+    }
+  } catch (err: unknown) {
+    console.error('REASSIGN_GATE_STATE_READ_FAILED', err);
+  }
+
   const order = await getOrderById(id);
   await appendAuditEntry({
     id: randomUUID(),
@@ -49,7 +74,13 @@ export async function reassignOrderHandler(
     action: 'REASSIGN',
     resourceType: 'booking',
     resourceId: id,
-    payload: { technicianId: parsed.data.technicianId, reason: parsed.data.reason },
+    payload: {
+      technicianId: parsed.data.technicianId,
+      reason: parsed.data.reason,
+      targetHoldState,
+      ...(targetOutstandingPaise !== null ? { targetOutstandingPaise } : {}),
+      ...(targetSuspended !== null ? { targetSuspended } : {}),
+    },
     timestamp: new Date().toISOString(),
     partitionKey: new Date().toISOString().slice(0, 7),
   });

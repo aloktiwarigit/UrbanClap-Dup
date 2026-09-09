@@ -1,12 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { getMessaging } from 'firebase-admin/messaging';
 import { bookingRepo, updateBookingFields } from '../cosmos/booking-repository.js';
-import { getTechniciansWithinRadius } from '../cosmos/technician-repository.js';
+import { getTechniciansWithinRadius, countBlockedInRadius } from '../cosmos/technician-repository.js';
 import { catalogueRepo } from '../cosmos/catalogue-repository.js';
 import { dispatchAttemptRepo } from '../cosmos/dispatch-attempt-repository.js';
 import { haversine } from '../cosmos/geo.js';
 import { getDispatchAttemptsContainer } from '../cosmos/client.js';
 import { getFirebaseAdmin } from './firebaseAdmin.js';
+import { gatesToPredicateOptions, loadDispatchGates, logShadowExclusions } from './dispatch-eligibility.js';
 import type { TechnicianProfile } from '../schemas/technician.js';
 import type { DispatchAttemptDoc } from '../schemas/dispatch-attempt.js';
 import type { BookingDoc } from '../schemas/booking.js';
@@ -64,10 +65,27 @@ async function dispatchBookingToTechs(
   // Cosmos uses a bounding-box (square) query; filter to the actual circle radius.
   // Exclude the original (no-show) technician from the candidate set so they cannot
   // receive the same booking again via a redispatch.
-  const candidates = (await getTechniciansWithinRadius(lat, lng, radiusKm, booking.serviceId))
+  // E21-S04: hold/kyc gating. Both flags default off; with enforcement off the query runs
+  // unfiltered and we shadow-log what it WOULD have excluded. Nothing here reaches
+  // rankTechnicians — see ADR-0032 and dispatch-eligibility.ts.
+  const gates = await loadDispatchGates();
+  const rawCandidates = await getTechniciansWithinRadius(
+    lat, lng, radiusKm, booking.serviceId, gatesToPredicateOptions(gates),
+  );
+
+  const candidates = rawCandidates
     .filter((t) => haversine(lat, lng, t.location.coordinates[1], t.location.coordinates[0]) <= radiusKm)
     .filter((t) => !excluded.has(t.id) && !excluded.has(t.technicianId))
     .filter((t) => !(t.blockedCustomerIds ?? []).includes(booking.customerId));
+
+  // Shadow logging runs on the FILTERED set, not the raw bounding-box rows: a technician outside
+  // the true circular radius, already attempted/assigned, or customer-blocked was never an eligible
+  // candidate, and counting them would inflate the readout the flag flip is decided on. Placed
+  // after every filter and before ranking; telemetry only, and purely synchronous, so dispatch
+  // behaviour is unchanged by the move.
+  if (!gates.holdEnforcementEnabled) {
+    logShadowExclusions(bookingId, candidates);
+  }
 
   if (candidates.length === 0) {
     if (isStillDispatchable(booking)) {
@@ -77,7 +95,18 @@ async function dispatchBookingToTechs(
       }
       return false;
     }
-    console.log(`DISPATCH_NO_TECHS bookingId=${bookingId}`);
+    // With the hold predicate in the SQL the excluded rows never come back, so "no coverage"
+    // and "everyone nearby is blocked" look identical in the logs. One extra count query, only
+    // on this dead-end path and only when enforcement is on, turns that into a diagnosis.
+    let blockedByHold = 0;
+    if (gates.holdEnforcementEnabled) {
+      try {
+        blockedByHold = await countBlockedInRadius(lat, lng, radiusKm, booking.serviceId);
+      } catch (err: unknown) {
+        console.error('DISPATCH_BLOCKED_COUNT_FAILED', err);
+      }
+    }
+    console.log(`DISPATCH_NO_TECHS bookingId=${bookingId} blockedByHold=${blockedByHold}`);
     await updateBookingFields(bookingId, { status: 'UNFULFILLED' });
     return false;
   }

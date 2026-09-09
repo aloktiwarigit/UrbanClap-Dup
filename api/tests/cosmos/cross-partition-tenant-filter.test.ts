@@ -66,6 +66,11 @@ const CROSS_PARTITION_IMPORT_TOKENS: ReadonlyArray<{ helper: string; importPatte
   { helper: 'queryAuditLog',                 importPattern: /\bqueryAuditLog\b/ },
   // ratingRepo.getAllByTechnicianId call-site (not just any ratingRepo import)
   { helper: 'ratingRepo.getAllByTechnicianId', importPattern: /ratingRepo\.getAllByTechnicianId\b/ },
+  // E21-S04: the four cross-partition helpers E21-S02 added and never registered.
+  { helper: 'listTechniciansWithHold',           importPattern: /\blistTechniciansWithHold\b/ },
+  { helper: 'listAllTechniciansWithHold',        importPattern: /\blistAllTechniciansWithHold\b/ },
+  { helper: 'listTechniciansWithExpiredOverride', importPattern: /\blistTechniciansWithExpiredOverride\b/ },
+  { helper: 'commissionReceivableRepo.sumDueGroupedByTechnician', importPattern: /commissionReceivableRepo\.sumDueGroupedByTechnician\b/ },
 ];
 
 // Approved authentication / scoping mechanisms:
@@ -108,6 +113,17 @@ describe('Semgrep rule presence (E19-S03)', () => {
   // (or is replaced with a non-blocking SARIF reporter).
   it('cross-partition-query-must-have-tenant-filter rule is not present (removed, see ADR-0027)', () => {
     expect(semgrepSrc).not.toMatch(/^\s*-\s+id:\s+cross-partition-query-must-have-tenant-filter\s*$/m);
+  });
+
+  it('api/.semgrep.yml contains the no-commission-hold-in-ranking rule id (E21-S04)', () => {
+    expect(semgrepSrc).toMatch(/^\s*-\s+id:\s+no-commission-hold-in-ranking\s*$/m);
+  });
+
+  it('no-commission-hold-in-ranking rule has ERROR severity', () => {
+    const ruleStart = semgrepSrc.indexOf('id: no-commission-hold-in-ranking');
+    const nextRule = semgrepSrc.indexOf('\n  - id:', ruleStart + 1);
+    const block = nextRule === -1 ? semgrepSrc.slice(ruleStart) : semgrepSrc.slice(ruleStart, nextRule);
+    expect(block).toMatch(/severity:\s+ERROR/);
   });
 });
 
@@ -170,6 +186,18 @@ describe('SEMGREP-JUSTIFIED comments present on cross-partition helpers', () => 
     {
       file: resolve(COSMOS_ROOT, 'rating-repository.ts'),
       helpers: ['getAllByTechnicianId'],
+    },
+    {
+      file: resolve(COSMOS_ROOT, 'technician-repository.ts'),
+      helpers: [
+        'listTechniciansWithHold',
+        'listAllTechniciansWithHold',
+        'listTechniciansWithExpiredOverride',
+      ],
+    },
+    {
+      file: resolve(COSMOS_ROOT, 'commission-receivable-repository.ts'),
+      helpers: ['sumDueGroupedByTechnician'],
     },
   ];
 

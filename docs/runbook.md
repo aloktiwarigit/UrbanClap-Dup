@@ -1487,13 +1487,17 @@ absent) value until something incidentally triggers a recompute:
 
 ### Flags
 
-All default **off** — this story ships the mechanism dark-launched, matching the ₹0-infra pilot
-posture of shipping observable-but-inert first:
+All default **off** — this story ships the *gating* dark-launched, matching the ₹0-infra pilot
+posture of shipping observable-but-inert first. Two parts of E21-S04 are **not** behind any flag
+and are live from merge: the 15-minute commission-hold reconciler (which moves hold states and the
+admin dashboard's figures) and the accept-path hold read that produces `ACCEPT_HOLD_SHADOW_BLOCK`
+(an extra Cosmos round-trip on every job accept, always answering ALLOW while the flag is off).
+See ADR-0032, Consequences (negative).
 
 | Flag | Doc | Default | Effect when on |
 |---|---|---|---|
 | `holdEnforcementEnabled` | `system/commission-config` | `false` | Technician-app actually gates job acceptance/dispatch on `commissionHold.state === 'BLOCKED'` (enforcement, not just visibility) |
-| `enforceKycInDispatch` | `system/commission-config` | `false` | Dispatch also gates on KYC status, independent of the commission hold |
+| `enforceKycInDispatch` | `system/commission-config` | `false` | Dispatch also requires both automated KYC steps (DigiLocker Aadhaar + PAN OCR) to have succeeded, independent of the commission hold. See the precondition below. |
 | `features.wallet` / `duesBanner` / `upiQr` / `incentives` / `addOnRequests` | `system/technician-client-config` | all `false` | Technician-app UI surfaces for the wallet screen, dues banner, UPI QR collection flow, incentive milestones, and add-on requests respectively |
 
 Change the commission-config flags/thresholds: `PUT /v1/admin/catalogue/commission-config`
@@ -1582,3 +1586,175 @@ spot-check during any security review or incident is the mechanism:
 `queryAuditLog({ action: 'PII_CONTACT_REVEAL_DENIED', adminId, dateFrom, dateTo })` per admin,
 flagging any admin whose combined daily count looks disproportionate to their normal order-review
 workload, and treating any `RATE_LIMITED_DAILY` occurrence as the priority signal to chase first.
+
+## Dues-gated dispatch (E21-S04)
+
+Wires the E21-S02 commission-hold cache into dispatch (candidate exclusion) and job acceptance
+(a hard gate) — both behind `holdEnforcementEnabled` (see the Flags table above), default `false`.
+See `docs/adr/0032-commission-hold-is-an-eligibility-gate.md` for the design rationale, and the
+"Technician says he is blocked / hold looks wrong" section above for diagnosing the underlying
+ledger — this section is specifically about the enforcement *behaviour* (dispatch exclusion,
+accept refusal), not the ledger math.
+
+### Technician says he is blocked from accepting jobs
+
+1. **Confirm enforcement is actually on.** `GET /v1/admin/catalogue/commission-config` →
+   `holdEnforcementEnabled`. If `false`, this feature is not the cause of the block — look
+   elsewhere (suspension, KYC, a client-side bug).
+2. **Read the technician's live position.** `GET
+   /v1/admin/finance/commission-receivables/{technicianId}` → `hold.state`,
+   `hold.outstandingPaise`, and the underlying receivable rows.
+3. **If they have paid:** record the remittance (`POST
+   /v1/admin/finance/commission-remittances`, see above). The hold clears on the recompute the
+   remittance itself triggers — no need to wait for the reconciler timer.
+4. **If they have not paid but must work now:** `POST
+   /v1/admin/finance/commission-hold/{technicianId}/override` with an expiry and a reason.
+   Audited as `COMMISSION_HOLD_OVERRIDDEN`. The override lapses automatically at its `until`
+   timestamp; the reconciler's `EXPIRED_OVERRIDES` sweep re-blocks the technician within 15
+   minutes of expiry, not immediately.
+5. **If the console shows `CLEAR` but the technician still gets a 403:** the cached hold and the
+   live sum have drifted — the accept gate always reads the live sum via `computeCommissionHold`,
+   never the console's cached figure, so a stale cache is not the source of a real 403. Force a
+   repair with `POST /v1/admin/finance/commission-receivables/recompute` and confirm
+   `unreconciledTechnicianCount` on the dashboard returns to (or stays at) zero afterward.
+6. **If the technician sees `503 HOLD_CHECK_UNAVAILABLE` rather than a 403,** this is not a dues
+   problem — the hold could not be read at all. Check Sentry for `ACCEPT_HOLD_CHECK_FAILED` /
+   `ACCEPT_HOLD_INDETERMINATE` and Cosmos health. The offer attempt stays `PENDING`; retrying
+   inside the 90-second offer window usually succeeds once the underlying read failure clears.
+
+### Shadow-mode readout before flipping `holdEnforcementEnabled`
+
+> **Discard any shadow data gathered before the E21-S04 Codex-round-2 fix.** Until that fix,
+> `DISPATCH_HOLD_SHADOW_EXCLUSION` was emitted against the raw bounding-box query result, before
+> the real dispatch filters ran — so it counted blocked technicians who were outside the true
+> circular radius, already attempted on that booking, already assigned/no-show-excluded, or blocked
+> by that customer. None of those were ever eligible candidates, and none of them would have lost a
+> dispatch to the hold gate. Those lines overstate enforcement impact by an unknown factor and must
+> not be reasoned from, reconciled against, or averaged in with lines collected after the fix.
+> **Start the seven-day window from scratch on the first deploy that carries the fix.** The
+> `ACCEPT_HOLD_SHADOW_BLOCK` lines were never affected — only the dispatch-side ones.
+
+1. With the flag off, dispatch logs one `DISPATCH_HOLD_SHADOW_EXCLUSION` line per candidate that
+   enforcement would have excluded — counted after every dispatch filter, so each line is a
+   technician who really would have lost this offer — and the accept path logs
+   `ACCEPT_HOLD_SHADOW_BLOCK` whenever a would-be-blocked technician accepts anyway.
+2. Collect at least seven days of these logs. Count distinct `technicianId` values and total line
+   counts for each log type.
+3. Cross-check each distinct technician against the commission dashboard
+   (`GET /v1/admin/finance/commission-receivables/{technicianId}`): is the balance real and
+   current, or does it look like an unreconciled cache artifact?
+4. Flip `holdEnforcementEnabled` to `true` only when **all** of the following hold: every
+   shadow-blocked technician has a genuinely unpaid balance at or above the block threshold; no
+   booking in the observed window would have gone `UNFULFILLED` for lack of any unblocked
+   candidate; and the technician-app release carrying the dues banner (E21-S05) has reached at
+   least 90% adoption among active technicians.
+5. After flipping, watch for `DISPATCH_NO_TECHS ... blockedByHold=<n>` in the logs. A non-zero
+   count there means a booking genuinely failed to dispatch *because of* the hold gate — the
+   signal to reconsider the block threshold or investigate coverage gaps, not to ignore.
+6. Rollback is the flag alone, nothing else. Setting `holdEnforcementEnabled` back to `false`
+   immediately stops both the dispatch exclusion and the accept refusal (subject to the existing
+   5-minute config-cache propagation delay on the dispatch side). No data migration, no code
+   change, no redeploy.
+
+### Precondition before flipping `enforceKycInDispatch`
+
+**Status: checked and clear in production as of 2026-09-09.** Re-run the query below in any new
+environment before flipping the flag there; the check is per-environment, not once-and-done.
+
+`enforceKycInDispatch` gates dispatch on **two independent facts**, both of which must hold:
+
+| Fact | Field | Written by | Meaning |
+|---|---|---|---|
+| Aadhaar step succeeded | `kyc.aadhaarVerified === true` | `POST /v1/kyc/aadhaar` | DigiLocker returned a result; explicitly `false` on failure |
+| PAN step succeeded | `kyc.panHash` present **and non-null** | `POST /v1/kyc/pan-ocr` | Form Recognizer read the card; explicitly nulled back out on rejection |
+
+It deliberately does **not** read `kyc.kycStatus`. That field is a progress marker for a two-step
+process that can be completed in either order, so it cannot express "both done" — whichever step
+ran last wins, and the one value that could mean "both done" (`COMPLETE`) has no writer. Three
+consecutive Codex review rounds on E21-S04 each found a real defect in a status-based version of
+this predicate, in opposite directions. See ADR-0032 and the `KYC_VERIFIED_PREDICATE` comment in
+`api/src/cosmos/technician-repository.ts`.
+
+Because it reads the two outcomes directly, the predicate is correct regardless of the order the
+technician completed the steps in, across retries, and it goes false again if either step is later
+rejected. It therefore no longer depends on `submit-pan-ocr.ts` enforcing step order (it still
+doesn't — that remains an open follow-up, but it is no longer a dispatch-correctness issue).
+
+**The residual risk is legacy data, and it fails CLOSED.** The fail-open disjunct is
+`NOT IS_DEFINED(c.kyc)` — the absence of the *whole* `kyc` sub-object. A technician document that
+carries a `kyc` object holding only pre-E19-S01 fields (`kyc.panNumber` or
+`kyc.panNumberEncrypted`, with no `kyc.panHash`) is holding partial information and will be
+**excluded** from dispatch once the flag is on — even if that technician was in fact fully
+verified under the old shape. That is the intended behaviour (partial information must not read as
+completion), but it means such technicians must be identified and re-verified *before* the flip,
+not discovered afterwards as a silent drop in dispatch volume.
+
+**Precondition query — run against the `technicians` container in the target environment.** It
+returns every technician who carries a `kyc` sub-object, and flags the legacy shape:
+
+```sql
+SELECT c.id,
+       c.kyc.kycStatus,
+       c.kyc.aadhaarVerified,
+       IS_DEFINED(c.kyc.panHash) AND NOT IS_NULL(c.kyc.panHash) AS hasPanHash,
+       IS_DEFINED(c.kyc.panNumber) AND NOT IS_NULL(c.kyc.panNumber) AS hasLegacyPanNumber,
+       IS_DEFINED(c.kyc.panNumberEncrypted) AS hasLegacyPanEncrypted
+FROM c
+WHERE IS_DEFINED(c.kyc)
+```
+
+Read the result as follows:
+
+- **Zero rows** → nothing to do; every technician fails open and the flip is safe from a
+  legacy-data standpoint.
+- A row with `hasLegacyPanNumber` or `hasLegacyPanEncrypted` true but `hasPanHash` false → this
+  technician **will be dropped from dispatch** by the flip. Either re-run their PAN step through
+  `POST /v1/kyc/pan-ocr` so a `panHash` is written, or accept the exclusion knowingly.
+- A row with `hasPanHash` true but `aadhaarVerified` not `true` (or vice versa) → half-verified;
+  exclusion is correct and intended.
+
+**Production result, 2026-09-09:** the query returned **zero rows** across all **16** technician
+documents — no technician in production carries a `kyc` sub-object at all, therefore zero carry
+legacy `panNumber` / `panNumberEncrypted` without a `panHash`. Every production technician
+currently fails open on this predicate.
+
+**The gate is inert in production today regardless of the flag.** The corollary of that result is
+that **the KYC flow has never been completed by anyone in production** — no technician has ever
+called `POST /v1/kyc/aadhaar` or `POST /v1/kyc/pan-ocr` successfully, since either call would have
+created a `kyc` sub-object. So flipping `enforceKycInDispatch` to `true` today would change
+nothing: all 16 technicians would still be dispatched via the fail-open disjunct. The flag becomes
+meaningful only once technicians actually start completing KYC — at which point *every* technician
+who has started but not finished KYC begins to be excluded. **Re-run the query at that point**,
+not just before the first flip.
+
+**A manual/offline KYC path would not satisfy this gate.** The predicate accepts only the two
+automated outcomes; there is no admin field an operator can set to admit a technician verified by
+other means. If such a path is added, add a real completion fact for the predicate to read — do not
+loosen it back toward `kyc.kycStatus` (see ADR-0032, Consequences — negative).
+
+**BLOCKING: do not flip `enforceKycInDispatch` until the KYC flow can actually be completed.**
+This is a hard precondition, not a caution. `upsertKycStatus` reconstructs the `kyc` sub-object
+with defaults (`aadhaarVerified: false`, `panHash: null`) on the *first* write, so the moment a
+technician touches either KYC endpoint they stop failing open and start being **excluded** — and
+they stay excluded until *both* facts land. That is correct behaviour for a half-verified
+technician, but it collides with a known gap in the flow itself: `POST /v1/kyc/pan-ocr` writes
+`PAN_DONE` without checking Aadhaar, and nothing ever writes a terminal status. A technician who
+does PAN first therefore acquires a `kyc` sub-object, becomes excluded, and has no path to finish.
+Flipping the flag in that state would strand them silently.
+
+Two consequences for whoever operates this:
+
+1. **Before flipping**, confirm the KYC flow has a completable path in both orderings — not just
+   that the query above is clear. The follow-up ticket covering the missing terminal state and the
+   missing step-order enforcement must be closed first.
+2. **Reading the shadow log**, expect would-be exclusions to appear the day technicians start
+   touching KYC, and do **not** read that as the gate misfiring. It is the gate working correctly
+   against a flow that cannot currently be completed. The number to act on is whether those
+   technicians have a route to finish, not whether the count is non-zero.
+
+
+### Timers
+
+| Timer | Schedule | Does |
+|---|---|---|
+| `triggerReconcileCommissionHolds` | every 15 minutes | Drains `system/hold-repair` (repairs queued technician holds, or triggers a `FULL` sweep on an `all` flag); sweeps `EXPIRED_OVERRIDES` unconditionally on every run; runs a `FULL` sweep on roughly every 6th invocation (~90 minutes, clock-derived — see ADR-0032); writes `system/hold-reconciliation-summary` for the admin dashboard every run. |

@@ -57,6 +57,21 @@ describe('dispatchAttemptRepo', () => {
     expect(result?.status).toBe('EXPIRED');
   });
 
+  // The authoritative half of the E21-S04 TOCTOU fix. `status === 'PENDING'` is not enough on its
+  // own: expireStaleOffers sweeps only every 30s, so an attempt past its 90s window still reads
+  // PENDING for up to a tick, and a caller that checked expiry before an awaited round-trip would
+  // otherwise accept it late. `declineAttempt` has always enforced this; acceptAttempt now matches.
+  it('acceptAttempt refuses a PENDING attempt whose offer window has lapsed', async () => {
+    mockRead.mockResolvedValue({
+      resource: { ...pendingAttempt, expiresAt: '2020-01-01T00:00:00.000Z', _etag: '"etag-4"' },
+    });
+
+    const result = await dispatchAttemptRepo.acceptAttempt('da-1', 'bk-1');
+
+    expect(result).toBeNull();
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
   it('does not update an attempt when the booking id does not match', async () => {
     mockRead.mockResolvedValue({ resource: { ...pendingAttempt, bookingId: 'other-booking', _etag: '"etag-3"' } });
 

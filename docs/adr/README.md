@@ -27,3 +27,4 @@ Every significant decision is recorded as a numbered, immutable ADR. Use `TEMPLA
 - [0010](0010-design-system-composite-build.md) — Design-system Gradle module via composite build
 - [0013](0013-audit-log-immutability.md) — Audit-log immutability (multi-layer defensive enforcement)
 - [0031](0031-single-partition-commission-ledger.md) — Commission ledger is a single-partition transactional log with absolute recomputation
+- [0032](0032-commission-hold-is-an-eligibility-gate.md) — Commission hold is a dispatch eligibility filter, never a ranking input

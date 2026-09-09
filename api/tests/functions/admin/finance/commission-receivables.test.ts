@@ -16,6 +16,10 @@ import {
   adminCommissionReceivablesPerTechHandler,
   adminCommissionReceivablesRecomputeHandler,
 } from '../../../../src/functions/admin/finance/commission-receivables.js';
+import {
+  HOLD_RECONCILIATION_SUMMARY_DOC_ID,
+  type HoldReconciliationSummaryDoc,
+} from '../../../../src/schemas/hold-reconciliation-summary.js';
 
 const ctx = { adminId: 'a1', role: 'super-admin' as const, sessionId: 's1' };
 const getReq = (url = 'http://localhost/api/v1/admin/finance/commission-receivables') =>
@@ -46,7 +50,10 @@ describe('adminCommissionReceivablesDashboardHandler', () => {
     const holdWarn = { outstandingPaise: 5000, dueCount: 1, state: 'WARN' as const, evaluatedAt: '2026-09-01T00:00:00.000Z' };
     const holdClearZero = { outstandingPaise: 0, dueCount: 0, state: 'CLEAR' as const, evaluatedAt: '2026-09-01T00:00:00.000Z' };
     vi.mocked(techRepo.listAllTechniciansWithHold).mockResolvedValue([
-      { id: 'tech-1', name: 'Ravi', commissionHold: holdWarn },
+      // tech-1 deliberately has no roster `name` (E21-S04: the read path only calls
+      // getTechniciansByIds for rows lacking a resolved technicianName — see
+      // commission-receivables.ts) so this still exercises the profile-lookup enrichment path.
+      { id: 'tech-1', commissionHold: holdWarn },
       { id: 'tech-2', name: 'Suresh', commissionHold: holdClearZero }, // filtered out: CLEAR + 0
     ]);
     vi.mocked(commissionReceivableRepo.sumDueGroupedByTechnician).mockResolvedValue([]);
@@ -71,7 +78,7 @@ describe('adminCommissionReceivablesDashboardHandler', () => {
       outstandingPaise: 5000,
       dueCount: 1,
       state: 'WARN',
-      staleAfter: '2026-09-01T06:00:00.000Z', // evaluatedAt + 6h
+      staleAfter: '2026-09-01T01:30:00.000Z', // evaluatedAt + 90min (E21-S04 corrected HOLD_STALE_AFTER_MS, was 6h)
     });
     expect(body.totalOutstanding).toBe(5000);
     expect(body.continuationToken).toBeUndefined();
@@ -418,5 +425,255 @@ describe('adminCommissionReceivablesRecomputeHandler', () => {
     const res = (await adminCommissionReceivablesRecomputeHandler(req, {} as never, ctx)) as HttpResponseInit;
 
     expect(res.status).toBe(502);
+  });
+});
+
+// ── E21-S04: summary-backed dashboard ────────────────────────────────────────
+
+const freshSummary = (over: Partial<HoldReconciliationSummaryDoc> = {}): HoldReconciliationSummaryDoc => ({
+  id: HOLD_RECONCILIATION_SUMMARY_DOC_ID,
+  computedAt: new Date().toISOString(),
+  totalTechnicianCount: 1,
+  totalOutstandingPaise: 5000,
+  unreconciledTechnicianCount: 0,
+  topN: 100,
+  top: [{
+    technicianId: 'tech-1', technicianName: 'Ravi Kumar', outstandingPaise: 5000,
+    dueCount: 1, state: 'WARN', evaluatedAt: '2026-09-08T00:00:00.000Z',
+  }],
+  ...over,
+});
+
+// Distinctive drain-path fixture used by every fallback test below so the assertions discriminate
+// "drained AND served" from "drained but the response still reflects something else" (e.g. stale
+// summary values left over from a previous call). totalOutstanding here (9999) can never collide
+// with freshSummary()'s totalOutstandingPaise (5000).
+const drainHold = { outstandingPaise: 9999, dueCount: 3, state: 'WARN' as const, evaluatedAt: '2026-09-08T00:00:00.000Z' };
+const mockDrainRoster = () => {
+  vi.mocked(techRepo.listAllTechniciansWithHold).mockResolvedValue([
+    { id: 'tech-drain', name: 'Drain Tech', commissionHold: drainHold },
+  ]);
+  vi.mocked(commissionReceivableRepo.sumDueGroupedByTechnician).mockResolvedValue([
+    { technicianId: 'tech-drain', outstandingPaise: 9999, dueCount: 3, oldestDueAt: '2026-09-01T00:00:00.000Z' },
+  ]);
+};
+
+describe('dashboard summary fast path', () => {
+  it('serves from the summary and performs NO drain', async () => {
+    vi.mocked(systemDocsRepo.getHoldReconciliationSummary).mockResolvedValue(freshSummary());
+
+    const res = (await adminCommissionReceivablesDashboardHandler(getReq(), {} as never, ctx)) as HttpResponseInit;
+
+    expect(res.status).toBe(200);
+    expect(techRepo.listAllTechniciansWithHold).not.toHaveBeenCalled();
+    expect(commissionReceivableRepo.sumDueGroupedByTechnician).not.toHaveBeenCalled();
+    expect(res.jsonBody).toMatchObject({
+      totalOutstanding: 5000,
+      unreconciledTechnicianCount: 0,
+      technicians: [expect.objectContaining({ technicianId: 'tech-1', technicianName: 'Ravi Kumar' })],
+    });
+  });
+
+  it('falls back to the live drain when the summary is absent', async () => {
+    vi.mocked(systemDocsRepo.getHoldReconciliationSummary).mockResolvedValue(null);
+    mockDrainRoster();
+
+    const res = (await adminCommissionReceivablesDashboardHandler(getReq(), {} as never, ctx)) as HttpResponseInit;
+
+    expect(res.status).toBe(200);
+    expect(techRepo.listAllTechniciansWithHold).toHaveBeenCalled();
+    // Discriminates "fell back AND served the drained data" from "fell back but still returned
+    // something else" — 9999 (drain) can't be confused with 5000 (a freshSummary() would give).
+    expect((res.jsonBody as { totalOutstanding: number }).totalOutstanding).toBe(9999);
+    expect((res.jsonBody as { technicians: Array<{ technicianName: string }> }).technicians[0]!.technicianName).toBe('Drain Tech');
+  });
+
+  it('falls back when the summary is older than 45 minutes', async () => {
+    vi.mocked(systemDocsRepo.getHoldReconciliationSummary).mockResolvedValue(
+      freshSummary({ computedAt: new Date(Date.now() - 46 * 60 * 1000).toISOString() }),
+    );
+    mockDrainRoster();
+
+    const res = (await adminCommissionReceivablesDashboardHandler(getReq(), {} as never, ctx)) as HttpResponseInit;
+
+    expect(techRepo.listAllTechniciansWithHold).toHaveBeenCalled();
+    expect((res.jsonBody as { totalOutstanding: number }).totalOutstanding).toBe(9999);
+  });
+
+  it('serves from the summary (no drain) when it is fresh at 44 minutes old', async () => {
+    vi.mocked(systemDocsRepo.getHoldReconciliationSummary).mockResolvedValue(
+      freshSummary({ computedAt: new Date(Date.now() - 44 * 60 * 1000).toISOString() }),
+    );
+    mockDrainRoster(); // present but must NOT be used
+
+    const res = (await adminCommissionReceivablesDashboardHandler(getReq(), {} as never, ctx)) as HttpResponseInit;
+
+    expect(res.status).toBe(200);
+    expect(techRepo.listAllTechniciansWithHold).not.toHaveBeenCalled();
+    expect(commissionReceivableRepo.sumDueGroupedByTechnician).not.toHaveBeenCalled();
+    expect((res.jsonBody as { totalOutstanding: number }).totalOutstanding).toBe(5000);
+  });
+
+  it('falls back when the requested page runs past topN', async () => {
+    vi.mocked(systemDocsRepo.getHoldReconciliationSummary).mockResolvedValue(
+      freshSummary({ topN: 100, totalTechnicianCount: 500 }),
+    );
+    mockDrainRoster();
+    const token = Buffer.from('100').toString('base64');
+
+    const res = (await adminCommissionReceivablesDashboardHandler(
+      getReq(`http://localhost/api/v1/admin/finance/commission-receivables?continuationToken=${token}`),
+      {} as never, ctx,
+    )) as HttpResponseInit;
+
+    expect(techRepo.listAllTechniciansWithHold).toHaveBeenCalled();
+    expect((res.jsonBody as { totalOutstanding: number }).totalOutstanding).toBe(9999);
+  });
+
+  it('falls back when reading the summary throws', async () => {
+    vi.mocked(systemDocsRepo.getHoldReconciliationSummary).mockRejectedValue(new Error('boom'));
+    mockDrainRoster();
+
+    const res = (await adminCommissionReceivablesDashboardHandler(getReq(), {} as never, ctx)) as HttpResponseInit;
+
+    expect(res.status).toBe(200);
+    expect(techRepo.listAllTechniciansWithHold).toHaveBeenCalled();
+    expect((res.jsonBody as { totalOutstanding: number }).totalOutstanding).toBe(9999);
+  });
+
+  it('paginates correctly ON the summary path: offset 50 of a 150-technician roster still yields a continuationToken', async () => {
+    // Regression test for the Task 10 review Critical: `rows = summary.top` is capped at `topN`
+    // (100), but the true roster is `totalTechnicianCount` (150) — `hasMore` must be derived from
+    // the latter, not from `rows.length`, or the last 50 technicians silently vanish with no
+    // continuationToken to reach them.
+    // Every row carries technicianName, matching a real reconciler-written summary (resolved at
+    // write time — see hold-reconciliation-summary.ts) — this keeps the test self-contained
+    // instead of relying on getTechniciansByIds behaving any particular way.
+    const top100 = Array.from({ length: 100 }, (_, i) => ({
+      technicianId: `tech-${String(i).padStart(3, '0')}`,
+      technicianName: `Tech ${i}`,
+      outstandingPaise: 10000 - i, // strictly descending, matches the documented ordering
+      dueCount: 1,
+      state: 'WARN' as const,
+      evaluatedAt: '2026-09-08T00:00:00.000Z',
+    }));
+    vi.mocked(systemDocsRepo.getHoldReconciliationSummary).mockResolvedValue(
+      freshSummary({ topN: 100, totalTechnicianCount: 150, top: top100 }),
+    );
+    const token = Buffer.from('50').toString('base64');
+
+    const res = (await adminCommissionReceivablesDashboardHandler(
+      getReq(`http://localhost/api/v1/admin/finance/commission-receivables?continuationToken=${token}`),
+      {} as never, ctx,
+    )) as HttpResponseInit;
+
+    expect(res.status).toBe(200);
+    expect(techRepo.listAllTechniciansWithHold).not.toHaveBeenCalled(); // still served from the summary
+    const body = res.jsonBody as { technicians: unknown[]; continuationToken?: string };
+    expect(body.technicians).toHaveLength(50); // rows 50..99 of top100
+    expect(body.continuationToken).toBeDefined();
+    expect(Buffer.from(body.continuationToken!, 'base64').toString('utf8')).toBe('100');
+
+    // Follow-on: offset 100 now runs past topN (100+50 > 100) and correctly falls back to drain.
+    vi.clearAllMocks();
+    vi.mocked(systemDocsRepo.getHoldReconciliationSummary).mockResolvedValue(
+      freshSummary({ topN: 100, totalTechnicianCount: 150, top: top100 }),
+    );
+    mockDrainRoster();
+    const nextToken = body.continuationToken!;
+    await adminCommissionReceivablesDashboardHandler(
+      getReq(`http://localhost/api/v1/admin/finance/commission-receivables?continuationToken=${nextToken}`),
+      {} as never, ctx,
+    );
+    expect(techRepo.listAllTechniciansWithHold).toHaveBeenCalled();
+  });
+
+  it('summary path and drain path produce identical JSON for the same underlying data (multi-row, oldestDueAt, override)', async () => {
+    // This is the guarantee that an admin can never see different money depending on which path
+    // served the request — deliberately the strongest test in the file: 3 rows with distinct
+    // outstandingPaise (exercises sort), one carrying oldestDueAt, one carrying an override.
+    const holdWithOldest = {
+      outstandingPaise: 8000, dueCount: 2, state: 'WARN' as const,
+      evaluatedAt: '2026-09-08T00:00:00.000Z', oldestDueAt: '2026-08-01T00:00:00.000Z',
+    };
+    const holdWithOverride = {
+      outstandingPaise: 5000, dueCount: 1, state: 'WARN' as const,
+      evaluatedAt: '2026-09-08T00:00:00.000Z',
+      override: { until: '2026-10-01T00:00:00.000Z', byAdminId: 'admin-9', reason: 'grace period' },
+    };
+    const holdPlain = {
+      outstandingPaise: 3000, dueCount: 1, state: 'WARN' as const,
+      evaluatedAt: '2026-09-08T00:00:00.000Z',
+    };
+
+    vi.mocked(systemDocsRepo.getHoldReconciliationSummary).mockResolvedValue(null);
+    vi.mocked(techRepo.listAllTechniciansWithHold).mockResolvedValue([
+      { id: 'tech-1', name: 'Alpha One', commissionHold: holdWithOldest },
+      { id: 'tech-2', name: 'Beta Two', commissionHold: holdWithOverride },
+      { id: 'tech-3', name: 'Gamma Three', commissionHold: holdPlain },
+    ]);
+    vi.mocked(commissionReceivableRepo.sumDueGroupedByTechnician).mockResolvedValue([
+      { technicianId: 'tech-1', outstandingPaise: 8000, dueCount: 2, oldestDueAt: '2026-08-01T00:00:00.000Z' },
+      { technicianId: 'tech-2', outstandingPaise: 5000, dueCount: 1, oldestDueAt: '2026-08-15T00:00:00.000Z' },
+      { technicianId: 'tech-3', outstandingPaise: 3000, dueCount: 1, oldestDueAt: '2026-08-20T00:00:00.000Z' },
+    ]);
+    const drained = (await adminCommissionReceivablesDashboardHandler(getReq(), {} as never, ctx)) as HttpResponseInit;
+
+    vi.clearAllMocks();
+    vi.mocked(systemDocsRepo.getHoldReconciliationSummary).mockResolvedValue(freshSummary({
+      totalTechnicianCount: 3,
+      totalOutstandingPaise: 16000,
+      unreconciledTechnicianCount: 0,
+      topN: 100,
+      top: [
+        { technicianId: 'tech-1', technicianName: 'Alpha One', outstandingPaise: 8000, dueCount: 2, oldestDueAt: '2026-08-01T00:00:00.000Z', state: 'WARN', evaluatedAt: '2026-09-08T00:00:00.000Z' },
+        { technicianId: 'tech-2', technicianName: 'Beta Two', outstandingPaise: 5000, dueCount: 1, state: 'WARN', evaluatedAt: '2026-09-08T00:00:00.000Z', override: { until: '2026-10-01T00:00:00.000Z', byAdminId: 'admin-9', reason: 'grace period' } },
+        { technicianId: 'tech-3', technicianName: 'Gamma Three', outstandingPaise: 3000, dueCount: 1, state: 'WARN', evaluatedAt: '2026-09-08T00:00:00.000Z' },
+      ],
+    }));
+    const fromSummary = (await adminCommissionReceivablesDashboardHandler(getReq(), {} as never, ctx)) as HttpResponseInit;
+
+    expect(fromSummary.jsonBody).toEqual(drained.jsonBody);
+    // Sanity: the shared fixture actually produced the richer fields this test claims to cover.
+    const rows = (drained.jsonBody as { technicians: Array<Record<string, unknown>> }).technicians;
+    expect(rows).toHaveLength(3);
+    expect(rows[0]).toMatchObject({ technicianId: 'tech-1', oldestDueAt: '2026-08-01T00:00:00.000Z' });
+    expect(rows[1]).toMatchObject({ technicianId: 'tech-2', override: { until: '2026-10-01T00:00:00.000Z', byAdminId: 'admin-9', reason: 'grace period' } });
+  });
+});
+
+describe('technicianName precedence between roster and profile lookup (E21-S04)', () => {
+  it('a name already present on the roster wins, and getTechniciansByIds is not called for that row', async () => {
+    // The roster's own name and the admin-profile displayName come from the SAME underlying
+    // technician document in production — `toHoldItem` (technician-repository.ts) sets
+    // `name = displayName ?? name` from that document, so the two sources cannot disagree there.
+    // This test pins the precedence anyway (roster name wins when present) so a future change to
+    // that invariant is caught here rather than discovered by an admin seeing the wrong name.
+    const hold = { outstandingPaise: 4200, dueCount: 1, state: 'WARN' as const, evaluatedAt: '2026-09-08T00:00:00.000Z' };
+    vi.mocked(systemDocsRepo.getHoldReconciliationSummary).mockResolvedValue(null);
+    vi.mocked(techRepo.listAllTechniciansWithHold).mockResolvedValue([
+      { id: 'tech-1', name: 'Roster Name', commissionHold: hold },
+    ]);
+    vi.mocked(commissionReceivableRepo.sumDueGroupedByTechnician).mockResolvedValue([]);
+    // If the (unreachable in prod) lookup fired anyway, it would return a different name — the
+    // test would fail loudly rather than silently coincide.
+    vi.mocked(techRepo.getTechniciansByIds).mockResolvedValue([
+      { id: 'tech-1', technicianId: 'tech-1', displayName: 'Profile Name' },
+    ]);
+
+    const res = (await adminCommissionReceivablesDashboardHandler(getReq(), {} as never, ctx)) as HttpResponseInit;
+
+    expect(res.status).toBe(200);
+    expect(techRepo.getTechniciansByIds).not.toHaveBeenCalled();
+    expect((res.jsonBody as { technicians: Array<{ technicianName: string }> }).technicians[0]!.technicianName).toBe('Roster Name');
+  });
+});
+
+describe('HOLD_STALE_AFTER_MS matches the reconciler cadence', () => {
+  it('staleAfter is 90 minutes after evaluatedAt, not 6 hours', async () => {
+    vi.mocked(systemDocsRepo.getHoldReconciliationSummary).mockResolvedValue(freshSummary());
+    const res = (await adminCommissionReceivablesDashboardHandler(getReq(), {} as never, ctx)) as HttpResponseInit;
+    const row = (res.jsonBody as { technicians: Array<{ evaluatedAt: string; staleAfter: string }> }).technicians[0]!;
+    expect(new Date(row.staleAfter).getTime() - new Date(row.evaluatedAt).getTime()).toBe(90 * 60 * 1000);
   });
 });

@@ -55,6 +55,163 @@ rules:
     languages: [typescript]
     severity: ERROR
 
+  # E21-S04 / ADR-0032 — commission hold is an ELIGIBILITY FILTER, never a ranking input.
+  #
+  # Same principle as karnataka-no-decline-in-dispatcher above, different field. A technician
+  # who owes commission may be excluded from the candidate set; they must never be sorted
+  # lower within it. Ranking is distance, then rating. Nothing else.
+  #
+  # Companion enforcement:
+  #   - api/tests/unit/dispatch-ranking-invariance.test.ts (runtime gate)
+  #   - api/src/services/dispatch-eligibility.ts (structural: the only hold-aware module)
+  #   - docs/adr/0032-commission-hold-is-an-eligibility-gate.md
+  #
+  # Note: semgrep-action@v1 treats every finding as blocking regardless of declared severity
+  # (see the comment in api/tests/cosmos/cross-partition-tenant-filter.test.ts). That is the
+  # intended behaviour for this rule.
+  - id: no-commission-hold-in-ranking
+    # History of this rule's pattern shapes (both fixes verified against local semgrep
+    # 1.159.0 with synthetic violations, before and after each change):
+    #
+    # 1. The first draft used single-line `{ ... $X.f ... }` / `=> ... $X.f ...` forms.
+    #    Those are rejected by this semgrep version's TypeScript parser
+    #    (Stdlib.Parsing.Parse_error) and, with --error, that fails the WHOLE rule (exit 2),
+    #    not just the offending pattern.
+    #
+    # 2. Reformatting to multi-line `{ ... }` blocks fixed the parser, but the embedded
+    #    `$X.field` ellipsis-body form only matches when the field reference is itself the
+    #    (sub-expression of a) top-level statement in the block — e.g. `return
+    #    a.commissionHold - b.commissionHold`. It does NOT match a hold reference buried
+    #    inside an if-condition, e.g. `if (a.commissionHold?.state === 'BLOCKED') return 1;`
+    #    — which is the single most natural way to write a "BLOCKED-last" tiebreaker. That
+    #    gap was verified empirically: the block-ellipsis form produced 0 findings against
+    #    such a snippet where a plain arithmetic return produced 1.
+    #
+    # The rule below uses `pattern-inside` (find the ranking function/comparator) combined
+    # with a bare field-access `pattern-either` (`$X.commissionHold` etc., which — used on
+    # its own outside a block-ellipsis body — matches the field reference at ANY nesting
+    # depth: if-conditions, ternaries, boolean expressions, everywhere) instead. Verified to
+    # catch the if-condition tiebreaker shape above, the plain-arithmetic shape, and the
+    # concise (no-braces) arrow-body shape, in both `rankTechnicians` and
+    # `getTechnicianCandidatesForBooking`, while staying at 0 findings against the current
+    # tree.
+    #
+    # api/src/cosmos/technician-repository.ts IS in scope (see paths.include below) because
+    # it hosts getTechnicianCandidatesForBooking() (~line 398), a second, independent copy of
+    # the Karnataka comparator (distanceKm, then rating) that ranks getTechniciansWithinRadius
+    # output for admin manual-assignment (src/functions/admin/orders/candidates.ts). That IS
+    # dispatch ranking through another door, and its comparator is an ordinary AST sort shape
+    # these patterns match perfectly — it is not SQL text and was not "impossible to cover".
+    # The one exclusion is listTechniciansWithHold() (~line 677, Task 10 admin roster
+    # listing), which legitimately sorts by outstandingPaise for an unrelated admin display —
+    # suppressed below via pattern-not-inside rather than by dropping the whole file from
+    # scope. listAllTechniciansWithHold() (~line 684) does not sort and is unaffected either
+    # way.
+    #
+    # 3. Codex review (E21-S04 round 1) flagged that the field-access pattern-either lists only
+    #    covered dot-access (`$X.commissionHold`), so `tech['commissionHold']`,
+    #    `tech["outstandingPaise"]`, or a derived `holdState` alias slipped past the rule
+    #    entirely. Each of the 4 `pattern-either` lists below now also carries both
+    #    bracket-quote forms and `holdState` for all four field names (dot + `'...'` + `"..."`,
+    #    12 patterns per list). Every added pattern is a bare standalone-expression pattern —
+    #    the same shape as the original `$X.commissionHold` entries — never a single-line
+    #    `{ ... }`/`=> ...` ellipsis-block form, so none of it revives the Stdlib.Parsing.Parse_error
+    #    from fix #1 above. Verified against semgrep 1.159.0 with synthetic violations for: dot
+    #    access in `rankTechnicians`, `['commissionHold']`, `["outstandingPaise"]`, a bare
+    #    `holdState` reference, and inside a `.sort()` comparator — see
+    #    `docs/reviews/codex-e21-s04-20260909-0804.md` and the round-1 fix report in
+    #    `.superpowers/sdd/2026-09-08-e21-s04-dues-gated-dispatch/` for the exact commands run
+    #    and their output. `listTechniciansWithHold`'s legitimate `commissionHold.outstandingPaise`
+    #    sort is still exempted by the same `pattern-not-inside` below.
+    patterns:
+      - pattern-not-inside: |
+          async function listTechniciansWithHold(...) {
+            ...
+          }
+      - pattern-either:
+          - patterns:
+              - pattern-inside: |
+                  function rankTechnicians(...) {
+                    ...
+                  }
+              - pattern-either:
+                  - pattern: $X.commissionHold
+                  - pattern: $X.outstandingPaise
+                  - pattern: $X.dueCount
+                  - pattern: $X.holdState
+                  - pattern: $X['commissionHold']
+                  - pattern: $X["commissionHold"]
+                  - pattern: $X['outstandingPaise']
+                  - pattern: $X["outstandingPaise"]
+                  - pattern: $X['dueCount']
+                  - pattern: $X["dueCount"]
+                  - pattern: $X['holdState']
+                  - pattern: $X["holdState"]
+          - patterns:
+              - pattern-inside: |
+                  $A.sort((...) => {
+                    ...
+                  })
+              - pattern-either:
+                  - pattern: $X.commissionHold
+                  - pattern: $X.outstandingPaise
+                  - pattern: $X.dueCount
+                  - pattern: $X.holdState
+                  - pattern: $X['commissionHold']
+                  - pattern: $X["commissionHold"]
+                  - pattern: $X['outstandingPaise']
+                  - pattern: $X["outstandingPaise"]
+                  - pattern: $X['dueCount']
+                  - pattern: $X["dueCount"]
+                  - pattern: $X['holdState']
+                  - pattern: $X["holdState"]
+          - patterns:
+              - pattern-inside: |
+                  $A.sort(function (...) {
+                    ...
+                  })
+              - pattern-either:
+                  - pattern: $X.commissionHold
+                  - pattern: $X.outstandingPaise
+                  - pattern: $X.dueCount
+                  - pattern: $X.holdState
+                  - pattern: $X['commissionHold']
+                  - pattern: $X["commissionHold"]
+                  - pattern: $X['outstandingPaise']
+                  - pattern: $X["outstandingPaise"]
+                  - pattern: $X['dueCount']
+                  - pattern: $X["dueCount"]
+                  - pattern: $X['holdState']
+                  - pattern: $X["holdState"]
+          - patterns:
+              - pattern-inside: |
+                  $A.sort((...) => $BODY)
+              - pattern-either:
+                  - pattern: $X.commissionHold
+                  - pattern: $X.outstandingPaise
+                  - pattern: $X.dueCount
+                  - pattern: $X.holdState
+                  - pattern: $X['commissionHold']
+                  - pattern: $X["commissionHold"]
+                  - pattern: $X['outstandingPaise']
+                  - pattern: $X["outstandingPaise"]
+                  - pattern: $X['dueCount']
+                  - pattern: $X["dueCount"]
+                  - pattern: $X['holdState']
+                  - pattern: $X["holdState"]
+    paths:
+      include:
+        - "api/src/services/dispatcher.service.ts"
+        - "api/src/services/dispatch-eligibility.ts"
+        - "api/src/cosmos/technician-repository.ts"
+    message: |
+      Commission hold state must not influence dispatch ranking — it is an eligibility
+      filter only (ADR-0032, and the same principle as ADR-0011 for decline history).
+      Exclude the technician from the candidate set if they are BLOCKED; never sort,
+      score or order by hold state, outstanding balance or due count.
+    languages: [typescript]
+    severity: ERROR
+
   # E11-S02 — FCM ordering invariant for pending-action projectors.
   #
   # In any trigger-projector-*.ts file, sendFcm (emitFcmForAction) MUST be

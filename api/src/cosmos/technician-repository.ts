@@ -218,21 +218,141 @@ export async function patchTechnicianServiceProfile(
   return result;
 }
 
+export interface DispatchPredicateOptions {
+  /**
+   * Exclude technicians whose commissionHold.state is BLOCKED. Driven by
+   * `holdEnforcementEnabled`; off = dark launch, in which case the caller runs unfiltered and
+   * shadow-logs the would-be exclusions instead (see services/dispatch-eligibility.ts).
+   */
+  excludeBlockedHolds?: boolean;
+  /**
+   * Require both automated KYC steps (DigiLocker Aadhaar + PAN OCR) to have succeeded. Driven by
+   * `enforceKycInDispatch`; off = today's behaviour. See `KYC_VERIFIED_PREDICATE` below for the
+   * two facts this actually checks, and why it does not read `kyc.kycStatus`.
+   */
+  requireKyc?: boolean;
+}
+
+/**
+ * The always-on predicates. `suspended` is a BUG FIX (E21-S04): patchTechnicianAdminFields sets
+ * `suspended:true` and `isOnline:false` together, so a suspended technician was excluded only as
+ * a side effect of being offline — any path that flips isOnline back on silently re-admitted
+ * them to dispatch.
+ *
+ * Every predicate here and below is written `(NOT IS_DEFINED(x) OR x != bad)`. Cosmos evaluates
+ * `!=` against an undefined path to undefined, which drops the row — so a bare `!=` would
+ * silently exclude every legacy document that lacks the field. The IS_DEFINED disjunct IS the
+ * fail-open, and removing it is a dispatch outage.
+ */
+const DISPATCH_BASE_PREDICATES = `ST_WITHIN(c.location, @polygon)
+            AND ARRAY_CONTAINS(c.skills, @serviceId)
+            AND c.isOnline = true
+            AND c.isAvailable = true
+            AND (NOT IS_DEFINED(c.suspended) OR c.suspended != true)`;
+
+const HOLD_NOT_BLOCKED_PREDICATE =
+  `(NOT IS_DEFINED(c.commissionHold.state) OR c.commissionHold.state != 'BLOCKED')`;
+
+/**
+ * KYC-verified means BOTH automated KYC steps have succeeded — the DigiLocker Aadhaar step and
+ * the PAN OCR step — as PRD FR-1.2/FR-3.1 require ("no half-verified dispatches").
+ *
+ * ── Why this reads two facts and not a status ────────────────────────────────────────────────
+ * The obvious implementation is to test `kyc.kycStatus`. Do not. That field is a *progress
+ * marker for a two-step process that is completable in either order*, and a single scalar cannot
+ * express "both done". `submit-aadhaar.ts` sets it to `AADHAAR_DONE`; `submit-pan-ocr.ts` sets it
+ * to `PAN_DONE`; whichever runs LAST wins, and neither endpoint checks that the other has run.
+ * `COMPLETE` — the one value in `KycStatusSchema` that could mean "both done" — has no writer
+ * anywhere in this codebase. So:
+ *   - `kycStatus = 'PAN_DONE'`  admits PAN-only (Aadhaar never done)          → too loose
+ *   - `kycStatus = 'AADHAAR_DONE'` is reached by a fully-verified technician who did PAN first
+ *     and Aadhaar second, because the Aadhaar write overwrote the marker      → too strict
+ * Three consecutive Codex review rounds on this predicate (E21-S04) each found a real defect,
+ * in opposite directions, because each attempt was reading that scalar. Any fourth attempt to
+ * "simplify" this back to a status comparison reintroduces one of those two bugs. Don't.
+ *
+ * ── The two facts ────────────────────────────────────────────────────────────────────────────
+ * Instead, read one independent, per-step fact for each step. Each is written by exactly one
+ * endpoint, and neither endpoint's patch carries the other's keys:
+ *   - `kyc.aadhaarVerified === true` — `submit-aadhaar.ts` writes `true` ONLY after
+ *     `exchangeCodeForAadhaar()` returns a DigiLocker result, and explicitly `false` on failure.
+ *   - `kyc.panHash` present and non-null — `submit-pan-ocr.ts` writes `panHash` ONLY when the
+ *     Form Recognizer read succeeds, and explicitly sets it back to `null` on rejection (so a
+ *     later failed submission revokes an earlier pass; see the "stale masked number" comment
+ *     there). `panHash` rather than `panMaskedNumber` because it is a SHA-256 of a successfully
+ *     extracted PAN and has no legacy predecessor — the legacy fields are `panNumber` /
+ *     `panNumberEncrypted`, which this predicate deliberately does NOT accept as proof.
+ * `upsertKycStatus()` merges `defaults → ...(base.kyc ?? {}) → ...patch`, so each step's fields
+ * survive the other step's write. THAT is what makes this predicate order-independent by
+ * construction rather than by luck — it is true iff both steps have succeeded, in either order,
+ * with retries, and it goes false again if either step is later rejected.
+ *
+ * ── The null trap ────────────────────────────────────────────────────────────────────────────
+ * `IS_DEFINED(c.kyc.panHash)` alone is NOT enough. `upsertKycStatus()` defaults `panHash: null`
+ * into every write, and `submit-pan-ocr.ts` writes an explicit `null` on rejection. Cosmos's
+ * `IS_DEFINED` returns true for a property whose value is `null`, so every technician who has
+ * ever touched the KYC flow — including one whose PAN was rejected — has `panHash` DEFINED.
+ * `NOT IS_NULL(...)` is the clause that actually tests "a PAN was successfully read". Both
+ * halves are load-bearing: `IS_NULL` is false for an *undefined* path too, so `NOT IS_NULL`
+ * alone would admit a technician with no `panHash` key at all.
+ *
+ * ── Fail-open boundary ───────────────────────────────────────────────────────────────────────
+ * The disjunct is `NOT IS_DEFINED(c.kyc)` — the absence of the WHOLE `kyc` sub-object, not the
+ * absence of the two fields. `upsertKycStatus()` is the only writer of `c.kyc` in the codebase,
+ * and it reconstructs from defaults that always include `aadhaarVerified: false` and
+ * `panHash: null`; so any document the KYC flow has ever touched carries both keys, and the two
+ * choices differ only for a document with a `kyc` object written some other way — i.e. a legacy
+ * doc holding, say, `panNumberEncrypted` and nothing else. Such a document carries PARTIAL KYC
+ * information (one step's worth), and partial information must fail CLOSED once the flag is on:
+ * keying on the whole object excludes it, keying on the two fields would wrongly admit it.
+ * A technician with no KYC information at all is still dispatched, exactly like the suspended
+ * and hold predicates above. `docs/runbook.md` carries the precondition query that checks a
+ * target environment for such legacy documents before `enforceKycInDispatch` is switched on.
+ *
+ * ── Cosmos evaluation, hand-traced ───────────────────────────────────────────────────────────
+ * A comparison against an undefined path evaluates to `undefined`, which DROPS the row, and
+ * `false OR undefined` is `undefined` — so the parenthesisation below is what decides whether a
+ * whole class of technicians silently vanishes from dispatch:
+ *   no `kyc` at all                    → true OR …                     → ADMITTED (fail-open)
+ *   `kyc` present, neither field       → false OR (undefined AND false)→ EXCLUDED
+ *   Aadhaar only (panHash null)        → false OR (true AND false)     → EXCLUDED
+ *   PAN only (aadhaarVerified false)   → false OR (false AND …)        → EXCLUDED
+ *   both, either order                 → false OR (true AND true)      → ADMITTED
+ *   PAN rejected after a prior success → panHash back to null          → EXCLUDED
+ *   Aadhaar failed                     → aadhaarVerified false         → EXCLUDED
+ * (Cosmos's ternary table gives `undefined AND false` = `false`, so the second row lands on
+ * EXCLUDED whichever side the engine evaluates first — but `false OR undefined` would be
+ * `undefined`, which also drops the row. Both routes exclude; neither admits.)
+ *
+ * This predicate still does not depend on the KYC endpoints enforcing step order — it does not
+ * need to, because it asserts the two outcomes directly rather than inferring them from a
+ * sequence. Adding step-order enforcement to `submit-pan-ocr.ts` remains a separate follow-up.
+ * See `docs/adr/0032-commission-hold-is-an-eligibility-gate.md` (Consequences — negative) for why
+ * dispatch is the component that ends up defining "KYC verified" for this system at all.
+ */
+const KYC_VERIFIED_PREDICATE =
+  `(NOT IS_DEFINED(c.kyc)
+    OR (c.kyc.aadhaarVerified = true
+        AND IS_DEFINED(c.kyc.panHash) AND NOT IS_NULL(c.kyc.panHash)))`;
+
 export async function getTechniciansWithinRadius(
   lat: number,
   lng: number,
   radiusKm: number,
   serviceId: string,
+  opts: DispatchPredicateOptions = {},
 ): Promise<TechnicianProfile[]> {
   const client = getCosmosClient();
   const container = client.database(DB_NAME).container(CONTAINER);
   const polygon = boundingBoxPolygon(lat, lng, radiusKm);
+
+  const extra: string[] = [];
+  if (opts.excludeBlockedHolds) extra.push(HOLD_NOT_BLOCKED_PREDICATE);
+  if (opts.requireKyc) extra.push(KYC_VERIFIED_PREDICATE);
+
   const query = {
     query: `SELECT * FROM c
-            WHERE ST_WITHIN(c.location, @polygon)
-            AND ARRAY_CONTAINS(c.skills, @serviceId)
-            AND c.isOnline = true
-            AND c.isAvailable = true`,
+            WHERE ${DISPATCH_BASE_PREDICATES}${extra.map((p) => `\n            AND ${p}`).join('')}`,
     parameters: [
       { name: '@polygon', value: polygon as unknown as string },
       { name: '@serviceId', value: serviceId },
@@ -242,6 +362,56 @@ export async function getTechniciansWithinRadius(
     .query<TechnicianProfile>(query)
     .fetchAll();
   return resources;
+}
+
+/**
+ * How many technicians inside the same geo/skill/online/available/not-suspended set are currently
+ * BLOCKED by a commission hold. Called ONLY on the zero-candidate dispatch path, and only when
+ * enforcement is on, so that `DISPATCH_NO_TECHS` can distinguish "nobody covers this area" from
+ * "everyone who covers it owes us money" — with the predicate in the SQL, the excluded rows never
+ * come back and the two are otherwise indistinguishable in the logs.
+ */
+export async function countBlockedInRadius(
+  lat: number,
+  lng: number,
+  radiusKm: number,
+  serviceId: string,
+): Promise<number> {
+  const container = getCosmosClient().database(DB_NAME).container(CONTAINER);
+  const polygon = boundingBoxPolygon(lat, lng, radiusKm);
+  const { resources } = await container.items
+    .query<number>({
+      query: `SELECT VALUE COUNT(1) FROM c
+              WHERE ${DISPATCH_BASE_PREDICATES}
+              AND c.commissionHold.state = 'BLOCKED'`,
+      parameters: [
+        { name: '@polygon', value: polygon as unknown as string },
+        { name: '@serviceId', value: serviceId },
+      ],
+    })
+    .fetchAll();
+  return resources[0] ?? 0;
+}
+
+/**
+ * Point read (single partition) of the two fields an admin reassign audit entry records about
+ * its target: the commission hold and the suspension flag. Both are absent on legacy documents,
+ * which reads as `hold: null, suspended: false` — the audit entry then records "no hold known",
+ * which is exactly true.
+ */
+export async function readTechnicianGateState(
+  technicianId: string,
+): Promise<{ exists: boolean; hold: CommissionHold | null; suspended: boolean }> {
+  const container = getCosmosClient().database(DB_NAME).container(CONTAINER);
+  const { resource } = await container
+    .item(technicianId, technicianId)
+    .read<{ commissionHold?: CommissionHold; suspended?: boolean }>();
+  if (!resource) return { exists: false, hold: null, suspended: false };
+  return {
+    exists: true,
+    hold: resource.commissionHold ?? null,
+    suspended: resource.suspended === true,
+  };
 }
 
 export interface TechnicianLookupInfo {
@@ -579,6 +749,9 @@ function toHoldItem(r: TechnicianWithHoldRow): { id: string; name?: string; comm
  * whole roster at once. Sorted by outstandingPaise desc within the page only — no composite
  * index required; ordering across pages is not guaranteed.
  */
+// SEMGREP-JUSTIFIED: cross-partition by design — a paged admin-only roster view. No caller in
+// api/src/functions/ today (the dashboard uses listAllTechniciansWithHold); any future caller
+// must carry requireAdmin, which the Layer-2 caller-scope test enforces.
 export async function listTechniciansWithHold(continuationToken?: string): Promise<{
   items: Array<{ id: string; name?: string; commissionHold: CommissionHold }>;
   continuationToken?: string;
@@ -599,6 +772,9 @@ export async function listTechniciansWithHold(continuationToken?: string): Promi
  * single page — a technician whose balance just dropped to zero must still be found here so it
  * can be recomputed down to CLEAR/0.
  */
+// SEMGREP-JUSTIFIED: cross-partition by design — the hold sweep and the reconciliation summary
+// need the whole roster. Callers are requireAdmin handlers or the app.timer reconciler; the query
+// takes no parameters at all, so no user input can reach it.
 export async function listAllTechniciansWithHold(): Promise<
   Array<{ id: string; name?: string; commissionHold: CommissionHold }>
 > {
@@ -619,6 +795,8 @@ export async function listAllTechniciansWithHold(): Promise<
  * touches that technician's receivables and triggers a recompute, silently under-enforcing a hold
  * that should have resumed.
  */
+// SEMGREP-JUSTIFIED: cross-partition by design — drives the reconciler's EXPIRED_OVERRIDES sweep.
+// Sole caller is the app.timer reconciler; the only parameter is a server-generated timestamp.
 export async function listTechniciansWithExpiredOverride(nowIso: string): Promise<string[]> {
   const container = getCosmosClient().database(DB_NAME).container(CONTAINER);
   const iterator = container.items.query<{ id: string }>(
