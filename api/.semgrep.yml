@@ -55,6 +55,113 @@ rules:
     languages: [typescript]
     severity: ERROR
 
+  # E21-S04 / ADR-0032 — commission hold is an ELIGIBILITY FILTER, never a ranking input.
+  #
+  # Same principle as karnataka-no-decline-in-dispatcher above, different field. A technician
+  # who owes commission may be excluded from the candidate set; they must never be sorted
+  # lower within it. Ranking is distance, then rating. Nothing else.
+  #
+  # Companion enforcement:
+  #   - api/tests/unit/dispatch-ranking-invariance.test.ts (runtime gate)
+  #   - api/src/services/dispatch-eligibility.ts (structural: the only hold-aware module)
+  #   - docs/adr/0032-commission-hold-is-an-eligibility-gate.md
+  #
+  # Note: semgrep-action@v1 treats every finding as blocking regardless of declared severity
+  # (see the comment in api/tests/cosmos/cross-partition-tenant-filter.test.ts). That is the
+  # intended behaviour for this rule.
+  - id: no-commission-hold-in-ranking
+    # Note: patterns are written as multi-line `{ ... }` blocks, not the single-line
+    # `{ ... $X.f ... }` form — the single-line form is rejected by the semgrep 1.x
+    # TypeScript pattern parser (Stdlib.Parsing.Parse_error), and with --error that fails
+    # the WHOLE rule (exit 2), not just the one pattern. The concise arrow-body form
+    # (no braces) is written with the deep-expression operator `<... ... ...>` — neither
+    # `=> ... $X.f ...` nor its multi-line equivalent parses at all in this semgrep
+    # version, on one line or several; `<... ... ...>` is the supported way to say "this
+    # expression contains X anywhere". All of the above verified against local semgrep
+    # 1.159.0 (findings on synthetic violations, zero findings on the current tree).
+    pattern-either:
+      - pattern: |
+          function rankTechnicians(...) {
+            ...
+            $X.commissionHold
+            ...
+          }
+      - pattern: |
+          function rankTechnicians(...) {
+            ...
+            $X.outstandingPaise
+            ...
+          }
+      - pattern: |
+          function rankTechnicians(...) {
+            ...
+            $X.dueCount
+            ...
+          }
+      - pattern: |
+          $A.sort((...) => {
+            ...
+            $X.commissionHold
+            ...
+          })
+      - pattern: |
+          $A.sort((...) => {
+            ...
+            $X.outstandingPaise
+            ...
+          })
+      - pattern: |
+          $A.sort((...) => {
+            ...
+            $X.dueCount
+            ...
+          })
+      - pattern: |
+          $A.sort(function (...) {
+            ...
+            $X.commissionHold
+            ...
+          })
+      - pattern: |
+          $A.sort(function (...) {
+            ...
+            $X.outstandingPaise
+            ...
+          })
+      - pattern: |
+          $A.sort(function (...) {
+            ...
+            $X.dueCount
+            ...
+          })
+      - pattern: |
+          $A.sort((...) => <... $X.commissionHold ...>)
+      - pattern: |
+          $A.sort((...) => <... $X.outstandingPaise ...>)
+      - pattern: |
+          $A.sort((...) => <... $X.dueCount ...>)
+    # api/src/cosmos/technician-repository.ts is deliberately NOT included here. It hosts
+    # listTechniciansWithHold() (Task 10 admin dashboard), which legitimately reads and
+    # sorts commissionHold/outstandingPaise for an admin listing view — verified against
+    # local semgrep 1.159.0, the patterns above fire on that exact function (line ~677)
+    # because they are not scoped to rankTechnicians. That is a real, unrelated feature,
+    # not a dispatch-ranking leak, so including this file would make the rule permanently
+    # red. The dispatch-candidate SQL query in this file (getTechniciansWithinRadius) is a
+    # string, not an AST sort/function shape, so these patterns could not have covered it
+    # anyway — structural correctness there is dispatch-eligibility.ts's job per its own
+    # doc comment ("the ONLY place dispatch learns about commission holds").
+    paths:
+      include:
+        - "api/src/services/dispatcher.service.ts"
+        - "api/src/services/dispatch-eligibility.ts"
+    message: |
+      Commission hold state must not influence dispatch ranking — it is an eligibility
+      filter only (ADR-0032, and the same principle as ADR-0011 for decline history).
+      Exclude the technician from the candidate set if they are BLOCKED; never sort,
+      score or order by hold state, outstanding balance or due count.
+    languages: [typescript]
+    severity: ERROR
+
   # E11-S02 — FCM ordering invariant for pending-action projectors.
   #
   # In any trigger-projector-*.ts file, sendFcm (emitFcmForAction) MUST be
