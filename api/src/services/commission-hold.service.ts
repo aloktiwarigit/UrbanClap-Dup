@@ -6,6 +6,7 @@ import {
   readCommissionHold,
 } from '../cosmos/technician-repository.js';
 import { getCommissionConfig } from './commission-config.service.js';
+import type { EffectiveCommissionConfig } from '../schemas/commission-config.js';
 import type { CommissionHold, HoldState } from '../schemas/technician.js';
 
 /**
@@ -44,10 +45,16 @@ export function evaluateState(
  * whether the current hold's override is still active and to evaluate the resulting state — so
  * an override that expires between the read and the evaluation is judged consistently in both
  * places rather than being preserved in the data but ignored in the state (or vice versa).
+ *
+ * The `cfg` actually used is returned alongside the hold. `getCommissionConfig` is TTL-cached
+ * (5 minutes, no write-invalidation), so a caller that re-read it would sometimes get a different
+ * threshold than the one this evaluation used — and a caller that reports a threshold to a user
+ * (the accept gate's 403) must report the threshold that produced the verdict, not a later one.
+ * Returning it removes the possibility of that disagreement rather than narrowing it.
  */
 export async function computeCommissionHold(
   technicianId: string,
-): Promise<{ hold: CommissionHold; readStartedAt: string } | null> {
+): Promise<{ hold: CommissionHold; readStartedAt: string; cfg: EffectiveCommissionConfig } | null> {
   const readStartedAt = new Date().toISOString();
   const [rows, cfg, current] = await Promise.all([
     commissionReceivableRepo.getOutstandingByTechnician(technicianId),
@@ -71,7 +78,7 @@ export async function computeCommissionHold(
     evaluatedAt: evaluationNowIso,
     ...(override ? { override } : {}),
   };
-  return { hold, readStartedAt };
+  return { hold, readStartedAt, cfg };
 }
 
 /**
@@ -176,6 +183,11 @@ async function collectFullScopeIds(): Promise<string[]> {
  * succeed; it does NOT mean the technician should be told they owe money, nor that their offer
  * should be destroyed. The handler maps INDETERMINATE to 503 and leaves the dispatch attempt
  * PENDING so the technician can retry inside the offer window — see ADR-0032.
+ *
+ * SECURITY: `INDETERMINATE.reason` is a SERVER-SIDE diagnostic. It carries the raw error message
+ * from whichever read failed, which for a Cosmos failure can include account, container, activity
+ * id and query text. It MUST NOT be echoed to a client. The handler returns a fixed
+ * `{ code: 'HOLD_CHECK_UNAVAILABLE' }` and logs `reason` instead.
  */
 export type AcceptGateResult =
   | { decision: 'ALLOW' }
@@ -197,27 +209,31 @@ export type AcceptGateResult =
  *   - enforcement ON  → fail CLOSED. BLOCKED blocks; anything indeterminate also refuses, but as
  *     INDETERMINATE rather than as a false accusation of debt.
  *
- * Every read is individually guarded. The config is read twice — once to learn whether
- * enforcement is on, once after the compute to report `blockThresholdPaise` (normally the same
- * 5-minute cache entry, and re-read rather than reused so the number reported matches the one
- * `computeCommissionHold` just evaluated against). The second read is allowed to fail: it falls
- * back to the first read's snapshot, because an unhandled rejection there would make the
- * enforcement-OFF path throw, which is exactly what a dark launch must never do.
+ * The config is read exactly twice, and only the first read is this function's own: once here to
+ * learn whether enforcement is on, and once inside `computeCommissionHold`. The threshold
+ * reported to the technician comes from THAT second one — the config the verdict was actually
+ * computed against — because `getCommissionConfig` is TTL-cached with no write-invalidation, so a
+ * third read could return a threshold no verdict was ever evaluated against and put a number in
+ * the 403 that is not the limit that blocked them. Both reads are guarded: an unhandled rejection
+ * would make the enforcement-OFF path throw, which is exactly what a dark launch must never do.
  */
 export async function assertCanAccept(technicianId: string): Promise<AcceptGateResult> {
   // Enforcement can only be ON if we positively read that it is ON. An unreadable config is
   // treated as the dark-launch default (OFF), which allows.
-  const configSnapshot = await getCommissionConfig().catch(() => null);
-  if (!configSnapshot) return { decision: 'ALLOW' };
-  const enforcementEnabled = configSnapshot.holdEnforcementEnabled;
+  const enforcementProbe = await getCommissionConfig().catch(() => null);
+  if (!enforcementProbe) return { decision: 'ALLOW' };
+  const enforcementEnabled = enforcementProbe.holdEnforcementEnabled;
 
   let computed: Awaited<ReturnType<typeof computeCommissionHold>>;
   try {
     computed = await computeCommissionHold(technicianId);
   } catch (err: unknown) {
-    if (!enforcementEnabled) return { decision: 'ALLOW' };
     const reason = err instanceof Error ? err.message : String(err);
+    // Logged unconditionally, including while enforcement is off: server-side logging is not
+    // user-visible, so it does not breach the dark-launch contract, and the failure rate of these
+    // reads during the dark launch is exactly the number needed before flipping the flag.
     console.error(`ACCEPT_HOLD_CHECK_FAILED technicianId=${technicianId} reason=${reason}`);
+    if (!enforcementEnabled) return { decision: 'ALLOW' };
     return { decision: 'INDETERMINATE', reason };
   }
 
@@ -226,8 +242,7 @@ export async function assertCanAccept(technicianId: string): Promise<AcceptGateR
     return { decision: 'INDETERMINATE', reason: 'TECHNICIAN_NOT_FOUND' };
   }
 
-  const { hold } = computed;
-  const cfg = (await getCommissionConfig().catch(() => null)) ?? configSnapshot;
+  const { hold, cfg } = computed;
 
   if (!enforcementEnabled) {
     if (hold.state === 'BLOCKED') {
