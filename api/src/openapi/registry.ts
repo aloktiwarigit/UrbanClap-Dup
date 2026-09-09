@@ -341,8 +341,9 @@ registry.registerPath({
   summary: 'Reveal the full phone number for one party on an order',
   description:
     'The only endpoint that returns an unmasked phone number. Restricted to super-admin and '
-    + 'ops-manager, rate-limited to 30 reveals per minute per admin, and audit-logged as '
-    + 'PII_CONTACT_REVEALED (ADR 0034).',
+    + 'ops-manager, rate-limited to 30 reveals per minute per admin and 50 per rolling 24 hours '
+    + 'per admin, and audit-logged as PII_CONTACT_REVEALED (success) or PII_CONTACT_REVEAL_DENIED '
+    + '(rate-limit denial). See ADR 0034.',
   parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
   request: { body: { content: { 'application/json': { schema: RevealContactBodySchema } } } },
   responses: {
@@ -351,7 +352,7 @@ registry.registerPath({
     403: { description: 'Forbidden' },
     404: { description: 'Order not found, party not on the order, or no number on file' },
     422: { description: 'Invalid party' },
-    429: { description: 'Reveal budget exhausted for this admin' },
+    429: { description: 'Rate limit exceeded: either per-minute budget (RATE_LIMITED) or daily budget (RATE_LIMITED_DAILY) exhausted' },
     502: { description: 'Contact lookup backend failed' },
     503: { description: 'Rate-limit budget could not be established; the endpoint fails closed' },
   },

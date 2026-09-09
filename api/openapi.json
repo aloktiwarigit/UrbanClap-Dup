@@ -4554,7 +4554,7 @@
           }
         ],
         "summary": "Reveal the full phone number for one party on an order",
-        "description": "The only endpoint that returns an unmasked phone number. Restricted to super-admin and ops-manager, rate-limited to 30 reveals per minute per admin, and audit-logged as PII_CONTACT_REVEALED (ADR 0034).",
+        "description": "The only endpoint that returns an unmasked phone number. Restricted to super-admin and ops-manager, rate-limited to 30 reveals per minute per admin and 50 per rolling 24 hours per admin, and audit-logged as PII_CONTACT_REVEALED (success) or PII_CONTACT_REVEAL_DENIED (rate-limit denial). See ADR 0034.",
         "parameters": [
           {
             "name": "id",
@@ -4631,7 +4631,7 @@
             "description": "Invalid party"
           },
           "429": {
-            "description": "Reveal budget exhausted for this admin"
+            "description": "Rate limit exceeded: either per-minute budget (RATE_LIMITED) or daily budget (RATE_LIMITED_DAILY) exhausted"
           },
           "502": {
             "description": "Contact lookup backend failed"
