@@ -53,14 +53,25 @@ The candidate set is filtered by:
 - **KYC-verified — only when the operator has this enabled.** When enabled
   (`enforceKycInDispatch` on the `system/commission-config` document), a technician whose KYC
   flow has not reached full completion is excluded from the candidate set. "Full completion"
-  means the nested KYC record's status is `PAN_DONE` or `COMPLETE` — the terminal state of the
-  Aadhaar-then-PAN DigiLocker/OCR flow described in FR-1.2, matching FR-3.1's "no half-verified
-  dispatches" requirement. **This filter is off by default**, so today it excludes nobody — KYC
-  currently plays no part in dispatch. A technician who has never had any KYC information
-  recorded at all is never excluded by this check, whether the flag is on or off; only a
-  technician with an explicit, not-yet-complete KYC status is affected once the flag is switched
-  on. (This bullet was corrected after an external review caught the original implementation
-  reading a different, unmaintained field — see ADR-0032's "Corrected after Codex review" note.)
+  means the nested KYC record's status has reached the terminal state of the Aadhaar-then-PAN
+  DigiLocker/OCR flow described in FR-1.2, and the technician's Aadhaar step is not on record as
+  explicitly failed or never done. **This filter is off by default**, so today it excludes
+  nobody — KYC currently plays no part in dispatch. A technician who has never had any KYC
+  information recorded at all is never excluded by this check, whether the flag is on or off;
+  only a technician with an explicit, not-yet-complete KYC status is affected once the flag is
+  switched on. (This bullet was corrected after an external review caught the original
+  implementation reading a different, unmaintained field — see ADR-0032's "Corrected after Codex
+  review" note.)
+  This check reads only the status the system has recorded for each step; it does not itself
+  confirm the two verification steps happened in the correct order. The system's Aadhaar and PAN
+  submission endpoints do not currently enforce that the identity step must be completed before
+  the tax-ID step is accepted, so in principle a technician could reach the PAN-recorded state
+  without the Aadhaar step ever having succeeded. This filter is written to still exclude that
+  specific case — an on-record Aadhaar failure blocks the technician even if the PAN step
+  separately succeeded — but it relies on how today's data happens to be written, not on an
+  enforced order of operations. See ADR-0032 (Consequences — negative) and the runbook for the
+  residual risk and the operational precondition that must be verified before this filter is
+  switched on in production.
 - **Not currently blocked by an unpaid commission balance — only when the operator has this
   enabled.** When enabled (`holdEnforcementEnabled` on the `system/commission-config` document),
   a technician whose cached `commissionHold.state` is `BLOCKED` is excluded from the candidate

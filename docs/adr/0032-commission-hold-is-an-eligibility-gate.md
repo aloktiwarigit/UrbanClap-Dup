@@ -93,7 +93,9 @@ flagged hold predicate, the flagged KYC predicate — is written as a disjunctio
 ```sql
 (NOT IS_DEFINED(c.suspended) OR c.suspended != true)
 (NOT IS_DEFINED(c.commissionHold.state) OR c.commissionHold.state != 'BLOCKED')
-(NOT IS_DEFINED(c.kyc.kycStatus) OR c.kyc.kycStatus IN ('PAN_DONE', 'COMPLETE'))
+(NOT IS_DEFINED(c.kyc.kycStatus)
+  OR (c.kyc.kycStatus IN ('PAN_DONE', 'COMPLETE')
+      AND (NOT IS_DEFINED(c.kyc.aadhaarVerified) OR c.kyc.aadhaarVerified = true)))
 ```
 
 **Corrected after Codex review (round 1):** the KYC predicate originally read the top-level
@@ -108,8 +110,19 @@ silently excluded every technician who had made real KYC progress and ever patch
 while admitting anyone who simply never touched their profile. See the `KYC_VERIFIED_PREDICATE`
 comment in `api/src/cosmos/technician-repository.ts` for the full derivation, including why
 `PAN_DONE` (today's terminal status of the two-step Aadhaar-then-PAN flow) and `COMPLETE` (a
-reserved future terminal status) are the two values that mean "fully verified," per PRD
-FR-1.2/FR-3.1 ("no half-verified dispatches").
+reserved future terminal status) are the two values the predicate treats as verified.
+
+**Re-review finding, same story: `kycStatus` reaching `PAN_DONE` is not proof both steps
+happened, because nothing enforces that they happen in order.** `submit-pan-ocr.ts` writes
+`kyc.kycStatus = 'PAN_DONE'` on a successful OCR read unconditionally — it does not check that
+`kyc.aadhaarVerified` was already `true`, so a technician who calls the PAN endpoint without ever
+completing Aadhaar reaches `PAN_DONE` with `aadhaarVerified` still `false`. The predicate above
+was tightened to add `AND (NOT IS_DEFINED(c.kyc.aadhaarVerified) OR c.kyc.aadhaarVerified = true)`
+— excluding a technician whose Aadhaar step is on record as explicitly failed, while still
+admitting one where the field is simply absent (fail-open, same reasoning as every other
+predicate in this ADR). This closes the specific PAN-without-Aadhaar gap using today's data
+shape, but it does not make the claim "no half-verified dispatches" (PRD FR-1.2/FR-3.1) an
+enforced invariant — see Consequences (negative) below.
 
 **This is the single most important sentence in this ADR: Cosmos evaluates `!=` (and most other
 comparison operators) against an undefined path as `undefined`, and `undefined` is falsy in a
@@ -353,6 +366,19 @@ lacked it.
 - **`listTechniciansWithHold` is an unused export** left over from E21-S02 — added "for the admin
   dashboard," which in fact uses `listAllTechniciansWithHold`. Not removed here: deleting an
   exported function is a behaviour change on E21-S02's surface and out of this story's scope.
+- **The KYC endpoints do not enforce step ordering, so a `kycStatus` of `PAN_DONE`/`COMPLETE` is
+  not proof a technician actually completed a valid Aadhaar-then-PAN sequence.**
+  `submit-pan-ocr.ts` accepts a PAN OCR submission and writes `kyc.kycStatus = 'PAN_DONE'`
+  regardless of whether `submit-aadhaar.ts` was ever called for that technician. The dispatch
+  predicate above closes the one exploitable shape this produces today (Aadhaar on record as
+  explicitly failed) by also checking `aadhaarVerified`, but that is a data-shape correction, not
+  an ordering guarantee: it works only because `upsertKycStatus()` happens to default
+  `aadhaarVerified` to `false` on every write. If the KYC endpoints or their persistence shape
+  ever change without preserving that default, this gate stops being reliable and nothing in the
+  KYC flow itself would catch it. Fixing step-order enforcement inside `submit-pan-ocr.ts` is
+  explicitly out of scope for this story (it is a behaviour change to someone else's endpoint);
+  see the runbook for the precondition this creates before `enforceKycInDispatch` may be switched
+  on.
 
 **Neutral:**
 - `enforceKycInDispatch` ships fully implemented (a `requireKyc` predicate option, identical

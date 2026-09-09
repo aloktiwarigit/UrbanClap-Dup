@@ -286,9 +286,32 @@ const HOLD_NOT_BLOCKED_PREDICATE =
  * has no `kyc` sub-object at all and when it has one but `kycStatus` is absent from it — either
  * way, a technician with zero KYC information on file is still dispatched, exactly like the
  * hold and suspended predicates above.
+ *
+ * Second clause (E21-S04 re-review fix): `kycStatus IN ('PAN_DONE', 'COMPLETE')` alone is not
+ * proof both steps happened. `submit-pan-ocr.ts` writes `kyc.kycStatus = 'PAN_DONE'` on OCR
+ * success unconditionally — it never checks that `kyc.aadhaarVerified` was already `true`, so a
+ * technician who calls the PAN endpoint without ever completing Aadhaar reaches `PAN_DONE` with
+ * `aadhaarVerified` still `false`. This predicate additionally requires
+ * `NOT IS_DEFINED(c.kyc.aadhaarVerified) OR c.kyc.aadhaarVerified = true`, i.e. it excludes a
+ * technician whose Aadhaar step is *explicitly* `false` but admits one where the field is simply
+ * absent. Absence is not a real production case today — `upsertKycStatus()` has defaulted
+ * `aadhaarVerified: false` into every write since the KYC feature's first commit, so any document
+ * with `kyc.kycStatus` defined also has `kyc.aadhaarVerified` defined — but the disjunct is kept
+ * for the same fail-open reason as every other predicate here: a legacy or future document
+ * missing the field must not be silently dropped from dispatch.
+ *
+ * This predicate does NOT rely on the KYC endpoints enforcing step order, because they don't:
+ * `submit-pan-ocr.ts` has no dependency on `submit-aadhaar.ts` having run first. The exclusion
+ * above works only because `aadhaarVerified` happens to still read `false` in that case — it is
+ * a data-shape check, not a guarantee that the two steps were completed in sequence. See
+ * `docs/adr/0032-commission-hold-is-an-eligibility-gate.md` (Consequences — negative) and
+ * `docs/runbook.md` for the residual risk and the operational precondition before
+ * `enforceKycInDispatch` goes live.
  */
 const KYC_VERIFIED_PREDICATE =
-  `(NOT IS_DEFINED(c.kyc.kycStatus) OR c.kyc.kycStatus IN ('PAN_DONE', 'COMPLETE'))`;
+  `(NOT IS_DEFINED(c.kyc.kycStatus)
+    OR (c.kyc.kycStatus IN ('PAN_DONE', 'COMPLETE')
+        AND (NOT IS_DEFINED(c.kyc.aadhaarVerified) OR c.kyc.aadhaarVerified = true)))`;
 
 export async function getTechniciansWithinRadius(
   lat: number,

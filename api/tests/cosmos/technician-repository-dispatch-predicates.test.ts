@@ -65,9 +65,12 @@ describe('getTechniciansWithinRadius predicates', () => {
     // Nested field the KYC flow actually maintains (upsertKycStatus writes kyc.kycStatus, never
     // the top-level c.kycStatus — see the KYC_VERIFIED_PREDICATE comment in
     // technician-repository.ts for the full derivation). Codex E21-S04 round-1 finding.
-    expect(on.query).toContain(
-      "NOT IS_DEFINED(c.kyc.kycStatus) OR c.kyc.kycStatus IN ('PAN_DONE', 'COMPLETE')",
-    );
+    expect(on.query).toContain("NOT IS_DEFINED(c.kyc.kycStatus)");
+    expect(on.query).toContain("c.kyc.kycStatus IN ('PAN_DONE', 'COMPLETE')");
+    // Re-review fix: kycStatus alone is not proof the Aadhaar step happened (submit-pan-ocr.ts
+    // writes PAN_DONE unconditionally). The predicate must also gate on aadhaarVerified, fail-open
+    // on absence and fail-closed on an explicit false.
+    expect(on.query).toContain('NOT IS_DEFINED(c.kyc.aadhaarVerified) OR c.kyc.aadhaarVerified = true');
     // Guard against regressing back to the wrong (unmaintained, dead) top-level field.
     expect(on.query).not.toContain("c.kycStatus = 'APPROVED'");
   });
@@ -79,19 +82,23 @@ describe('getTechniciansWithinRadius predicates', () => {
      * of the second disjunct. A present path must satisfy the IN-list. This mirrors that exact
      * boolean shape in JS so the fail-open/fail-closed behaviour has a real assertion beyond
      * string-containment on the SQL text above — it is not a re-implementation of business
-     * logic, just the two-branch boolean Cosmos itself evaluates.
+     * logic, just the boolean Cosmos itself evaluates, including the aadhaarVerified gate added
+     * by the E21-S04 re-review (PAN-without-Aadhaar sequencing gap).
      */
-    function kycPredicatePasses(doc: { kyc?: { kycStatus?: string } }): boolean {
+    function kycPredicatePasses(doc: { kyc?: { kycStatus?: string; aadhaarVerified?: boolean } }): boolean {
       const status = doc.kyc?.kycStatus;
-      return status === undefined || status === 'PAN_DONE' || status === 'COMPLETE';
+      if (status === undefined) return true;
+      if (status !== 'PAN_DONE' && status !== 'COMPLETE') return false;
+      const aadhaar = doc.kyc?.aadhaarVerified;
+      return aadhaar === undefined || aadhaar === true;
     }
 
-    it('dispatches a technician verified via the nested field (PAN_DONE)', () => {
-      expect(kycPredicatePasses({ kyc: { kycStatus: 'PAN_DONE' } })).toBe(true);
+    it('dispatches a technician verified via the nested field (PAN_DONE, aadhaarVerified true)', () => {
+      expect(kycPredicatePasses({ kyc: { kycStatus: 'PAN_DONE', aadhaarVerified: true } })).toBe(true);
     });
 
-    it('dispatches a technician verified via the nested field (COMPLETE)', () => {
-      expect(kycPredicatePasses({ kyc: { kycStatus: 'COMPLETE' } })).toBe(true);
+    it('dispatches a technician verified via the nested field (COMPLETE, aadhaarVerified true)', () => {
+      expect(kycPredicatePasses({ kyc: { kycStatus: 'COMPLETE', aadhaarVerified: true } })).toBe(true);
     });
 
     it('excludes a technician explicitly not yet verified (MANUAL_REVIEW)', () => {
@@ -112,6 +119,19 @@ describe('getTechniciansWithinRadius predicates', () => {
 
     it('FAIL-OPEN: dispatches a technician with a kyc sub-object but no kycStatus field', () => {
       expect(kycPredicatePasses({ kyc: {} })).toBe(true);
+    });
+
+    it('FAIL-CLOSED (E21-S04 re-review): excludes PAN_DONE with aadhaarVerified explicitly false '
+      + '(submit-pan-ocr.ts called without ever completing Aadhaar)', () => {
+      expect(kycPredicatePasses({ kyc: { kycStatus: 'PAN_DONE', aadhaarVerified: false } })).toBe(false);
+    });
+
+    it('FAIL-OPEN (E21-S04 re-review): admits PAN_DONE with aadhaarVerified absent (legacy doc)', () => {
+      expect(kycPredicatePasses({ kyc: { kycStatus: 'PAN_DONE' } })).toBe(true);
+    });
+
+    it('FAIL-OPEN (E21-S04 re-review): admits COMPLETE with aadhaarVerified absent (legacy doc)', () => {
+      expect(kycPredicatePasses({ kyc: { kycStatus: 'COMPLETE' } })).toBe(true);
     });
   });
 

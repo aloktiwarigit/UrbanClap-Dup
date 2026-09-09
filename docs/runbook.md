@@ -1641,6 +1641,36 @@ accept refusal), not the ledger math.
    5-minute config-cache propagation delay on the dispatch side). No data migration, no code
    change, no redeploy.
 
+### Precondition before flipping `enforceKycInDispatch`
+
+`enforceKycInDispatch` gates dispatch on `kyc.kycStatus` reaching `PAN_DONE`/`COMPLETE` with
+`kyc.aadhaarVerified` not on record as explicitly `false` (see ADR-0032, "Re-review finding" in
+the asymmetric-fail-directions section). **This is a data-shape check, not an enforced
+Aadhaar-then-PAN sequence.** `api/src/functions/kyc/submit-pan-ocr.ts` writes
+`kyc.kycStatus = 'PAN_DONE'` on a successful OCR read unconditionally — it does not check that
+`submit-aadhaar.ts` was ever called for that technician first. The dispatch predicate closes the
+one exploitable case this produces today only because `upsertKycStatus()` happens to default
+`aadhaarVerified` to `false` on every write; it is not a guarantee that KYC steps happen in
+order, because the KYC endpoints don't enforce that order.
+
+**Before flipping `enforceKycInDispatch` to `true` in production, one of the following must be
+true:**
+
+- Step-order enforcement has been added to `submit-pan-ocr.ts` (rejecting a PAN submission unless
+  `kyc.aadhaarVerified === true` already), closing the gap at the source instead of relying on the
+  dispatch-side data-shape check; **or**
+- An explicit owner decision accepts the residual risk as-is, having confirmed (query the
+  `technicians` container) that no technician in the target environment currently has
+  `kyc.kycStatus IN ('PAN_DONE', 'COMPLETE')` with `kyc.aadhaarVerified` absent or `true` despite
+  never having a successful `AADHAAR` entry in the KYC audit log
+  (`kycAuditEntry(technicianId, 'AADHAAR', 'VERIFIED')` — see `services/kycAudit.service.ts`) —
+  i.e. that today's data does not already contain a PAN-without-Aadhaar technician who would be
+  wrongly admitted.
+
+This precondition was not fixed as part of E21-S04 — enforcing step order inside
+`submit-pan-ocr.ts` is a behaviour change to a different endpoint and was ruled out of scope for
+that story. Treat it as an open item for whoever next scopes `enforceKycInDispatch`'s rollout.
+
 ### Timers
 
 | Timer | Schedule | Does |
