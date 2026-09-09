@@ -93,8 +93,23 @@ flagged hold predicate, the flagged KYC predicate — is written as a disjunctio
 ```sql
 (NOT IS_DEFINED(c.suspended) OR c.suspended != true)
 (NOT IS_DEFINED(c.commissionHold.state) OR c.commissionHold.state != 'BLOCKED')
-(NOT IS_DEFINED(c.kycStatus) OR c.kycStatus = 'APPROVED')
+(NOT IS_DEFINED(c.kyc.kycStatus) OR c.kyc.kycStatus IN ('PAN_DONE', 'COMPLETE'))
 ```
+
+**Corrected after Codex review (round 1):** the KYC predicate originally read the top-level
+`c.kycStatus` field for `= 'APPROVED'`. That field is never actually written with the value
+`'APPROVED'` by any code path in this codebase — the real KYC flow (`upsertKycStatus`, called
+only from `POST /v1/kyc/aadhaar` and `POST /v1/kyc/pan-ocr`) writes exclusively to the nested
+`kyc.kycStatus` sub-field, using the wider `KycStatusSchema` vocabulary (`PENDING`,
+`AADHAAR_DONE`, `PAN_DONE`, `COMPLETE`, `PENDING_MANUAL`, `MANUAL_REVIEW`). The top-level field is
+set only incidentally by `patchTechnicianServiceProfile`, which mirrors whatever the nested value
+happens to be without translating it — so once enabled, the original predicate would have
+silently excluded every technician who had made real KYC progress and ever patched their profile,
+while admitting anyone who simply never touched their profile. See the `KYC_VERIFIED_PREDICATE`
+comment in `api/src/cosmos/technician-repository.ts` for the full derivation, including why
+`PAN_DONE` (today's terminal status of the two-step Aadhaar-then-PAN flow) and `COMPLETE` (a
+reserved future terminal status) are the two values that mean "fully verified," per PRD
+FR-1.2/FR-3.1 ("no half-verified dispatches").
 
 **This is the single most important sentence in this ADR: Cosmos evaluates `!=` (and most other
 comparison operators) against an undefined path as `undefined`, and `undefined` is falsy in a

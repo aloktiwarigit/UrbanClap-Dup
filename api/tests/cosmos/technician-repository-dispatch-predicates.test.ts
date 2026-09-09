@@ -62,7 +62,57 @@ describe('getTechniciansWithinRadius predicates', () => {
 
     const on = mockQuery([]);
     await getTechniciansWithinRadius(12.97, 77.59, 10, 'svc-plumbing', { requireKyc: true });
-    expect(on.query).toContain("NOT IS_DEFINED(c.kycStatus) OR c.kycStatus = 'APPROVED'");
+    // Nested field the KYC flow actually maintains (upsertKycStatus writes kyc.kycStatus, never
+    // the top-level c.kycStatus — see the KYC_VERIFIED_PREDICATE comment in
+    // technician-repository.ts for the full derivation). Codex E21-S04 round-1 finding.
+    expect(on.query).toContain(
+      "NOT IS_DEFINED(c.kyc.kycStatus) OR c.kyc.kycStatus IN ('PAN_DONE', 'COMPLETE')",
+    );
+    // Guard against regressing back to the wrong (unmaintained, dead) top-level field.
+    expect(on.query).not.toContain("c.kycStatus = 'APPROVED'");
+  });
+
+  describe('KYC predicate fail-open semantics (mirrors Cosmos evaluation of the SQL text above)', () => {
+    /**
+     * Cosmos evaluates `(NOT IS_DEFINED(path) OR path IN (...))` by short-circuiting: an absent
+     * path makes `IS_DEFINED` false, so `NOT IS_DEFINED` is true and the row passes regardless
+     * of the second disjunct. A present path must satisfy the IN-list. This mirrors that exact
+     * boolean shape in JS so the fail-open/fail-closed behaviour has a real assertion beyond
+     * string-containment on the SQL text above — it is not a re-implementation of business
+     * logic, just the two-branch boolean Cosmos itself evaluates.
+     */
+    function kycPredicatePasses(doc: { kyc?: { kycStatus?: string } }): boolean {
+      const status = doc.kyc?.kycStatus;
+      return status === undefined || status === 'PAN_DONE' || status === 'COMPLETE';
+    }
+
+    it('dispatches a technician verified via the nested field (PAN_DONE)', () => {
+      expect(kycPredicatePasses({ kyc: { kycStatus: 'PAN_DONE' } })).toBe(true);
+    });
+
+    it('dispatches a technician verified via the nested field (COMPLETE)', () => {
+      expect(kycPredicatePasses({ kyc: { kycStatus: 'COMPLETE' } })).toBe(true);
+    });
+
+    it('excludes a technician explicitly not yet verified (MANUAL_REVIEW)', () => {
+      expect(kycPredicatePasses({ kyc: { kycStatus: 'MANUAL_REVIEW' } })).toBe(false);
+    });
+
+    it('excludes a technician who has only completed the Aadhaar step (AADHAAR_DONE)', () => {
+      expect(kycPredicatePasses({ kyc: { kycStatus: 'AADHAAR_DONE' } })).toBe(false);
+    });
+
+    it('excludes a technician who has not started KYC (PENDING)', () => {
+      expect(kycPredicatePasses({ kyc: { kycStatus: 'PENDING' } })).toBe(false);
+    });
+
+    it('FAIL-OPEN: dispatches a technician with no kyc information at all', () => {
+      expect(kycPredicatePasses({})).toBe(true);
+    });
+
+    it('FAIL-OPEN: dispatches a technician with a kyc sub-object but no kycStatus field', () => {
+      expect(kycPredicatePasses({ kyc: {} })).toBe(true);
+    });
   });
 
   it('composes both optional predicates together', async () => {

@@ -50,13 +50,17 @@ The candidate set is filtered by:
   the booking's customer is excluded.
 - **Not already attempted for this booking** — a technician who already held (and lost, declined,
   or timed out on) an offer attempt for the same booking is excluded from a redispatch.
-- **KYC-approved — only when the operator has this enabled.** When enabled
-  (`enforceKycInDispatch` on the `system/commission-config` document), a technician whose
-  KYC status is not `APPROVED` is excluded from the candidate set. **This filter is off by
-  default**, so today it excludes nobody — KYC currently plays no part in dispatch. A technician
-  who has never had a KYC status recorded at all is never excluded by this check, whether the
-  flag is on or off; only a technician with an explicit, non-approved status is affected once the
-  flag is switched on.
+- **KYC-verified — only when the operator has this enabled.** When enabled
+  (`enforceKycInDispatch` on the `system/commission-config` document), a technician whose KYC
+  flow has not reached full completion is excluded from the candidate set. "Full completion"
+  means the nested KYC record's status is `PAN_DONE` or `COMPLETE` — the terminal state of the
+  Aadhaar-then-PAN DigiLocker/OCR flow described in FR-1.2, matching FR-3.1's "no half-verified
+  dispatches" requirement. **This filter is off by default**, so today it excludes nobody — KYC
+  currently plays no part in dispatch. A technician who has never had any KYC information
+  recorded at all is never excluded by this check, whether the flag is on or off; only a
+  technician with an explicit, not-yet-complete KYC status is affected once the flag is switched
+  on. (This bullet was corrected after an external review caught the original implementation
+  reading a different, unmaintained field — see ADR-0032's "Corrected after Codex review" note.)
 - **Not currently blocked by an unpaid commission balance — only when the operator has this
   enabled.** When enabled (`holdEnforcementEnabled` on the `system/commission-config` document),
   a technician whose cached `commissionHold.state` is `BLOCKED` is excluded from the candidate

@@ -225,7 +225,11 @@ export interface DispatchPredicateOptions {
    * shadow-logs the would-be exclusions instead (see services/dispatch-eligibility.ts).
    */
   excludeBlockedHolds?: boolean;
-  /** Require kycStatus APPROVED. Driven by `enforceKycInDispatch`; off = today's behaviour. */
+  /**
+   * Require the technician's KYC flow to report full completion. Driven by
+   * `enforceKycInDispatch`; off = today's behaviour. See `KYC_VERIFIED_PREDICATE` below for
+   * which field and values this actually checks, and why.
+   */
   requireKyc?: boolean;
 }
 
@@ -249,8 +253,42 @@ const DISPATCH_BASE_PREDICATES = `ST_WITHIN(c.location, @polygon)
 const HOLD_NOT_BLOCKED_PREDICATE =
   `(NOT IS_DEFINED(c.commissionHold.state) OR c.commissionHold.state != 'BLOCKED')`;
 
-const KYC_APPROVED_PREDICATE =
-  `(NOT IS_DEFINED(c.kycStatus) OR c.kycStatus = 'APPROVED')`;
+/**
+ * KYC-verified means the technician's KYC flow reports full completion — both the Aadhaar and
+ * PAN steps PRD FR-1.2/FR-3.1 require ("no half-verified dispatches").
+ *
+ * The field: `c.kyc.kycStatus` (nested), NOT the top-level `c.kycStatus`. `upsertKycStatus()` —
+ * the only function the KYC flow calls (`POST /v1/kyc/aadhaar`, `POST /v1/kyc/pan-ocr`; see
+ * `functions/kyc/submit-aadhaar.ts`, `functions/kyc/submit-pan-ocr.ts`) — writes exclusively to
+ * the nested `kyc` sub-object. The sibling top-level `c.kycStatus` field is set only
+ * incidentally, by `patchTechnicianServiceProfile()` above, which copies whatever raw nested
+ * value happens to exist through unmodified (or defaults to `'PENDING'`) every time a technician
+ * patches their skills/location — it never performs the APPROVED/PENDING/REJECTED translation
+ * its own schema (`TechnicianKycStatusSchema`) implies. No code path anywhere ever writes the
+ * literal `'APPROVED'` to either field (grep confirms `mapKycStatus()` in
+ * `functions/admin/technicians/list.ts` is the only place that string appears outside a schema
+ * enum, and it's a read-side display mapping, not a writer). A predicate that reads the
+ * top-level field for `= 'APPROVED'` therefore never matches anything: once a technician who has
+ * made real KYC progress (`kyc.kycStatus` = `AADHAAR_DONE`/`PAN_DONE`/etc.) does any profile
+ * patch, their top-level `kycStatus` becomes DEFINED with that same non-'APPROVED' string, and
+ * they are silently excluded from dispatch forever — the exact bug Codex's E21-S04 round-1
+ * review caught. Fixed by reading the field the KYC flow actually maintains.
+ *
+ * The vocabulary: `KycStatusSchema` (`schemas/kyc.ts`) — PENDING, AADHAAR_DONE, PAN_DONE,
+ * COMPLETE, PENDING_MANUAL, MANUAL_REVIEW — not the narrower `TechnicianKycStatusSchema`
+ * (`schemas/technician.ts`) that the (dead) top-level field's type implies. `PAN_DONE` is the
+ * terminal status of today's two-step Aadhaar-then-PAN flow (`submit-pan-ocr.ts`); `COMPLETE` is
+ * reserved for a future fully-approved terminal state and is included for forward compatibility
+ * even though nothing writes it yet. Every other status means at least one step is outstanding
+ * or needs manual review, matching the PRD's "no half-verified dispatches" requirement.
+ *
+ * Fail-open unchanged: `NOT IS_DEFINED(c.kyc.kycStatus)` is true both when a technician document
+ * has no `kyc` sub-object at all and when it has one but `kycStatus` is absent from it — either
+ * way, a technician with zero KYC information on file is still dispatched, exactly like the
+ * hold and suspended predicates above.
+ */
+const KYC_VERIFIED_PREDICATE =
+  `(NOT IS_DEFINED(c.kyc.kycStatus) OR c.kyc.kycStatus IN ('PAN_DONE', 'COMPLETE'))`;
 
 export async function getTechniciansWithinRadius(
   lat: number,
@@ -265,7 +303,7 @@ export async function getTechniciansWithinRadius(
 
   const extra: string[] = [];
   if (opts.excludeBlockedHolds) extra.push(HOLD_NOT_BLOCKED_PREDICATE);
-  if (opts.requireKyc) extra.push(KYC_APPROVED_PREDICATE);
+  if (opts.requireKyc) extra.push(KYC_VERIFIED_PREDICATE);
 
   const query = {
     query: `SELECT * FROM c
