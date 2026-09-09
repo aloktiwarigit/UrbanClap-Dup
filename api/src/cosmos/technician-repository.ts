@@ -218,21 +218,58 @@ export async function patchTechnicianServiceProfile(
   return result;
 }
 
+export interface DispatchPredicateOptions {
+  /**
+   * Exclude technicians whose commissionHold.state is BLOCKED. Driven by
+   * `holdEnforcementEnabled`; off = dark launch, in which case the caller runs unfiltered and
+   * shadow-logs the would-be exclusions instead (see services/dispatch-eligibility.ts).
+   */
+  excludeBlockedHolds?: boolean;
+  /** Require kycStatus APPROVED. Driven by `enforceKycInDispatch`; off = today's behaviour. */
+  requireKyc?: boolean;
+}
+
+/**
+ * The always-on predicates. `suspended` is a BUG FIX (E21-S04): patchTechnicianAdminFields sets
+ * `suspended:true` and `isOnline:false` together, so a suspended technician was excluded only as
+ * a side effect of being offline — any path that flips isOnline back on silently re-admitted
+ * them to dispatch.
+ *
+ * Every predicate here and below is written `(NOT IS_DEFINED(x) OR x != bad)`. Cosmos evaluates
+ * `!=` against an undefined path to undefined, which drops the row — so a bare `!=` would
+ * silently exclude every legacy document that lacks the field. The IS_DEFINED disjunct IS the
+ * fail-open, and removing it is a dispatch outage.
+ */
+const DISPATCH_BASE_PREDICATES = `ST_WITHIN(c.location, @polygon)
+            AND ARRAY_CONTAINS(c.skills, @serviceId)
+            AND c.isOnline = true
+            AND c.isAvailable = true
+            AND (NOT IS_DEFINED(c.suspended) OR c.suspended != true)`;
+
+const HOLD_NOT_BLOCKED_PREDICATE =
+  `(NOT IS_DEFINED(c.commissionHold.state) OR c.commissionHold.state != 'BLOCKED')`;
+
+const KYC_APPROVED_PREDICATE =
+  `(NOT IS_DEFINED(c.kycStatus) OR c.kycStatus = 'APPROVED')`;
+
 export async function getTechniciansWithinRadius(
   lat: number,
   lng: number,
   radiusKm: number,
   serviceId: string,
+  opts: DispatchPredicateOptions = {},
 ): Promise<TechnicianProfile[]> {
   const client = getCosmosClient();
   const container = client.database(DB_NAME).container(CONTAINER);
   const polygon = boundingBoxPolygon(lat, lng, radiusKm);
+
+  const extra: string[] = [];
+  if (opts.excludeBlockedHolds) extra.push(HOLD_NOT_BLOCKED_PREDICATE);
+  if (opts.requireKyc) extra.push(KYC_APPROVED_PREDICATE);
+
   const query = {
     query: `SELECT * FROM c
-            WHERE ST_WITHIN(c.location, @polygon)
-            AND ARRAY_CONTAINS(c.skills, @serviceId)
-            AND c.isOnline = true
-            AND c.isAvailable = true`,
+            WHERE ${DISPATCH_BASE_PREDICATES}${extra.map((p) => `\n            AND ${p}`).join('')}`,
     parameters: [
       { name: '@polygon', value: polygon as unknown as string },
       { name: '@serviceId', value: serviceId },
@@ -242,6 +279,56 @@ export async function getTechniciansWithinRadius(
     .query<TechnicianProfile>(query)
     .fetchAll();
   return resources;
+}
+
+/**
+ * How many technicians inside the same geo/skill/online/available/not-suspended set are currently
+ * BLOCKED by a commission hold. Called ONLY on the zero-candidate dispatch path, and only when
+ * enforcement is on, so that `DISPATCH_NO_TECHS` can distinguish "nobody covers this area" from
+ * "everyone who covers it owes us money" — with the predicate in the SQL, the excluded rows never
+ * come back and the two are otherwise indistinguishable in the logs.
+ */
+export async function countBlockedInRadius(
+  lat: number,
+  lng: number,
+  radiusKm: number,
+  serviceId: string,
+): Promise<number> {
+  const container = getCosmosClient().database(DB_NAME).container(CONTAINER);
+  const polygon = boundingBoxPolygon(lat, lng, radiusKm);
+  const { resources } = await container.items
+    .query<number>({
+      query: `SELECT VALUE COUNT(1) FROM c
+              WHERE ${DISPATCH_BASE_PREDICATES}
+              AND c.commissionHold.state = 'BLOCKED'`,
+      parameters: [
+        { name: '@polygon', value: polygon as unknown as string },
+        { name: '@serviceId', value: serviceId },
+      ],
+    })
+    .fetchAll();
+  return resources[0] ?? 0;
+}
+
+/**
+ * Point read (single partition) of the two fields an admin reassign audit entry records about
+ * its target: the commission hold and the suspension flag. Both are absent on legacy documents,
+ * which reads as `hold: null, suspended: false` — the audit entry then records "no hold known",
+ * which is exactly true.
+ */
+export async function readTechnicianGateState(
+  technicianId: string,
+): Promise<{ exists: boolean; hold: CommissionHold | null; suspended: boolean }> {
+  const container = getCosmosClient().database(DB_NAME).container(CONTAINER);
+  const { resource } = await container
+    .item(technicianId, technicianId)
+    .read<{ commissionHold?: CommissionHold; suspended?: boolean }>();
+  if (!resource) return { exists: false, hold: null, suspended: false };
+  return {
+    exists: true,
+    hold: resource.commissionHold ?? null,
+    suspended: resource.suspended === true,
+  };
 }
 
 export interface TechnicianLookupInfo {
