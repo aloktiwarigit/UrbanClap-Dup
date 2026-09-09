@@ -196,6 +196,12 @@ technician-app/release.keystore
 # nothing. Ignore the directory by default; keeping a file is now the explicit
 # act. Note this does NOT untrack the 149 already committed — gitignore does not
 # apply to tracked files.
-docs/reviews/*
+# A nested transcript directory (docs/reviews/round3/) is excluded as a whole
+# by a `docs/reviews/*` rule, and git cannot re-include a file inside an
+# excluded directory -- so a `.summary.md` written one level down would be
+# dropped silently. Exclude by file, re-admit directories, then re-admit
+# summaries at any depth. Proven with real files, not read off the docs.
+docs/reviews/**
+!docs/reviews/**/
 !docs/reviews/README.md
-!docs/reviews/*.summary.md
+!docs/reviews/**/*.summary.md

@@ -17,8 +17,14 @@ on:
       # Root-level config files belong to no sub-project, so no other
       # *-ship.yml matches them either — a .gitignore-only PR could satisfy
       # no required check and stalled indefinitely (PR #331). Same deadlock
-      # this workflow was created for, one filter-gap over.
-      - '.gitignore'
+      # this workflow was created for, one filter-gap over. Widened by class
+      # rather than enumerated: enumerating '.gitignore' alone left 8 other
+      # root files (CLAUDE.md, TOKEN-SYNC.md, .firebaserc, firebase.json,
+      # .gitattributes, .semgrepignore, .bmad-readiness-passed,
+      # .codex-review-passed) able to stall exactly the same way. An Actions
+      # path glob treats '*' as "any character except /", so this matches
+      # root-level files only and does not swallow sub-project paths.
+      - '*'
   push:
     branches: [main]
     paths:
@@ -27,8 +33,14 @@ on:
       # Root-level config files belong to no sub-project, so no other
       # *-ship.yml matches them either — a .gitignore-only PR could satisfy
       # no required check and stalled indefinitely (PR #331). Same deadlock
-      # this workflow was created for, one filter-gap over.
-      - '.gitignore'
+      # this workflow was created for, one filter-gap over. Widened by class
+      # rather than enumerated: enumerating '.gitignore' alone left 8 other
+      # root files (CLAUDE.md, TOKEN-SYNC.md, .firebaserc, firebase.json,
+      # .gitattributes, .semgrepignore, .bmad-readiness-passed,
+      # .codex-review-passed) able to stall exactly the same way. An Actions
+      # path glob treats '*' as "any character except /", so this matches
+      # root-level files only and does not swallow sub-project paths.
+      - '*'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
