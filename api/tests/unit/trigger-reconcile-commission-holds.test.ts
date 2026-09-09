@@ -19,20 +19,27 @@ vi.mock('../../src/services/commission-hold.service.js', () => ({
 }));
 vi.mock('../../src/cosmos/technician-repository.js', () => ({
   listAllTechniciansWithHold: vi.fn(),
-  getTechniciansByIds: vi.fn(),
 }));
 vi.mock('../../src/cosmos/commission-receivable-repository.js', () => ({
   commissionReceivableRepo: { sumDueGroupedByTechnician: vi.fn() },
 }));
 
 import * as Sentry from '@sentry/node';
+import { app } from '@azure/functions';
 import { systemDocsRepo } from '../../src/cosmos/system-docs-repository.js';
 import { sweepAllHolds, recomputeCommissionHold } from '../../src/services/commission-hold.service.js';
-import { listAllTechniciansWithHold, getTechniciansByIds } from '../../src/cosmos/technician-repository.js';
+import { listAllTechniciansWithHold } from '../../src/cosmos/technician-repository.js';
 import { commissionReceivableRepo } from '../../src/cosmos/commission-receivable-repository.js';
 import { reconcileCommissionHolds } from '../../src/functions/trigger-reconcile-commission-holds.js';
 
 const ctx = { log: vi.fn(), error: vi.fn() } as never;
+
+/**
+ * The `app.timer(...)` registration the module performed when it was first imported. Captured
+ * here at module-eval time because `vi.clearAllMocks()` in `beforeEach` would otherwise wipe it
+ * before any test could look at it.
+ */
+const timerRegistration = vi.mocked(app.timer).mock.calls[0];
 
 /** A wall-clock ms value whose 15-minute slot index is / is not divisible by 6. */
 const SLOT_MS = 15 * 60 * 1000;
@@ -47,7 +54,6 @@ beforeEach(() => {
   vi.mocked(recomputeCommissionHold).mockResolvedValue({ hold: null, status: 'APPLIED' } as never);
   vi.mocked(listAllTechniciansWithHold).mockResolvedValue([]);
   vi.mocked(commissionReceivableRepo.sumDueGroupedByTechnician).mockResolvedValue([]);
-  vi.mocked(getTechniciansByIds).mockResolvedValue([]);
   vi.useFakeTimers();
   vi.setSystemTime(NON_FULL_SWEEP_MS);
 });
@@ -80,6 +86,15 @@ describe('EXPIRED_OVERRIDES sweep (E21-S02 carry-forward)', () => {
     await reconcileCommissionHolds(ctx);
     expect(sweepAllHolds).toHaveBeenCalledWith({ scope: 'EXPIRED_OVERRIDES', log: expect.any(Function) });
   });
+
+  // The case above only exercises the INNER per-id catch and would still pass if steps 1 and 2
+  // shared one try block. THIS is the failure that would actually skip the sweep: the drain
+  // itself rejecting. It is the test that proves steps 1 and 2 are independent.
+  it('runs even when drainHoldRepair itself rejected', async () => {
+    vi.mocked(systemDocsRepo.drainHoldRepair).mockRejectedValue(new Error('cosmos down'));
+    await expect(reconcileCommissionHolds(ctx)).resolves.toBeUndefined();
+    expect(sweepAllHolds).toHaveBeenCalledWith({ scope: 'EXPIRED_OVERRIDES', log: expect.any(Function) });
+  });
 });
 
 describe('repair queue', () => {
@@ -104,6 +119,31 @@ describe('repair queue', () => {
     expect(systemDocsRepo.enqueueHoldRepair).toHaveBeenCalledWith(['t1']);
     expect(recomputeCommissionHold).toHaveBeenCalledWith('t2');
     expect(Sentry.captureException).toHaveBeenCalled();
+  });
+
+  // Draining `all` discards the queued ids by short-circuiting the per-id loop, so a FULL sweep
+  // that then dies would silently lose the admin's explicit "recompute everything".
+  it('re-enqueues ALL when the repairAll-triggered FULL sweep threw', async () => {
+    vi.mocked(systemDocsRepo.drainHoldRepair).mockResolvedValue({ technicianIds: [], all: true });
+    vi.mocked(sweepAllHolds).mockImplementation(async (opts) => {
+      if (opts?.scope === 'FULL') throw new Error('boom');
+      return { recomputed: 0, drifted: 0 };
+    });
+    await expect(reconcileCommissionHolds(ctx)).resolves.toBeUndefined();
+    expect(systemDocsRepo.enqueueHoldRepair).toHaveBeenCalledWith('ALL');
+  });
+
+  // A clock-scheduled sweep retries on its own next slot; re-enqueuing it would leave a permanent
+  // `all` flag forcing a cross-partition sweep on every subsequent run.
+  it('does NOT re-enqueue ALL when a clock-scheduled FULL sweep threw', async () => {
+    vi.setSystemTime(FULL_SWEEP_MS);
+    vi.mocked(systemDocsRepo.drainHoldRepair).mockResolvedValue({ technicianIds: [], all: false });
+    vi.mocked(sweepAllHolds).mockImplementation(async (opts) => {
+      if (opts?.scope === 'FULL') throw new Error('boom');
+      return { recomputed: 0, drifted: 0 };
+    });
+    await expect(reconcileCommissionHolds(ctx)).resolves.toBeUndefined();
+    expect(systemDocsRepo.enqueueHoldRepair).not.toHaveBeenCalled();
   });
 });
 
@@ -164,10 +204,28 @@ describe('summary document', () => {
     expect(doc.totalTechnicianCount).toBe(130);
   });
 
+  // The mirror of the summary-write-failure case below: the summary must not be collateral damage
+  // when an earlier, independent step dies. Together they pin CF-2 off the happy path.
+  it('is still written when a sweep threw', async () => {
+    vi.mocked(sweepAllHolds).mockRejectedValue(new Error('boom'));
+    await expect(reconcileCommissionHolds(ctx)).resolves.toBeUndefined();
+    expect(systemDocsRepo.putHoldReconciliationSummary).toHaveBeenCalledTimes(1);
+  });
+
   it('a summary write failure is captured but does not fail the run', async () => {
     vi.mocked(systemDocsRepo.putHoldReconciliationSummary).mockRejectedValue(new Error('boom'));
     await expect(reconcileCommissionHolds(ctx)).resolves.toBeUndefined();
     expect(Sentry.captureException).toHaveBeenCalled();
+  });
+});
+
+describe('timer registration', () => {
+  // The CRON string and RECONCILE_INTERVAL_MS are load-bearing on each other: the "every 6th slot"
+  // arithmetic only yields 90 minutes while the timer actually fires every 15. Changing either
+  // alone would silently alter the sweep frequency, so pin both here rather than in a comment.
+  it('registers a 15-minute timer under the expected name', () => {
+    expect(timerRegistration?.[0]).toBe('triggerReconcileCommissionHolds');
+    expect(timerRegistration?.[1].schedule).toBe('0 */15 * * * *');
   });
 });
 

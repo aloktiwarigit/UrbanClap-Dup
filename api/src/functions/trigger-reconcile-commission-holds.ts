@@ -4,7 +4,7 @@ import type { InvocationContext, Timer } from '@azure/functions';
 import * as Sentry from '@sentry/node';
 import { systemDocsRepo } from '../cosmos/system-docs-repository.js';
 import { recomputeCommissionHold, sweepAllHolds } from '../services/commission-hold.service.js';
-import { getTechniciansByIds, listAllTechniciansWithHold } from '../cosmos/technician-repository.js';
+import { listAllTechniciansWithHold } from '../cosmos/technician-repository.js';
 import { commissionReceivableRepo } from '../cosmos/commission-receivable-repository.js';
 import { buildHoldRoster } from '../services/commission-dashboard.service.js';
 import {
@@ -17,8 +17,10 @@ import {
 const RECONCILE_INTERVAL_MS = 15 * 60 * 1000;
 
 /**
- * A FULL sweep runs on every 6th 15-minute slot — i.e. every 90 minutes, as the E21-S04 spec
- * requires.
+ * A FULL sweep runs on every 6th 15-minute slot — i.e. roughly every 90 minutes, as the E21-S04
+ * spec requires. "Roughly" because timer jitter can fire an invocation a moment early and land it
+ * in the previous slot, skipping that window's sweep; the next sweep-slot picks it up 90 minutes
+ * later. Acceptable: this is a safety net over the repair queue, not the primary correction path.
  *
  * Derived from the wall clock rather than a module-level counter ON PURPOSE. Azure Functions
  * Consumption cold-starts constantly; a counter would reset to zero on every cold start, firing
@@ -96,6 +98,21 @@ export async function reconcileCommissionHolds(ctx: InvocationContext): Promise<
     } catch (err: unknown) {
       Sentry.captureException(err);
       ctx.error('HOLD_FULL_SWEEP_FAILED');
+      if (repairAll) {
+        // Draining `all` already discarded the queued ids by short-circuiting the per-id loop, so
+        // if this sweep dies the admin's explicit "recompute everything" is simply lost and the
+        // correction waits up to 90 minutes for the next clock slot. Put the request back —
+        // symmetric with the per-id re-enqueue above.
+        //
+        // Only for the `repairAll` case. A *clock*-scheduled sweep that fails genuinely retries on
+        // its own next slot; re-enqueuing it would leave a permanent `all` flag in the queue that
+        // forces a cross-partition sweep on every subsequent run.
+        try {
+          await systemDocsRepo.enqueueHoldRepair('ALL');
+        } catch (reEnqueueErr: unknown) {
+          Sentry.captureException(reEnqueueErr);
+        }
+      }
     }
   }
 
@@ -120,25 +137,12 @@ async function writeReconciliationSummary(ctx: InvocationContext): Promise<void>
     allWithHold,
     dueGroups,
   );
+  // No display-name backfill here on purpose. `listAllTechniciansWithHold` already projects
+  // `c.displayName, c.name` and collapses them to `name`, and `rows` is built only from that
+  // roster — so a `getTechniciansByIds` lookup would re-read the same two fields from the same
+  // container and could never resolve a name the row lacks. It would only buy a cross-partition
+  // ARRAY_CONTAINS query over up to 100 ids every 15 minutes for nothing.
   const top = rows.slice(0, HOLD_SUMMARY_TOP_N);
-
-  // Resolve display names for the capped page only, so this never becomes an unbounded lookup.
-  const needsName = top.filter((r) => r.technicianName === undefined).map((r) => r.technicianId);
-  if (needsName.length > 0) {
-    try {
-      const profiles = await getTechniciansByIds(needsName);
-      const nameById = new Map(
-        profiles.map((p) => [p.technicianId || p.id, p.displayName || p.name]),
-      );
-      for (const row of top) {
-        const name = nameById.get(row.technicianId);
-        if (row.technicianName === undefined && name) row.technicianName = name;
-      }
-    } catch (err: unknown) {
-      // Names are cosmetic; the numbers are not. Ship the summary without them.
-      Sentry.captureException(err);
-    }
-  }
 
   const doc: HoldReconciliationSummaryDoc = {
     id: HOLD_RECONCILIATION_SUMMARY_DOC_ID,
