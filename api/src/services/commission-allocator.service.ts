@@ -180,7 +180,7 @@ export async function consumePendingCredits(technicianId: string): Promise<{ con
         ];
         const remainingPaise = doc.originalPaise - consumedBy.reduce((s, c) => s + c.paise, 0); // absolute recompute
         const ops: OperationInput[] = [
-          { operationType: 'Replace', id: doc.id, ifMatch: etag, resourceBody: { ...doc, consumedBy, remainingPaise, updatedAt: now } },
+          { operationType: 'Replace', id: doc.id, ifMatch: etag, resourceBody: { ...doc, consumedBy, remainingPaise, updatedAt: now } as never },
         ];
         const byBooking = new Map(rows.map((r) => [r.entry.bookingId, r]));
         for (const a of plan.allocations) {
