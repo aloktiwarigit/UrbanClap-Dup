@@ -666,8 +666,9 @@ function toHoldItem(r: TechnicianWithHoldRow): { id: string; name?: string; comm
  * whole roster at once. Sorted by outstandingPaise desc within the page only — no composite
  * index required; ordering across pages is not guaranteed.
  */
-// SEMGREP-JUSTIFIED: cross-partition by design — an admin-only roster view. Callers are gated by
-// requireAdmin (admin/finance/commission-receivables.ts); no user-controlled filter reaches the query.
+// SEMGREP-JUSTIFIED: cross-partition by design — a paged admin-only roster view. No caller in
+// api/src/functions/ today (the dashboard uses listAllTechniciansWithHold); any future caller
+// must carry requireAdmin, which the Layer-2 caller-scope test enforces.
 export async function listTechniciansWithHold(continuationToken?: string): Promise<{
   items: Array<{ id: string; name?: string; commissionHold: CommissionHold }>;
   continuationToken?: string;
