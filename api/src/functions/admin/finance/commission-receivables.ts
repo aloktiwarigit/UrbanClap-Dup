@@ -64,6 +64,10 @@ function decodeContinuationToken(token: string | undefined): number | null {
  *   3. too short for the requested page — the page's end offset exceeds the summary's `topN`.
  * Both paths route through `buildHoldRoster` so they can never disagree on the money shown, and
  * the response JSON shape is byte-for-byte identical regardless of which path served it.
+ *
+ * Known staleness: a `technicianName` served from the summary was snapshotted at the reconciler's
+ * last run, up to `SUMMARY_MAX_AGE_MS` (45 min) earlier — a rename in that window shows the old
+ * name until the next sweep overwrites it.
  */
 export const adminCommissionReceivablesDashboardHandler: AdminHttpHandler = async (
   req: HttpRequest,
@@ -86,6 +90,10 @@ export const adminCommissionReceivablesDashboardHandler: AdminHttpHandler = asyn
     let rows: HoldSummaryRow[] | null = null;
     let totalOutstanding = 0;
     let unreconciledTechnicianCount = 0;
+    // Total roster size backing `rows`. On the summary path this is `totalTechnicianCount`, NOT
+    // `rows.length` (`summary.top` is capped at `topN` — the roster can be far larger); on the
+    // drain path `rows` already holds every technician, so the two coincide.
+    let totalRows = 0;
 
     try {
       const summary = await systemDocsRepo.getHoldReconciliationSummary();
@@ -97,6 +105,7 @@ export const adminCommissionReceivablesDashboardHandler: AdminHttpHandler = asyn
         rows = summary.top;
         totalOutstanding = summary.totalOutstandingPaise;
         unreconciledTechnicianCount = summary.unreconciledTechnicianCount;
+        totalRows = summary.totalTechnicianCount;
       }
     } catch {
       // Fall through to the live drain.
@@ -111,11 +120,12 @@ export const adminCommissionReceivablesDashboardHandler: AdminHttpHandler = asyn
       rows = roster.rows;
       totalOutstanding = roster.totalOutstandingPaise;
       unreconciledTechnicianCount = roster.unreconciledTechnicianCount;
+      totalRows = rows.length;
     }
 
     const pageItems = rows.slice(offset, offset + DASHBOARD_PAGE_SIZE);
     const nextOffset = offset + DASHBOARD_PAGE_SIZE;
-    const hasMore = nextOffset < rows.length;
+    const hasMore = nextOffset < totalRows;
 
     const relevant = pageItems.filter((r) => r.outstandingPaise > 0 || r.state !== 'CLEAR');
 
