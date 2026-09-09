@@ -216,6 +216,24 @@ Every sub-project's template includes:
 - Amending published commits.
 - Direct push to `main` (must go through PR + CI).
 
+## Root-config PRs and CI coverage
+
+`main` requires the `quality-gate` context. Every `*-ship.yml` workflow is
+scoped by a `paths:` filter to its own sub-project, so a PR touching **only**
+a root-level file matches no filter, runs nothing, and can never satisfy the
+required check — it sits `MERGEABLE` + `BLOCKED` with zero checks reported,
+indefinitely. PR #331 stalled this way for 50 minutes.
+
+`docs-ship.yml` is the workflow that covers this case. Its filter includes
+`- '*'`, which in an Actions path glob means "any character except `/`" —
+i.e. root-level files only, not sub-project paths. Do not narrow it back to an
+enumerated list: enumeration is what left `.gitignore` uncovered in the first
+place, and left eight more root files uncovered after that.
+
+If a root-config PR ever does stall, the escape is
+`gh pr merge <n> --squash --admin` — owner's call, never automatic. Never push
+to `main` directly.
+
 ## Cross-cutting ADR scope
 
 ADRs that span multiple sub-projects (e.g. "use FCM for all dispatch", "Cosmos DB schema conventions", "auth token format") live in **root `docs/adr/`**. Stack-specific ADRs (e.g. "use Hilt for DI in customer-app") live in the sub-project's own `docs/adr/` once that folder is populated.
