@@ -1487,8 +1487,12 @@ absent) value until something incidentally triggers a recompute:
 
 ### Flags
 
-All default **off** — this story ships the mechanism dark-launched, matching the ₹0-infra pilot
-posture of shipping observable-but-inert first:
+All default **off** — this story ships the *gating* dark-launched, matching the ₹0-infra pilot
+posture of shipping observable-but-inert first. Two parts of E21-S04 are **not** behind any flag
+and are live from merge: the 15-minute commission-hold reconciler (which moves hold states and the
+admin dashboard's figures) and the accept-path hold read that produces `ACCEPT_HOLD_SHADOW_BLOCK`
+(an extra Cosmos round-trip on every job accept, always answering ALLOW while the flag is off).
+See ADR-0032, Consequences (negative).
 
 | Flag | Doc | Default | Effect when on |
 |---|---|---|---|
@@ -1620,9 +1624,20 @@ accept refusal), not the ledger math.
 
 ### Shadow-mode readout before flipping `holdEnforcementEnabled`
 
+> **Discard any shadow data gathered before the E21-S04 Codex-round-2 fix.** Until that fix,
+> `DISPATCH_HOLD_SHADOW_EXCLUSION` was emitted against the raw bounding-box query result, before
+> the real dispatch filters ran — so it counted blocked technicians who were outside the true
+> circular radius, already attempted on that booking, already assigned/no-show-excluded, or blocked
+> by that customer. None of those were ever eligible candidates, and none of them would have lost a
+> dispatch to the hold gate. Those lines overstate enforcement impact by an unknown factor and must
+> not be reasoned from, reconciled against, or averaged in with lines collected after the fix.
+> **Start the seven-day window from scratch on the first deploy that carries the fix.** The
+> `ACCEPT_HOLD_SHADOW_BLOCK` lines were never affected — only the dispatch-side ones.
+
 1. With the flag off, dispatch logs one `DISPATCH_HOLD_SHADOW_EXCLUSION` line per candidate that
-   enforcement would have excluded, and the accept path logs `ACCEPT_HOLD_SHADOW_BLOCK` whenever
-   a would-be-blocked technician accepts anyway.
+   enforcement would have excluded — counted after every dispatch filter, so each line is a
+   technician who really would have lost this offer — and the accept path logs
+   `ACCEPT_HOLD_SHADOW_BLOCK` whenever a would-be-blocked technician accepts anyway.
 2. Collect at least seven days of these logs. Count distinct `technicianId` values and total line
    counts for each log type.
 3. Cross-check each distinct technician against the commission dashboard

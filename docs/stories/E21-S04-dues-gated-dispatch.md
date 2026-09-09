@@ -9,13 +9,28 @@
 - **Design:** `docs/superpowers/specs/2026-09-08-e21-s04-dues-gated-dispatch-design.md`
 - **Decision record:** `docs/adr/0032-commission-hold-is-an-eligibility-gate.md`
 
-## Ships dark
+## Ships dark — with two exceptions
 
-Nothing observable changes for any technician or customer until an owner sets
+No technician is excluded from dispatch and no accept is refused until an owner sets
 `holdEnforcementEnabled: true` on the `system/commission-config` document. That flag defaults
 `false`. See `docs/runbook.md` → "Dues-gated dispatch (E21-S04)" for the shadow-mode readout
 procedure that should precede flipping it, and the diagnosis path for a technician who reports
 being blocked once it is on.
+
+**"Nothing changes until the flag flips" is not accurate, and earlier drafts of this story said
+so.** Two things go live on merge, with the flag still `false`:
+
+1. **The 15-minute reconciler is not flag-gated.** `trigger-reconcile-commission-holds.ts` runs
+   from merge: hold states move, expired overrides are swept, and
+   `system/hold-reconciliation-summary` — the figures the admin commission dashboard renders —
+   starts changing every 15 minutes. Nothing technician- or customer-visible, but an admin's
+   numbers do move.
+2. **Every job accept gains an awaited Cosmos round-trip.** `assertCanAccept` calls
+   `computeCommissionHold` even with enforcement off, because that read is what produces the
+   accept-side `ACCEPT_HOLD_SHADOW_BLOCK` log line. The decision is always `ALLOW` while the flag
+   is off, but the latency is real and it is on the hottest path in the product. It also widened a
+   latent TOCTOU on offer expiry, closed in Codex round 2 — see ADR-0032, "Offer expiry across the
+   gate".
 
 ## What shipped
 

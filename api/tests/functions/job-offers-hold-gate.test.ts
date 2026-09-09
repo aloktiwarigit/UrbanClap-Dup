@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { HttpRequest } from '@azure/functions';
 
 vi.mock('../../src/middleware/verifyTechnicianToken.js', () => ({
@@ -315,5 +315,105 @@ describe('acceptJobOfferHandler — commission hold gate', () => {
     const res = await acceptJobOfferHandler(req(), ctx);
     expect(res.status).toBe(410);
     expect(assertCanAccept).not.toHaveBeenCalled();
+  });
+});
+
+// ── TOCTOU: the offer window can lapse DURING the gate ────────────────────────
+//
+// `assertCanAccept` awaits a Cosmos ledger read, so the 90s window can pass between the expiry
+// check at the top of the handler and the write at the bottom. expireStaleOffers sweeps only every
+// 30s, so the attempt can still read PENDING throughout. The clock is mocked rather than slept on;
+// the gate mock moves it forward to model that latency.
+describe('acceptJobOfferHandler — offer expiry across the hold gate', () => {
+  const NOW = '2026-09-08T12:00:00.000Z';
+  const EXPIRES = '2026-09-08T12:00:30.000Z';
+  const AFTER_EXPIRY = '2026-09-08T12:00:31.000Z';
+
+  const liveAttempt = { ...pendingAttempt, expiresAt: EXPIRES };
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(NOW));
+    vi.mocked(dispatchAttemptRepo.getByBookingId).mockResolvedValue(liveAttempt as never);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('ALLOW: an offer that expires during the gate returns 410 and never calls acceptAttempt', async () => {
+    vi.mocked(assertCanAccept).mockImplementation(async () => {
+      vi.setSystemTime(new Date(AFTER_EXPIRY));
+      return { decision: 'ALLOW' };
+    });
+
+    const res = await acceptJobOfferHandler(req(), ctx);
+
+    expect(assertCanAccept).toHaveBeenCalledWith('tech-1');
+    expect(res.status).toBe(410);
+    expect(res.jsonBody).toEqual({ code: 'OFFER_EXPIRED' });
+    expect(dispatchAttemptRepo.acceptAttempt).not.toHaveBeenCalled();
+    expect(updateBookingFields).not.toHaveBeenCalled();
+  });
+
+  it('ALLOW: an offer still live after the gate accepts as before', async () => {
+    vi.mocked(assertCanAccept).mockImplementation(async () => {
+      vi.setSystemTime(new Date('2026-09-08T12:00:20.000Z'));
+      return { decision: 'ALLOW' };
+    });
+    vi.mocked(dispatchAttemptRepo.acceptAttempt).mockResolvedValue(liveAttempt as never);
+
+    const res = await acceptJobOfferHandler(req(), ctx);
+
+    expect(res.status).toBe(200);
+    expect(dispatchAttemptRepo.acceptAttempt).toHaveBeenCalledWith('att-1', 'bk-1');
+  });
+
+  // The recheck sits AFTER the BLOCKED branch on purpose. A blocked technician's audit trail and
+  // the decline that hands the booking on must not be pre-empted by the clock, or the block would
+  // go unrecorded and the attempt would be left for the sweeper instead of being walked forward.
+  it('BLOCKED: an expiry during the gate does not pre-empt the block audit or the decline', async () => {
+    vi.mocked(assertCanAccept).mockImplementation(async () => {
+      vi.setSystemTime(new Date(AFTER_EXPIRY));
+      return { decision: 'BLOCKED', outstandingPaise: 620000, blockThresholdPaise: 500000 };
+    });
+
+    const res = await acceptJobOfferHandler(req(), ctx);
+
+    expect(res.status).toBe(403);
+    expect(res.jsonBody).toEqual({
+      code: 'COMMISSION_HOLD_BLOCKED', outstandingPaise: 620000, blockThresholdPaise: 500000,
+    });
+    expect(bookingEventRepo.append).toHaveBeenCalledWith({
+      event: 'TECH_ACCEPT_BLOCKED_BY_HOLD', technicianId: 'tech-1', bookingId: 'bk-1',
+    });
+    expect(dispatchAttemptRepo.declineAttempt).toHaveBeenCalledWith('att-1', 'bk-1');
+    expect(dispatchAttemptRepo.acceptAttempt).not.toHaveBeenCalled();
+  });
+
+  // Residual window: the repository does its own read, so an attempt can lapse between the
+  // handler's recheck and that read. acceptAttempt then returns null, which would otherwise read as
+  // 409 OFFER_ALREADY_TAKEN. Re-evaluating the same immutable expiresAt keeps the answer 410.
+  it('a lapse between the recheck and the repository read still answers 410, not 409', async () => {
+    vi.mocked(assertCanAccept).mockResolvedValue({ decision: 'ALLOW' });
+    vi.mocked(dispatchAttemptRepo.acceptAttempt).mockImplementation(async () => {
+      vi.setSystemTime(new Date(AFTER_EXPIRY));
+      return null;
+    });
+
+    const res = await acceptJobOfferHandler(req(), ctx);
+
+    expect(res.status).toBe(410);
+    expect(res.jsonBody).toEqual({ code: 'OFFER_EXPIRED' });
+  });
+
+  it('a null from acceptAttempt on a still-live offer stays 409 OFFER_ALREADY_TAKEN', async () => {
+    vi.mocked(assertCanAccept).mockResolvedValue({ decision: 'ALLOW' });
+    vi.mocked(dispatchAttemptRepo.acceptAttempt).mockResolvedValue(null);
+
+    const res = await acceptJobOfferHandler(req(), ctx);
+
+    expect(res.status).toBe(409);
+    expect(res.jsonBody).toEqual({ code: 'OFFER_ALREADY_TAKEN' });
   });
 });

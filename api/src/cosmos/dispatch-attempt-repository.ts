@@ -31,6 +31,12 @@ export const dispatchAttemptRepo = {
     if (!resource) return null;
     if (resource.bookingId !== bookingId) return null;
     if (resource.status !== 'PENDING') return null;
+    // Status alone is not enough: expireStaleOffers sweeps only every 30s, so an attempt past its
+    // 90s window still reads PENDING for up to a tick. `declineAttempt` has always enforced this;
+    // `acceptAttempt` was the asymmetric one, which let a caller that checked expiry before an
+    // awaited round-trip (E21-S04's hold gate) accept an offer that lapsed in between. This is the
+    // authoritative layer — the handler's own recheck only shapes the status code.
+    if (new Date(resource.expiresAt) <= new Date()) return null;
 
     const updated: DispatchAttemptDoc = {
       id: resource.id,

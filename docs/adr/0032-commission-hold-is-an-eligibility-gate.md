@@ -31,9 +31,27 @@ This story wires the hold into the two places money actually changes hands going
 2. **Accept** — if one somehow receives an offer (a race, a stale cache, an admin override that
    lapsed), can they accept it?
 
-Both are gated behind one flag, `holdEnforcementEnabled`, which defaults `false`. Nothing
-observable changes for any technician or customer until the owner flips it after a shadow-mode
+Both are gated behind one flag, `holdEnforcementEnabled`, which defaults `false`. No technician is
+excluded from dispatch and no accept is refused until the owner flips it after a shadow-mode
 readout — see the runbook.
+
+**This story does not, however, ship entirely dark.** Earlier drafts of this ADR and of the story
+said "nothing changes until the flag flips"; that was wrong, and is corrected here. Two things go
+live the moment this merges, with the flag still `false`:
+
+1. **The 15-minute reconciler** (`trigger-reconcile-commission-holds.ts`) runs unconditionally —
+   it is not behind `holdEnforcementEnabled` at all. It sweeps expired admin overrides, drains the
+   hold-repair queue, recomputes holds on a ~90-minute full pass, and writes
+   `system/hold-reconciliation-summary`. Hold states and the figures the admin commission dashboard
+   renders therefore start moving on merge, before any flip. This is intended (the readout the flip
+   is decided on has to be current to be worth anything), but it is a live change to what an admin
+   sees, not a no-op.
+2. **An awaited Cosmos round-trip on every job accept.** `assertCanAccept` calls
+   `computeCommissionHold(technicianId)` even when enforcement is off, because that is what
+   produces the accept-side `ACCEPT_HOLD_SHADOW_BLOCK` readout. The decision returned is always
+   `ALLOW` while the flag is off, but the latency is real and it lands on the hottest path in the
+   product. It also widened a pre-existing TOCTOU on offer expiry — see "Offer expiry across the
+   gate" below.
 
 The central design tension is that dispatch and accept sit at opposite ends of the same booking's
 lifecycle and have opposite failure economics. Dispatch runs early, over many candidates, and a
@@ -235,6 +253,40 @@ race is bounded and already described above: a second technician sees a recovera
 lost. Accepted as a known, parked gap rather than closed, because closing it needs an atomic
 primitive the repository layer does not currently expose.
 
+### Offer expiry across the gate
+
+Because `assertCanAccept` awaits a Cosmos read between the handler's expiry check and
+`acceptAttempt`, the 90-second offer window can lapse *inside* the gate. `expireStaleOffers` sweeps
+only every 30 seconds, so the attempt still reads `PENDING` for up to a tick after it has really
+expired, and `acceptAttempt` checked only `status === 'PENDING'` — never expiry — while
+`declineAttempt` had always checked both. The race predates this story (the checks used to be
+synchronous, so the window was microseconds); the awaited gate widened it to the latency of a
+ledger read, which is the point at which it becomes reachable in practice. Codex round 2 caught it.
+
+Closed at two layers:
+
+- **Repository (authoritative).** `acceptAttempt` now refuses an attempt whose `expiresAt` has
+  passed, exactly as `declineAttempt` does. The window is shut at the write, not merely at one
+  caller, so any future caller inherits the guard.
+- **Handler (response shape).** After the gate returns, `acceptJobOfferHandler` re-evaluates the
+  `expiresAt` it already holds and answers `410 OFFER_EXPIRED` — the same shape as the early
+  check. `expiresAt` is immutable on the attempt document, so this needs no second read; re-reading
+  would cost a round-trip and open a fresh window of its own.
+
+The recheck sits **after** the `BLOCKED` and `INDETERMINATE` branches, deliberately. A blocked
+technician's audit trail and the decline that walks the booking to the next candidate must happen
+whatever the clock says; letting a 410 pre-empt them would lose the record of a real block and
+leave the attempt for the sweeper instead of moving dispatch on. So the block path is byte-for-byte
+unchanged, and only the `ALLOW` path can now answer 410.
+
+One residual remains and is accepted: the repository does its own read, so an attempt can lapse in
+the sub-millisecond between the handler's recheck and that read. `acceptAttempt` then returns
+`null`, which historically mapped to `409 OFFER_ALREADY_TAKEN`. The handler re-checks the same
+immutable `expiresAt` on the null branch and answers 410 when it has passed, 409 otherwise — so the
+technician's answer stays accurate without any extra read. Either way the attempt is untouched and
+the booking is recovered by `expireStaleOffers`; the distinction is about telling the technician the
+truth, not about state.
+
 ### The enforcement flag and shadow mode
 
 `holdEnforcementEnabled` (on `system/commission-config`, default `false`) is read through
@@ -243,7 +295,14 @@ therefore takes **up to five minutes** to propagate to a running dispatch instan
 intentional cost for a staged rollout, not a bug.
 
 With enforcement off, the dispatch query runs unfiltered (`SELECT *` already returns
-`commissionHold`), and every candidate that would have been excluded is logged:
+`commissionHold`), and every candidate that would have been excluded is logged. The log runs
+against the **filtered** candidate set — after the true circular-radius haversine refinement, the
+already-attempted/assigned exclusions, and the customer-block filter, and before ranking. An
+earlier draft logged the raw bounding-box rows instead, which counted technicians who were never
+eligible candidates and so overstated the enforcement impact; since this readout is the entire
+evidential basis for the flip, an inflated count would have argued for a flip the data did not
+support. Corrected after Codex round 2 — see the runbook for what that means for shadow data
+already collected.
 
 ```
 DISPATCH_HOLD_SHADOW_EXCLUSION bookingId=<id> technicianId=<id> state=BLOCKED outstandingPaise=<n> evaluatedAt=<iso>
@@ -333,6 +392,22 @@ lacked it.
   independent of anything else in this story.
 
 **Negative:**
+- **The accept path carries an extra Cosmos round-trip while the flag is off, and that is not
+  free.** `assertCanAccept` calls `computeCommissionHold` unconditionally — even with
+  `holdEnforcementEnabled: false`, where the answer is always `ALLOW` — because that read is what
+  produces the accept-side `ACCEPT_HOLD_SHADOW_BLOCK` line. This is the price of having an
+  accept-side shadow readout at all: without it the owner would be deciding the flip on dispatch
+  data alone, blind to how often a blocked technician actually reaches the accept button. It is
+  paid on the hottest path in the product, on every accept, from merge onward rather than from the
+  flip. It also lengthened the offer-expiry TOCTOU described above from microseconds to a real
+  Cosmos read, which had to be closed at the repository layer as a direct consequence. If the
+  readout is ever judged complete, this round-trip should be put behind the flag rather than left
+  standing.
+- **The story is not fully dark on merge.** The 15-minute reconciler is not flag-gated, so hold
+  states and the admin commission dashboard's figures begin moving as soon as this merges. Nothing
+  a technician or customer sees changes, but an admin's numbers do, and any rollback story that
+  assumes "flip the flag back and everything is as it was" is only true of the gating, not of the
+  reconciliation.
 - **The SQL predicate makes enforce-mode exclusions invisible except on the zero-candidate path.**
   A booking that finds at least one eligible (non-blocked) candidate produces no signal at all
   about how many nearby technicians were excluded by the hold — the shadow-log mechanism only

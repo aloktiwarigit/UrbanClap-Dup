@@ -592,6 +592,37 @@ describe('dispatch hold gating', () => {
     log.mockRestore();
   });
 
+  // The shadow readout is the entire evidential basis for flipping holdEnforcementEnabled, so it
+  // has to count people who would ACTUALLY have lost a dispatch. Logging the raw bounding-box rows
+  // counted technicians outside the true circular radius, already attempted, and customer-blocked —
+  // none of whom were ever eligible candidates — and inflated the case for the flip. The call now
+  // sits after every filter: this length assertion reads 1, and would read 4 at the old position.
+  it('enforcement OFF: shadow-logs only technicians who survive the real dispatch filters', async () => {
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.mocked(bookingRepo.getById).mockResolvedValue({ ...BASE_BOOKING, status: 'SEARCHING' });
+    vi.mocked(dispatchAttemptRepo.getAttemptedTechnicianIds).mockResolvedValue(['tech-attempted']);
+    vi.mocked(getTechniciansWithinRadius).mockResolvedValue([
+      { ...makeTech('tech-eligible', 0.001), commissionHold: blockedHold },
+      // ~21 km east: inside the bounding box the SQL uses, outside the true circle
+      { ...makeTech('tech-far', 0.2), commissionHold: blockedHold },
+      { ...makeTech('tech-attempted', 0.002), commissionHold: blockedHold },
+      {
+        ...makeTech('tech-customer-blocked', 0.003),
+        commissionHold: blockedHold,
+        blockedCustomerIds: ['cust-1'],
+      },
+    ]);
+
+    await dispatcherService.continueDispatchAfterOfferOutcome('bk-1');
+
+    const shadowLines = log.mock.calls
+      .map((c) => String(c[0]))
+      .filter((line) => line.includes('DISPATCH_HOLD_SHADOW_EXCLUSION'));
+    expect(shadowLines).toHaveLength(1);
+    expect(shadowLines[0]).toContain('technicianId=tech-eligible');
+    log.mockRestore();
+  });
+
   it('enforcement ON: queries with excludeBlockedHolds true and emits no shadow line', async () => {
     const log = vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.mocked(getCommissionConfig).mockResolvedValue(cfg({ holdEnforcementEnabled: true }));

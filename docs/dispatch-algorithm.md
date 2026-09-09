@@ -79,6 +79,16 @@ The candidate set is filtered by:
   setting** — see §7 and ADR-0032 for the enforcement mechanics, the shadow-mode readout
   procedure, and why the underlying predicate is written to fail open on a technician document
   that has never had a hold computed.
+
+  To be plain about what happens while this setting is switched **off**: no technician is left out
+  of a job offer, and no technician is refused a job they accept, because of money they owe. The
+  system does two related things anyway. It recalculates every technician's outstanding balance on
+  a regular timer, so the figures the operator sees are current. And when a technician accepts a
+  job, it looks that balance up and writes an internal operator log recording that the technician
+  would have been affected had the setting been on. Neither changes the outcome for the technician
+  or the customer: the offer is still sent, and the job is still accepted. The logs exist so the
+  operator can see the real effect a change would have before making it, rather than switching it
+  on and finding out.
 - Geographic bounding-box predicate `ST_WITHIN` (a square, refined to the true circular radius by
   an in-process haversine filter after the Cosmos query returns).
 

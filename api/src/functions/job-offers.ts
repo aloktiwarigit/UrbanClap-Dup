@@ -40,7 +40,10 @@ export async function acceptJobOfferHandler(
 
   // E21-S04 dues gate. Runs AFTER ownership/expiry so a stranger's request is rejected on
   // identity, not on someone else's balance — and BEFORE acceptAttempt so a blocked accept
-  // never transiently marks the attempt ACCEPTED. No-op while holdEnforcementEnabled is off.
+  // never transiently marks the attempt ACCEPTED. The DECISION is always ALLOW while
+  // holdEnforcementEnabled is off, but this is not a no-op: assertCanAccept still awaits a Cosmos
+  // read to produce the accept-side shadow log, so every accept pays that latency from merge, not
+  // from the flag flip. That awaited read is what widened the offer-expiry race handled below.
   const gate = await assertCanAccept(technicianId);
 
   if (gate.decision === 'INDETERMINATE') {
@@ -134,8 +137,26 @@ export async function acceptJobOfferHandler(
     };
   }
 
+  // Re-check expiry after the gate. `assertCanAccept` awaits a Cosmos round-trip, so the 90s offer
+  // window can lapse between the check at line 34 and the write below; expireStaleOffers sweeps only
+  // every 30s, so the attempt can still read PENDING and would otherwise be accepted late.
+  // `expiresAt` is immutable on the attempt doc, so re-evaluating the value already in hand is
+  // exact — a re-read would cost a round-trip and open a fresh window of its own. Placed AFTER the
+  // BLOCKED/INDETERMINATE branches on purpose: a blocked technician must still be audited and their
+  // attempt declined, whatever the clock says, so this must not pre-empt that path.
+  if (new Date(attempt.expiresAt) <= new Date()) {
+    return { status: 410, jsonBody: { code: 'OFFER_EXPIRED' } };
+  }
+
   const accepted = await dispatchAttemptRepo.acceptAttempt(attempt.id, bookingId);
   if (!accepted) {
+    // acceptAttempt now also refuses expired attempts, so a null can mean "expired in the sub-ms
+    // between the recheck above and the repository's own read". Re-evaluating the same immutable
+    // expiresAt distinguishes the two without an extra read: expired → 410, anything else (already
+    // terminal, _etag conflict) → 409.
+    if (new Date(attempt.expiresAt) <= new Date()) {
+      return { status: 410, jsonBody: { code: 'OFFER_EXPIRED' } };
+    }
     return { status: 409, jsonBody: { code: 'OFFER_ALREADY_TAKEN' } };
   }
 

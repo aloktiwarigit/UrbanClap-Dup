@@ -72,14 +72,20 @@ async function dispatchBookingToTechs(
   const rawCandidates = await getTechniciansWithinRadius(
     lat, lng, radiusKm, booking.serviceId, gatesToPredicateOptions(gates),
   );
-  if (!gates.holdEnforcementEnabled) {
-    logShadowExclusions(bookingId, rawCandidates);
-  }
 
   const candidates = rawCandidates
     .filter((t) => haversine(lat, lng, t.location.coordinates[1], t.location.coordinates[0]) <= radiusKm)
     .filter((t) => !excluded.has(t.id) && !excluded.has(t.technicianId))
     .filter((t) => !(t.blockedCustomerIds ?? []).includes(booking.customerId));
+
+  // Shadow logging runs on the FILTERED set, not the raw bounding-box rows: a technician outside
+  // the true circular radius, already attempted/assigned, or customer-blocked was never an eligible
+  // candidate, and counting them would inflate the readout the flag flip is decided on. Placed
+  // after every filter and before ranking; telemetry only, and purely synchronous, so dispatch
+  // behaviour is unchanged by the move.
+  if (!gates.holdEnforcementEnabled) {
+    logShadowExclusions(bookingId, candidates);
+  }
 
   if (candidates.length === 0) {
     if (isStillDispatchable(booking)) {

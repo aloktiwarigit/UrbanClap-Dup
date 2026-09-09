@@ -6,7 +6,8 @@
 - **Branch / worktree:** `feat/e21-s04-dues-gate` in `C:/Alok/Business Projects/wt-e21-s04`, cut from `origin/main` @ `7e3fdef4`.
 - **Binding spec:** `~/.claude/plans/validated-frolicking-mochi.md` §3 (invariants), §6 (E21-S04 table), §7.3.
 - **Builds on:** `docs/stories/E21-S02-interface-notes.md`, `docs/adr/0031-single-partition-commission-ledger.md`.
-- **Ships dark.** Nothing observable changes for any technician or customer until `holdEnforcementEnabled` is flipped on the `commission-config` doc. That flag defaults `false` (`toEffectiveConfig`).
+- **Ships dark — the gating only.** No technician is excluded from dispatch and no accept is refused until `holdEnforcementEnabled` is flipped on the `commission-config` doc. That flag defaults `false` (`toEffectiveConfig`).
+- **Correction (Codex round 2).** This line originally read "Nothing observable changes for any technician or customer" — that was wrong. Two things go live on merge with the flag still off: the 15-minute reconciler (not flag-gated; it moves hold states and the admin dashboard's figures) and an awaited Cosmos round-trip on every job accept (`assertCanAccept` calls `computeCommissionHold` unconditionally to produce the accept-side shadow log). See ADR-0032, "This story does not, however, ship entirely dark".
 
 ---
 
