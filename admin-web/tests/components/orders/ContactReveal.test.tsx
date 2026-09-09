@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 
@@ -185,6 +185,111 @@ describe('ContactReveal', () => {
       await vi.advanceTimersByTimeAsync(60_000);
       await waitFor(() => expect(screen.queryByText('+919999999999')).toBeNull());
       expect(screen.getByText('+91 XXXXX-X9999')).toBeInTheDocument();
+    });
+  });
+
+  // Codex round 2, Finding 2: a reveal in flight when the component's
+  // subject changes must never commit the previous subject's raw number
+  // under the new props. The reset effect (Finding 3, above) only clears
+  // already-revealed state; it does nothing about a promise that is still
+  // pending when the subject changes mid-flight.
+  describe('Codex round 2, Finding 2 — a stale in-flight reveal must not render under new props', () => {
+    it('does not render the resolved number when maskedPhone changes before the reveal promise resolves', async () => {
+      let resolveReveal: (v: { party: 'CUSTOMER'; phone: string; revealedAt: string }) => void;
+      revealOrderContact.mockReturnValueOnce(
+        new Promise((resolve) => { resolveReveal = resolve; }),
+      );
+      const { rerender } = render(<ContactReveal {...base} />);
+      await userEvent.click(screen.getByRole('button'));
+
+      // Subject changes (new masked number) while the reveal is still in flight.
+      rerender(<ContactReveal {...base} maskedPhone="+91 XXXXX-X1234" />);
+
+      // The stale promise now resolves with the PREVIOUS subject's number.
+      await act(async () => {
+        resolveReveal!({ party: 'CUSTOMER', phone: '+919999999999', revealedAt: '2026-09-08T00:00:00.000Z' });
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(screen.queryByText('+919999999999')).toBeNull();
+      expect(screen.getByText('+91 XXXXX-X1234')).toBeInTheDocument();
+    });
+
+    it('does not render the resolved number when party changes before the reveal promise resolves', async () => {
+      let resolveReveal: (v: { party: 'CUSTOMER'; phone: string; revealedAt: string }) => void;
+      revealOrderContact.mockReturnValueOnce(
+        new Promise((resolve) => { resolveReveal = resolve; }),
+      );
+      const { rerender } = render(<ContactReveal {...base} />);
+      await userEvent.click(screen.getByRole('button'));
+
+      rerender(<ContactReveal {...base} party="TECHNICIAN" maskedPhone="+91 XXXXX-X4321" />);
+
+      await act(async () => {
+        resolveReveal!({ party: 'CUSTOMER', phone: '+919999999999', revealedAt: '2026-09-08T00:00:00.000Z' });
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(screen.queryByText('+919999999999')).toBeNull();
+      expect(screen.getByText('+91 XXXXX-X4321')).toBeInTheDocument();
+    });
+  });
+
+  // Codex round 2, Finding 3: in OrdersTable, the reveal button sits inside
+  // a `<tr onClick={() => onRowClick(order)}>`. Without isolation, clicking
+  // "Show number" bubbles to the row, opens the slide-over drawer behind the
+  // in-flight reveal, and the operator typically reveals a second time from
+  // the drawer — a second audit entry for one intent.
+  describe('Codex round 2, Finding 3 — reveal click must not bubble to a row click handler', () => {
+    it('does not invoke a row-level onClick when the reveal button is clicked, but does call revealOrderContact', async () => {
+      revealOrderContact.mockResolvedValue({
+        party: 'CUSTOMER', phone: '+919999999999', revealedAt: '2026-09-08T00:00:00.000Z',
+      });
+      const rowOnClick = vi.fn();
+      render(
+        <table>
+          <tbody>
+            <tr onClick={rowOnClick}>
+              <td>
+                <ContactReveal {...base} />
+              </td>
+            </tr>
+          </tbody>
+        </table>,
+      );
+
+      await userEvent.click(screen.getByRole('button'));
+
+      expect(rowOnClick).not.toHaveBeenCalled();
+      expect(revealOrderContact).toHaveBeenCalledWith('ord_1', 'CUSTOMER');
+    });
+
+    it('does not invoke a row-level onClick when the hide-now button is clicked', async () => {
+      revealOrderContact.mockResolvedValue({
+        party: 'CUSTOMER', phone: '+919999999999', revealedAt: '2026-09-08T00:00:00.000Z',
+      });
+      const rowOnClick = vi.fn();
+      render(
+        <table>
+          <tbody>
+            <tr onClick={rowOnClick}>
+              <td>
+                <ContactReveal {...base} />
+              </td>
+            </tr>
+          </tbody>
+        </table>,
+      );
+
+      await userEvent.click(screen.getByRole('button'));
+      await waitFor(() => expect(screen.getByText('+919999999999')).toBeInTheDocument());
+      rowOnClick.mockClear();
+
+      await userEvent.click(screen.getByRole('button')); // "Hide now"
+
+      expect(rowOnClick).not.toHaveBeenCalled();
     });
   });
 

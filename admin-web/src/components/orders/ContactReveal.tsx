@@ -58,6 +58,14 @@ export function ContactReveal({
   const [pending, setPending] = useState(false);
   const [errorKey, setErrorKey] = useState<ErrorKey | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Codex round 2, Finding 2: guards against a stale in-flight reveal. If
+  // this component instance is reused for a different subject (orderId,
+  // party, or maskedPhone changes — see the reset effect below) before an
+  // in-flight reveal() promise resolves, that promise's resolution must not
+  // commit the PREVIOUS subject's raw number under the new props. Bumped on
+  // every new reveal attempt and on every subject change; a response is only
+  // committed if the request id it was issued under is still current.
+  const requestIdRef = useRef(0);
 
   const stopTimer = useCallback(() => {
     if (intervalRef.current !== null) {
@@ -83,6 +91,9 @@ export function ContactReveal({
   // of the masked number itself (maskedPhone), which changes whenever the
   // underlying phone-on-file changes even for the same order/party.
   useEffect(() => {
+    // Invalidate any reveal that is still in flight for the previous
+    // subject — its eventual resolution must be a no-op (see reveal() below).
+    requestIdRef.current += 1;
     stopTimer();
     setPhone(null);
     setSecondsLeft(REVEAL_SECONDS);
@@ -90,10 +101,16 @@ export function ContactReveal({
   }, [orderId, party, maskedPhone, stopTimer]);
 
   const reveal = useCallback(async () => {
+    const requestId = (requestIdRef.current += 1);
     setPending(true);
     setErrorKey(null);
     try {
       const result = await revealOrderContact(orderId, party);
+      // The subject may have changed while this request was in flight (a
+      // new reveal was started, or the reset effect above bumped the id in
+      // response to a prop change). A stale response must never be
+      // committed under the new subject's props.
+      if (requestIdRef.current !== requestId) return;
       setPhone(result.phone);
       setSecondsLeft(REVEAL_SECONDS);
       stopTimer();
@@ -108,9 +125,10 @@ export function ContactReveal({
         });
       }, 1000);
     } catch (err: unknown) {
+      if (requestIdRef.current !== requestId) return;
       setErrorKey(errorKeyFor(err));
     } finally {
-      setPending(false);
+      if (requestIdRef.current === requestId) setPending(false);
     }
   }, [orderId, party, stopTimer]);
 
@@ -156,11 +174,22 @@ export function ContactReveal({
         number" branch during an error state; reveal() itself clears
         errorKey at the start of each attempt.
       */}
+      {/*
+        Codex round 2, Finding 3: in OrdersTable this component sits inside
+        a `<tr onClick={() => onRowClick(order)}>`. Without isolating this
+        click, "Show number" bubbles to the row, opens the slide-over drawer
+        behind the in-flight reveal, and the operator typically reveals a
+        second time from the drawer — a second audit entry for one intent.
+        `stopPropagation()` in the onClick handler covers keyboard activation
+        too: activating a native <button> via Enter/Space dispatches the same
+        'click' event that a mouse click does, so there is no separate
+        keyboard path to guard.
+      */}
       {canReveal && (
         phone === null ? (
           <button
             type="button"
-            onClick={() => { void reveal(); }}
+            onClick={(e) => { e.stopPropagation(); void reveal(); }}
             disabled={pending}
             aria-label={t('showNumberAria', { party: partyLabel })}
             className={controlClass}
@@ -170,7 +199,7 @@ export function ContactReveal({
         ) : (
           <button
             type="button"
-            onClick={hide}
+            onClick={(e) => { e.stopPropagation(); hide(); }}
             aria-label={t('hideNowAria')}
             className={controlClass}
           >
