@@ -127,4 +127,84 @@ describe('ContactReveal', () => {
     await userEvent.click(screen.getByRole('button'));
     await waitFor(() => expect(revealOrderContact).toHaveBeenCalledWith('ord_1', 'TECHNICIAN'));
   });
+
+  // Finding 2: the API returns the placeholder mask '••••••••••'
+  // (MASK_PLACEHOLDER in api/src/lib/pii/mask.ts) when there is no number on
+  // file at all. That is a non-empty string, so it must be treated as "no
+  // number on file" — same branch as maskedPhone === undefined — rather than
+  // rendering a reveal control that can only end in a wasted budget spend
+  // and a generic error.
+  it('renders the unavailable copy (and no button) when maskedPhone is the all-bullet placeholder mask', () => {
+    render(<ContactReveal {...base} maskedPhone="••••••••••" />);
+    expect(screen.getByText('[orders.pii.unavailable]')).toBeInTheDocument();
+    expect(screen.queryByRole('button')).toBeNull();
+  });
+
+  // Finding 3: `phone` is component state. If the component instance is
+  // reused with new props (e.g. an admin reassigns the technician in an
+  // open drawer while that technician's number is revealed), the previous
+  // person's raw number must not remain on screen attributed to the new
+  // subject.
+  describe('Finding 3 — resets revealed state when the subject identity changes', () => {
+    it('clears the revealed phone when maskedPhone changes on the same instance', async () => {
+      revealOrderContact.mockResolvedValue({
+        party: 'CUSTOMER', phone: '+919999999999', revealedAt: '2026-09-08T00:00:00.000Z',
+      });
+      const { rerender } = render(<ContactReveal {...base} />);
+      await userEvent.click(screen.getByRole('button'));
+      await waitFor(() => expect(screen.getByText('+919999999999')).toBeInTheDocument());
+
+      rerender(<ContactReveal {...base} maskedPhone="+91 XXXXX-X1234" />);
+
+      expect(screen.queryByText('+919999999999')).toBeNull();
+      expect(screen.getByText('+91 XXXXX-X1234')).toBeInTheDocument();
+    });
+
+    it('clears the revealed phone when party changes on the same instance', async () => {
+      revealOrderContact.mockResolvedValue({
+        party: 'CUSTOMER', phone: '+919999999999', revealedAt: '2026-09-08T00:00:00.000Z',
+      });
+      const { rerender } = render(<ContactReveal {...base} />);
+      await userEvent.click(screen.getByRole('button'));
+      await waitFor(() => expect(screen.getByText('+919999999999')).toBeInTheDocument());
+
+      rerender(<ContactReveal {...base} party="TECHNICIAN" maskedPhone="+91 XXXXX-X4321" />);
+
+      expect(screen.queryByText('+919999999999')).toBeNull();
+      expect(screen.getByText('+91 XXXXX-X4321')).toBeInTheDocument();
+    });
+
+    it('still auto-remasks after 60 seconds (no regression from the reset effect)', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      revealOrderContact.mockResolvedValue({
+        party: 'CUSTOMER', phone: '+919999999999', revealedAt: '2026-09-08T00:00:00.000Z',
+      });
+      render(<ContactReveal {...base} />);
+      await userEvent.click(screen.getByRole('button'));
+      await waitFor(() => expect(screen.getByText('+919999999999')).toBeInTheDocument());
+      await vi.advanceTimersByTimeAsync(60_000);
+      await waitFor(() => expect(screen.queryByText('+919999999999')).toBeNull());
+      expect(screen.getByText('+91 XXXXX-X9999')).toBeInTheDocument();
+    });
+  });
+
+  // Finding 5: `canReveal && errorKey === null` removed the button after any
+  // failure, but the error copy says "Try again" — a dead end for
+  // transient 502/429/network failures.
+  it('Finding 5 — keeps a usable retry button visible after a failed reveal, and retrying calls revealOrderContact again', async () => {
+    revealOrderContact.mockRejectedValueOnce(new Error('network'));
+    revealOrderContact.mockResolvedValueOnce({
+      party: 'CUSTOMER', phone: '+919999999999', revealedAt: '2026-09-08T00:00:00.000Z',
+    });
+    render(<ContactReveal {...base} />);
+    await userEvent.click(screen.getByRole('button'));
+    await waitFor(() => expect(screen.getByText('[orders.pii.errors.failed]')).toBeInTheDocument());
+
+    const retryButton = screen.getByRole('button');
+    expect(retryButton).toBeInTheDocument();
+
+    await userEvent.click(retryButton);
+    await waitFor(() => expect(screen.getByText('+919999999999')).toBeInTheDocument());
+    expect(revealOrderContact).toHaveBeenCalledTimes(2);
+  });
 });

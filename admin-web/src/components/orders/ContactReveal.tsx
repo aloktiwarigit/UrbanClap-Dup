@@ -74,6 +74,21 @@ export function ContactReveal({
 
   useEffect(() => stopTimer, [stopTimer]);
 
+  // Finding 3: this component instance can be reused with new props (e.g.
+  // an admin reassigns the technician in an open drawer while that
+  // technician's number is revealed). `phone` is component state, so
+  // without this reset the previous subject's raw number stays on screen
+  // attributed to the new one — the worst failure this component can
+  // produce. Reset on any change of subject identity (orderId, party) or
+  // of the masked number itself (maskedPhone), which changes whenever the
+  // underlying phone-on-file changes even for the same order/party.
+  useEffect(() => {
+    stopTimer();
+    setPhone(null);
+    setSecondsLeft(REVEAL_SECONDS);
+    setErrorKey(null);
+  }, [orderId, party, maskedPhone, stopTimer]);
+
   const reveal = useCallback(async () => {
     setPending(true);
     setErrorKey(null);
@@ -108,7 +123,15 @@ export function ContactReveal({
     'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ' +
     'focus-visible:outline-[var(--color-focus-ring)] disabled:opacity-60';
 
-  if (!maskedPhone) {
+  // Finding 2: when there is no number on file at all, the API returns the
+  // placeholder mask MASK_PLACEHOLDER ('••••••••••', see
+  // api/src/lib/pii/mask.ts) rather than an empty string. A structural
+  // check — a mask made up entirely of bullet characters — catches that
+  // case without duplicating the API's exact placeholder string across the
+  // package boundary.
+  const isPlaceholderMask = maskedPhone !== undefined && /^•+$/.test(maskedPhone);
+
+  if (!maskedPhone || isPlaceholderMask) {
     return (
       <span className="text-xs italic text-[var(--color-text-faint)]">{t('unavailable')}</span>
     );
@@ -124,7 +147,16 @@ export function ContactReveal({
         </a>
       )}
 
-      {canReveal && errorKey === null && (
+      {/*
+        Finding 5: the control must stay visible after a failed reveal — the
+        error copy says "Try again", so hiding the only control that lets an
+        admin retry turns a transient 502/429/network failure into a dead
+        end. `phone` stays null whenever errorKey is set (reveal() never
+        sets phone on a failed attempt), so this always renders the "Show
+        number" branch during an error state; reveal() itself clears
+        errorKey at the start of each attempt.
+      */}
+      {canReveal && (
         phone === null ? (
           <button
             type="button"
