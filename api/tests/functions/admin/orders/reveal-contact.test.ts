@@ -239,6 +239,26 @@ describe('POST /v1/admin/orders/{id}/reveal-contact', () => {
       expect((res.jsonBody as { code: string }).code).toBe('PARTY_NOT_AVAILABLE');
       expect(appendAuditEntry).not.toHaveBeenCalled();
     });
+
+    // Codex round 4, Finding 2: a technician-lookup outage (getTechniciansByIds
+    // throwing) must surface as 502 CONTACT_LOOKUP_FAILED, not be swallowed
+    // into the same 404 PARTY_NOT_AVAILABLE used for a genuine absence or an
+    // ambiguous match. See docs/reviews/codex-20260909-0838-round4.md.
+    it('returns 502 CONTACT_LOOKUP_FAILED and reports to Sentry when getTechniciansByIds throws', async () => {
+      getTechniciansByIds.mockRejectedValue(new Error('technicians container throttled'));
+      const res = await revealContactHandler(request({ party: 'TECHNICIAN' }), ctx, admin);
+      expect(res.status).toBe(502);
+      expect((res.jsonBody as { code: string }).code).toBe('CONTACT_LOOKUP_FAILED');
+      expect(Sentry.captureException).toHaveBeenCalled();
+      expect(appendAuditEntry).not.toHaveBeenCalled();
+    });
+
+    it('exact match still resolves correctly when getTechniciansByIds does not throw', async () => {
+      getTechniciansByIds.mockResolvedValue([{ id: 'tech_1', technicianId: 'tech_1' }]);
+      const res = await revealContactHandler(request({ party: 'TECHNICIAN' }), ctx, admin);
+      expect(res.status).toBe(200);
+      expect((res.jsonBody as { phone: string }).phone).toBe('+919876544321');
+    });
   });
 
   describe('Codex round 2, Finding 1 — audit payload must never carry a raw subject identifier', () => {
@@ -391,6 +411,18 @@ describe('POST /v1/admin/orders/{id}/reveal-contact', () => {
       const [, action, , , payload] = auditLog.mock.calls[0]!;
       expect(action).toBe('PII_CONTACT_REVEAL_DENIED');
       expect((payload as Record<string, unknown>)['reason']).toBe('LOOKUP_FAILED');
+    });
+
+    it('502 technician-lookup failure writes a denial row reason LOOKUP_FAILED with no phone in the body', async () => {
+      getTechniciansByIds.mockRejectedValue(new Error('technicians container throttled'));
+      const res = await revealContactHandler(request({ party: 'TECHNICIAN' }), ctx, admin);
+      expect(res.status).toBe(502);
+      expect((res.jsonBody as { code: string }).code).toBe('CONTACT_LOOKUP_FAILED');
+      expect((res.jsonBody as { phone?: string }).phone).toBeUndefined();
+      const [, action, , , payload] = auditLog.mock.calls[0]!;
+      expect(action).toBe('PII_CONTACT_REVEAL_DENIED');
+      expect((payload as Record<string, unknown>)['reason']).toBe('LOOKUP_FAILED');
+      expect(appendAuditEntry).not.toHaveBeenCalled();
     });
 
     it('503 rate-limit-store failure writes a denial row reason RATE_LIMIT_UNAVAILABLE', async () => {

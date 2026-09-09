@@ -80,7 +80,10 @@ over-satisfied (with no access control) for the customer side.
 7. Technician-uid resolution is deterministic under `getTechniciansByIds`' unordered cross-key
    match (a booking's `technicianId` may match either a document's `id` or its `technicianId`
    field): an exact `id` match wins outright; otherwise a unique `technicianId` match is accepted;
-   anything ambiguous or absent resolves to `404 PARTY_NOT_AVAILABLE` rather than guessing.
+   anything ambiguous or absent resolves to `404 PARTY_NOT_AVAILABLE` rather than guessing. A
+   `getTechniciansByIds` call that throws (technicians container throttled or unreachable) is a
+   distinct outcome — `502 CONTACT_LOOKUP_FAILED`, reported to Sentry — never collapsed into the
+   same 404 used for a genuine absence or an ambiguous match.
 8. `ContactReveal` (admin-web) shows the masked number at rest, a labelled "Show number" control
    (not an icon-only eye), reveals the full number for 60 seconds with a live "Hide now · Ns"
    countdown/manual-hide control, states inline that the reveal was recorded in the audit log,
@@ -127,8 +130,8 @@ Headers: `Cache-Control: no-store`.
 | 422 | `VALIDATION_ERROR` | Malformed or non-JSON body, unknown `party`, or an unexpected extra key. |
 | 429 | `RATE_LIMITED` | The admin's 30/min budget is spent. `Retry-After` header + `retryAfterMs` in the body. |
 | 429 | `RATE_LIMITED_DAILY` | The admin's 50/rolling-24h budget is spent (per-minute budget still had room). `Retry-After` header + `retryAfterMs` in the body. |
-| 502 | `CONTACT_LOOKUP_FAILED` | Firebase Auth lookup threw (reported to Sentry). |
-| 503 | `RATE_LIMIT_UNAVAILABLE` | The rate-limit store itself is unreachable; the endpoint fails closed by design. |
+| 502 | `CONTACT_LOOKUP_FAILED` | The Firebase Auth phone lookup or the technician-uid lookup (`getTechniciansByIds`) threw (reported to Sentry) — an outage, distinguished from a genuine absence (404 above). |
+| 503 | `RATE_LIMIT_UNAVAILABLE` | The rate-limit store itself is unreachable; the endpoint fails closed by design. A concurrent create race on a brand-new per-admin bucket (both requests read 404, one loses the create with a 409) is NOT this — it is retried against the winner's doc and does not surface as a failure. |
 
 Every outcome above except `200`, `401`, and `422` also writes a `PII_CONTACT_REVEAL_DENIED` audit
 entry (see Acceptance 6a/6b and `docs/runbook.md` → "Contact reveal (E09-S08)"). `401` is not

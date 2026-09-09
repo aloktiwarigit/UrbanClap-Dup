@@ -163,18 +163,21 @@ async function auditDenied(
  *      if it is unique.
  *   3. Anything ambiguous or absent resolves to `undefined` — the handler
  *      then answers PARTY_NOT_AVAILABLE rather than guess.
+ *
+ * Throws on a genuine lookup failure (technicians container throttled or
+ * unreachable) rather than swallowing the error — same shape as
+ * `phoneForUid` above, and for the same reason: the caller must be able to
+ * tell "no technician resolves" (404 PARTY_NOT_AVAILABLE) apart from "we
+ * could not check" (502 CONTACT_LOOKUP_FAILED). Silently collapsing both to
+ * `undefined` would hide an outage as if it were routine data absence.
  */
 async function technicianUid(technicianId: string): Promise<string | undefined> {
-  try {
-    const techs = await getTechniciansByIds([technicianId]);
-    const exact = techs.find((t) => t.id === technicianId);
-    if (exact) return exact.id;
-    const byTechnicianId = techs.filter((t) => t.technicianId === technicianId);
-    if (byTechnicianId.length === 1) return byTechnicianId[0]!.id;
-    return undefined;
-  } catch {
-    return undefined;
-  }
+  const techs = await getTechniciansByIds([technicianId]);
+  const exact = techs.find((t) => t.id === technicianId);
+  if (exact) return exact.id;
+  const byTechnicianId = techs.filter((t) => t.technicianId === technicianId);
+  if (byTechnicianId.length === 1) return byTechnicianId[0]!.id;
+  return undefined;
 }
 
 /**
@@ -313,7 +316,13 @@ export async function revealContactHandler(
       await auditDenied(admin, id, 'NOT_FOUND', { party });
       return { status: 404, jsonBody: { code: 'PARTY_NOT_AVAILABLE' } };
     }
-    subjectId = await technicianUid(order.technicianId);
+    try {
+      subjectId = await technicianUid(order.technicianId);
+    } catch (err: unknown) {
+      Sentry.captureException(err);
+      await auditDenied(admin, id, 'LOOKUP_FAILED', { party });
+      return { status: 502, jsonBody: { code: 'CONTACT_LOOKUP_FAILED' } };
+    }
   }
   if (!subjectId) {
     await auditDenied(admin, id, 'NOT_FOUND', { party });

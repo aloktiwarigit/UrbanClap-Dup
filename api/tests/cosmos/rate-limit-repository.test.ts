@@ -254,3 +254,80 @@ describe('consumeStrict — fails CLOSED (used by the PII reveal endpoint)', () 
     expect(Sentry.captureException).not.toHaveBeenCalled();
   });
 });
+
+// Codex round 4, Finding 1: a create conflict (409) on a brand-new bucket key
+// is a healthy-store race between two concurrent first requests, NOT a store
+// outage — it must not surface as RATE_LIMIT_UNAVAILABLE/503 under
+// consumeStrict. See docs/reviews/codex-20260909-0838-round4.md.
+describe('consume/consumeStrict — concurrent create conflict (409) on a new bucket key', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+  });
+
+  it('retries once on a 409 create conflict and returns allowed=true against the doc the other writer created', async () => {
+    const now = Date.now();
+    vi.setSystemTime(now);
+    const err404 = Object.assign(new Error('Not found'), { code: 404 });
+    const err409 = Object.assign(new Error('Conflict'), { code: 409 });
+
+    // First read: bucket doesn't exist yet. Our create loses the race (409).
+    // Second read (the retry): the other writer's doc is now there.
+    mockRead
+      .mockRejectedValueOnce(err404)
+      .mockResolvedValueOnce({ resource: makeDoc(9, now), etag: 'etag-1' });
+    mockCreate.mockRejectedValueOnce(err409);
+    mockReplace.mockResolvedValueOnce({ resource: makeDoc(8, now) });
+
+    const result = await consumeStrict('test-key', 10, 10 / 60);
+    expect(result.allowed).toBe(true);
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(mockRead).toHaveBeenCalledTimes(2);
+    expect(mockReplace).toHaveBeenCalledTimes(1);
+
+    vi.useRealTimers();
+  });
+
+  it('propagates a non-409 create error through consumeStrict instead of retrying', async () => {
+    const err404 = Object.assign(new Error('Not found'), { code: 404 });
+    const errOther = new Error('Cosmos throttled during create');
+    mockRead.mockRejectedValue(err404);
+    mockCreate.mockRejectedValue(errOther);
+
+    await expect(consumeStrict('test-key', 10, 10 / 60)).rejects.toThrow(
+      'Cosmos throttled during create',
+    );
+    expect(mockRead).toHaveBeenCalledTimes(1);
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+
+    vi.useRealTimers();
+  });
+
+  it('bounds the create-conflict retry to one attempt: a second consecutive 409 fails CLOSED under consumeStrict', async () => {
+    const err404 = Object.assign(new Error('Not found'), { code: 404 });
+    const err409 = Object.assign(new Error('Conflict'), { code: 409 });
+    // Every read still sees no doc, and every create loses — bound the retry
+    // instead of looping forever.
+    mockRead.mockRejectedValue(err404);
+    mockCreate.mockRejectedValue(err409);
+
+    await expect(consumeStrict('test-key', 10, 10 / 60)).rejects.toThrow();
+    expect(mockCreate).toHaveBeenCalledTimes(2);
+    expect(mockRead).toHaveBeenCalledTimes(2);
+
+    vi.useRealTimers();
+  });
+
+  it('bounds the create-conflict retry to one attempt: fails OPEN (not throw) under consume when retries are exhausted', async () => {
+    const err404 = Object.assign(new Error('Not found'), { code: 404 });
+    const err409 = Object.assign(new Error('Conflict'), { code: 409 });
+    mockRead.mockRejectedValue(err404);
+    mockCreate.mockRejectedValue(err409);
+
+    const result = await consume('test-key', 10, 10 / 60);
+    expect(result.allowed).toBe(true);
+    expect(mockCreate).toHaveBeenCalledTimes(2);
+
+    vi.useRealTimers();
+  });
+});
