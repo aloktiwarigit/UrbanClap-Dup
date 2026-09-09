@@ -1,9 +1,25 @@
 # E09-S08: PII-safe phones + audited reveal
 
 **Goal:** Admin sees both the technician and the customer phone number on a booking (owner
-requirement R2), masked by default everywhere — list, drawer, CSV export — with a role-gated,
+requirement R2), masked by default everywhere the number appears, with a role-gated,
 rate-limited, audit-logged reveal for the full number. No raw phone number leaves the API except
 in the `reveal-contact` response body.
+
+Per surface (spec §7.11 — `ContactReveal` sits in `OrderSlideOver` for both parties; masked in
+table/CSV):
+
+- **Customer phone:** masked in the orders **list**, the **drawer** (`OrderSlideOver`), and the
+  **CSV export**; revealable via `ContactReveal` from both the list (`CustomerCell`) and the
+  drawer.
+- **Technician phone:** masked in the **drawer** and the **CSV export**; revealable via
+  `ContactReveal` from the drawer only. The orders **list** (`OrdersTable` / `TechnicianCell`) has
+  no technician phone column at all — this is a deliberate design decision, not a gap: a 50-row
+  grid stays calm without a second reveal control per row, and the customer-facing reveal already
+  covers the list's primary contact-lookup need. Consistent with spec §7.11. (Recorded 2026-09-09
+  after Codex round-3 finding 3 questioned it against this doc's earlier, imprecise "list, drawer,
+  CSV export — everywhere" phrasing — the code was already correct; this doc was not. Do not
+  re-raise a table-level technician `ContactReveal` without a fresh product decision to change the
+  list's density.)
 
 ## Owner requirement
 

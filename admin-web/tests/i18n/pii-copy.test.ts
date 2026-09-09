@@ -26,6 +26,7 @@ const REQUIRED = [
   'orders.pii.party.technician',
   'orders.pii.errors.forbidden',
   'orders.pii.errors.rateLimited',
+  'orders.pii.errors.rateLimitedDaily',
   'orders.pii.errors.failed',
   'orders.csv.headers.technicianPhone',
   'orders.detail.sections.customerPhone',

@@ -67,6 +67,12 @@ audited path back to the raw value.
 - **Client re-masks itself.** The admin-web `ContactReveal` component holds the revealed number in
   component state only (never in a store, never in a URL), starts a 60-second countdown on reveal,
   and re-masks automatically when it elapses or when the operator clicks "Hide now" early.
+  `ContactReveal` is wired into the orders **list** (`CustomerCell`) and the order **drawer**
+  (`OrderSlideOver`, both parties) — per spec §7.11. The **customer** number is revealable from
+  both surfaces; the **technician** number is revealable from the drawer only, since the list has
+  no technician-phone column at all (deliberate, for grid density — see
+  `docs/stories/E09-S08-pii-safe-phones.md`). The CSV export never carries a reveal control by
+  design — see "Alternatives considered" → Reveal-by-CSV.
 
 ## Update 2026-09-09 — denial auditing, daily cap, and authorize-in-handler
 

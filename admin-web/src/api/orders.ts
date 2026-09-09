@@ -126,13 +126,48 @@ export async function fetchTechnicianCandidatesForOrder(id: string): Promise<Tec
 }
 
 /** Error thrown by revealOrderContact, carrying the HTTP status so the UI can
- *  distinguish forbidden (403) from rate-limited (429) from everything else. */
+ *  distinguish forbidden (403) from rate-limited (429) from everything else.
+ *
+ *  Codex round 3, Finding 2: a 429 can mean either the per-minute cap
+ *  (`code: 'RATE_LIMITED'`) or the rolling-24h daily cap
+ *  (`code: 'RATE_LIMITED_DAILY'`) — telling the admin "try again in a
+ *  minute" when the real wait is hours is a real usability bug. `code` and
+ *  `retryAfterMs` carry the response body through so the UI can tell them
+ *  apart; both are `undefined` when the body could not be read (see
+ *  `parseErrorBody` below). */
 export class RevealContactError extends Error {
   readonly status: number;
-  constructor(status: number) {
+  readonly code: string | undefined;
+  readonly retryAfterMs: number | undefined;
+  constructor(status: number, code?: string, retryAfterMs?: number) {
     super(`revealOrderContact failed: ${status}`);
     this.name = 'RevealContactError';
     this.status = status;
+    this.code = code;
+    this.retryAfterMs = retryAfterMs;
+  }
+}
+
+/**
+ * Reads the JSON error body defensively. The body may be absent (e.g. a 403
+ * with no payload) or unparseable (e.g. a proxy/gateway error page that
+ * returns HTML with a 429 status), so a parse failure must fall back to
+ * `undefined` fields rather than throwing a second error out of the error
+ * path and masking the original HTTP status.
+ */
+async function parseErrorBody(res: Response): Promise<{ code: string | undefined; retryAfterMs: number | undefined }> {
+  try {
+    const body: unknown = await res.json();
+    if (body && typeof body === 'object') {
+      const { code, retryAfterMs } = body as { code?: unknown; retryAfterMs?: unknown };
+      return {
+        code: typeof code === 'string' ? code : undefined,
+        retryAfterMs: typeof retryAfterMs === 'number' ? retryAfterMs : undefined,
+      };
+    }
+    return { code: undefined, retryAfterMs: undefined };
+  } catch {
+    return { code: undefined, retryAfterMs: undefined };
   }
 }
 
@@ -146,6 +181,9 @@ export async function revealOrderContact(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ party }),
   });
-  if (!res.ok) throw new RevealContactError(res.status);
+  if (!res.ok) {
+    const { code, retryAfterMs } = await parseErrorBody(res);
+    throw new RevealContactError(res.status, code, retryAfterMs);
+  }
   return res.json() as Promise<RevealContactResponse>;
 }

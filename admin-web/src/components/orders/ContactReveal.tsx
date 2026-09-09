@@ -19,12 +19,21 @@ interface ContactRevealProps {
   variant?: 'inline' | 'block';
 }
 
-type ErrorKey = 'forbidden' | 'rateLimited' | 'failed';
+type ErrorKey = 'forbidden' | 'rateLimited' | 'rateLimitedDaily' | 'failed';
 
+// Codex round 3, Finding 2: the API distinguishes the per-minute cap
+// (`code: 'RATE_LIMITED'`) from the rolling-24h daily cap
+// (`code: 'RATE_LIMITED_DAILY'`) — both surface as HTTP 429. Collapsing them
+// into one message tells the admin to try again in a minute when the real
+// wait may be hours. `code` is undefined when the response body couldn't be
+// parsed (see `parseErrorBody` in `@/api/orders`), so that case falls
+// through to the existing per-minute copy rather than a new failure mode.
 function errorKeyFor(err: unknown): ErrorKey {
   if (err instanceof RevealContactError) {
     if (err.status === 403) return 'forbidden';
-    if (err.status === 429) return 'rateLimited';
+    if (err.status === 429) {
+      return err.code === 'RATE_LIMITED_DAILY' ? 'rateLimitedDaily' : 'rateLimited';
+    }
   }
   return 'failed';
 }
@@ -40,6 +49,8 @@ function errorMessage(t: (key: string) => string, key: ErrorKey): string {
       return t('errors.forbidden');
     case 'rateLimited':
       return t('errors.rateLimited');
+    case 'rateLimitedDaily':
+      return t('errors.rateLimitedDaily');
     default:
       return t('errors.failed');
   }
@@ -98,6 +109,13 @@ export function ContactReveal({
     setPhone(null);
     setSecondsLeft(REVEAL_SECONDS);
     setErrorKey(null);
+    // Codex round 3, Finding 1: `pending` was not reset here. A reveal in
+    // flight when the subject changes gets invalidated by the requestId
+    // bump above, so reveal()'s `finally` — which only clears `pending` when
+    // the request id it ran under is still current — refuses to clear it.
+    // Without this line the new subject's "Show number" button stayed
+    // disabled forever.
+    setPending(false);
   }, [orderId, party, maskedPhone, stopTimer]);
 
   const reveal = useCallback(async () => {

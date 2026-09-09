@@ -354,6 +354,7 @@
       "errors": {
         "forbidden": "Your role can't reveal contact numbers.",
         "rateLimited": "Too many reveals. Try again in a minute.",
+        "rateLimitedDaily": "You've reached today's reveal limit. Try again tomorrow.",
         "failed": "Couldn't reveal the number. Try again."
       }
     }

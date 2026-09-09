@@ -18,7 +18,14 @@ const { revealOrderContact, RevealContactError } = vi.hoisted(() => {
   const revealOrderContact = vi.fn();
   class RevealContactError extends Error {
     status: number;
-    constructor(status: number) { super('x'); this.status = status; }
+    code: string | undefined;
+    retryAfterMs: number | undefined;
+    constructor(status: number, code?: string, retryAfterMs?: number) {
+      super('x');
+      this.status = status;
+      this.code = code;
+      this.retryAfterMs = retryAfterMs;
+    }
   }
   return { revealOrderContact, RevealContactError };
 });
@@ -311,5 +318,95 @@ describe('ContactReveal', () => {
     await userEvent.click(retryButton);
     await waitFor(() => expect(screen.getByText('+919999999999')).toBeInTheDocument());
     expect(revealOrderContact).toHaveBeenCalledTimes(2);
+  });
+
+  // Codex round 3, Finding 1: the subject-change reset effect cleared
+  // `phone`, `errorKey` and `secondsLeft` but not `pending`. If a reveal is
+  // still in flight when the subject changes, the effect invalidates the
+  // request, and the stale request's `finally` refuses to clear `pending`
+  // because the request id no longer matches — the new subject's button
+  // stays disabled forever.
+  describe('Codex round 3, Finding 1 — pending must not survive a subject change', () => {
+    it('does not leave the new subject\'s button disabled when maskedPhone changes mid-flight, and the stale resolution is a no-op', async () => {
+      let resolveStale: (v: { party: 'CUSTOMER'; phone: string; revealedAt: string }) => void;
+      let resolveFresh: (v: { party: 'CUSTOMER'; phone: string; revealedAt: string }) => void;
+      revealOrderContact.mockReturnValueOnce(
+        new Promise((resolve) => { resolveStale = resolve; }),
+      );
+      const { rerender } = render(<ContactReveal {...base} />);
+      await userEvent.click(screen.getByRole('button'));
+      expect(screen.getByRole('button')).toBeDisabled();
+
+      // Subject changes while the reveal is still in flight.
+      rerender(<ContactReveal {...base} maskedPhone="+91 XXXXX-X1234" />);
+
+      const newButton = screen.getByRole('button');
+      expect(newButton).not.toBeDisabled();
+
+      // It must actually be clickable, and clicking it must start a genuine
+      // new reveal for the current subject (a second call to
+      // revealOrderContact) — not a no-op left over from the disabled state.
+      revealOrderContact.mockReturnValueOnce(
+        new Promise((resolve) => { resolveFresh = resolve; }),
+      );
+      await userEvent.click(newButton);
+      expect(revealOrderContact).toHaveBeenCalledTimes(2);
+      expect(screen.getByRole('button')).toBeDisabled(); // pending again, for the NEW subject
+
+      // Let the stale (first) promise resolve; it must be a no-op — no
+      // crash, and it must never render the previous subject's number.
+      await act(async () => {
+        resolveStale!({ party: 'CUSTOMER', phone: '+919999999999', revealedAt: '2026-09-08T00:00:00.000Z' });
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      expect(screen.queryByText('+919999999999')).toBeNull();
+      // The fresh (current) reveal is still pending — the stale resolution
+      // must not have cleared it, disabled/enabled it incorrectly, or
+      // resolved it on the fresh request's behalf.
+      expect(screen.getByRole('button')).toBeDisabled();
+
+      // Resolving the fresh reveal completes normally for the new subject.
+      await act(async () => {
+        resolveFresh!({ party: 'CUSTOMER', phone: '+911234567890', revealedAt: '2026-09-08T00:00:00.000Z' });
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      expect(screen.getByText('+911234567890')).toBeInTheDocument();
+      expect(screen.queryByText('+919999999999')).toBeNull();
+    });
+  });
+
+  // Codex round 3, Finding 2: the API distinguishes the per-minute cap
+  // (429 RATE_LIMITED) from the rolling-24h daily cap (429 RATE_LIMITED_DAILY).
+  // Collapsing both into the same "try again in a minute" copy misleads the
+  // admin when the real wait is hours.
+  describe('Codex round 3, Finding 2 — daily rate-limit gets its own message', () => {
+    it('shows the daily-cap message on 429 RATE_LIMITED_DAILY', async () => {
+      revealOrderContact.mockRejectedValue(new RevealContactError(429, 'RATE_LIMITED_DAILY', 3_600_000));
+      render(<ContactReveal {...base} />);
+      await userEvent.click(screen.getByRole('button'));
+      await waitFor(() =>
+        expect(screen.getByText('[orders.pii.errors.rateLimitedDaily]')).toBeInTheDocument(),
+      );
+    });
+
+    it('still shows the per-minute message on 429 RATE_LIMITED', async () => {
+      revealOrderContact.mockRejectedValue(new RevealContactError(429, 'RATE_LIMITED', 5_000));
+      render(<ContactReveal {...base} />);
+      await userEvent.click(screen.getByRole('button'));
+      await waitFor(() =>
+        expect(screen.getByText('[orders.pii.errors.rateLimited]')).toBeInTheDocument(),
+      );
+    });
+
+    it('falls back to the per-minute message when the 429 body is unparseable (no code)', async () => {
+      revealOrderContact.mockRejectedValue(new RevealContactError(429, undefined, undefined));
+      render(<ContactReveal {...base} />);
+      await userEvent.click(screen.getByRole('button'));
+      await waitFor(() =>
+        expect(screen.getByText('[orders.pii.errors.rateLimited]')).toBeInTheDocument(),
+      );
+    });
   });
 });
