@@ -128,7 +128,7 @@ export function ContactReveal({
         phone === null ? (
           <button
             type="button"
-            onClick={reveal}
+            onClick={() => { void reveal(); }}
             disabled={pending}
             aria-label={t('showNumberAria', { party: partyLabel })}
             className={controlClass}
