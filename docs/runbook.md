@@ -1521,14 +1521,22 @@ Every successful reveal writes a `PII_CONTACT_REVEALED` entry to `audit_log`, pa
 `YYYY-MM` (the month of the reveal, `revealedAt.slice(0, 7)`). The payload carries:
 
 ```json
-{ "party": "CUSTOMER", "subjectId": "<firebase uid>", "phoneMasked": "+91 XXXXX-X4821", "phoneLast4": "4821" }
+{ "party": "CUSTOMER", "subjectRef": "3f9a1c2e7b4d5061", "phoneMasked": "+91 XXXXX-X4821", "phoneLast4": "4821" }
 ```
+
+`subjectRef` is `sha256(subjectId).slice(0, 16)`, not the raw subject id — customer Firebase UIDs
+are phone-derived (`createCustomToken(phoneNumber)` in `truecaller-verify.ts`), so the raw
+`subjectId` can literally BE the customer's phone number, and `audit_log` is readable by any role
+holding `audit.read` (broader than the two roles allowed to reveal). To correlate a specific
+customer or technician to an entry, hash the candidate id the same way
+(`sha256(candidateId).slice(0, 16)`) and compare against `subjectRef`.
 
 Query it directly via `queryAuditLog({ action: 'PII_CONTACT_REVEALED', dateFrom, dateTo })` (same
 helper OP-A7 uses), or filter on the admin-web Audit Log page by action. There is no raw phone
-number anywhere in this entry — `phoneMasked` and `phoneLast4` are the only representations of
-the number that ever reach the audit log, deliberately, since `audit_log` is readable by any role
-holding `audit.read` (broader than the two roles allowed to reveal).
+number or raw subject identifier anywhere in this entry — `subjectRef`, `phoneMasked`, and
+`phoneLast4` are the only representations of the subject/number that ever reach the audit log,
+deliberately, since `audit_log` is readable by any role holding `audit.read` (broader than the two
+roles allowed to reveal).
 
 **Known gap:** only successful (`200`) reveals are audited. A denied (401/403), missing-party
 (404), or rate-limited (429) attempt writes nothing. If you're investigating a suspected PII

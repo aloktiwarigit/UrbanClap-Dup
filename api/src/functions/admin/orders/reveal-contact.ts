@@ -1,6 +1,6 @@
 import { app } from '@azure/functions';
 import type { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import * as Sentry from '@sentry/node';
 import { requireAdmin } from '../../../middleware/requireAdmin.js';
 import type { AdminContext } from '../../../types/admin.js';
@@ -29,6 +29,31 @@ const REVEAL_REFILL_PER_SEC = 0.5;
 async function phoneForUid(uid: string): Promise<string | undefined> {
   const { users } = await getFirebaseAdmin().auth().getUsers([{ uid }]);
   return users[0]?.phoneNumber ?? undefined;
+}
+
+/**
+ * Derives a stable, non-PII surrogate for a subject identifier to write into
+ * the audit log.
+ *
+ * `subjectId` (`order.customerId` for customers, the technician's Firebase
+ * uid for technicians) is NOT safe to write raw: `truecaller-verify.ts` mints
+ * customer Firebase UIDs as `createCustomToken(phoneNumber)` (see the
+ * `TODO(E11-S01b)` there tracking the migration off phone-as-uid), so for
+ * every Truecaller-onboarded customer `subjectId` literally IS their phone
+ * number. `audit_log` is readable by any role holding `audit.read` — broader
+ * than the two roles allowed to reveal — so writing that value there would
+ * re-leak precisely what this endpoint's masking exists to prevent.
+ *
+ * Applied uniformly to both parties (not special-cased for customers):
+ * technician uids may also turn out to be phone-derived, and uniform
+ * treatment is easier to reason about than trusting a per-party exemption.
+ *
+ * A breach investigator can still correlate a `subjectRef` back to a
+ * candidate id by hashing that candidate the same way and comparing — the
+ * standard "hash, don't encrypt" pattern for a one-way audit correlation key.
+ */
+function subjectRefFor(subjectId: string): string {
+  return createHash('sha256').update(subjectId).digest('hex').slice(0, 16);
 }
 
 /**
@@ -157,9 +182,12 @@ export async function revealContactHandler(
   // to prevent.
   const phoneLast4 = phoneMasked === MASK_PLACEHOLDER ? '' : phone.trim().slice(-4);
 
-  // The audit payload carries the masked number only — audit_log is readable
-  // by any role with audit.read, so storing the raw number there would defeat
-  // the purpose of masking it everywhere else.
+  // The audit payload carries the masked number and a one-way subjectRef
+  // only — never the raw subjectId. audit_log is readable by any role with
+  // audit.read, and subjectId can itself be a raw phone number (customer
+  // Firebase UIDs are phone-derived, see subjectRefFor() above), so storing
+  // it directly would defeat the purpose of masking the number everywhere
+  // else.
   await appendAuditEntry({
     id: randomUUID(),
     adminId: admin.adminId,
@@ -169,7 +197,7 @@ export async function revealContactHandler(
     resourceId: id,
     payload: {
       party,
-      subjectId,
+      subjectRef: subjectRefFor(subjectId),
       phoneMasked,
       phoneLast4,
     },

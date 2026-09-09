@@ -239,6 +239,51 @@ describe('POST /v1/admin/orders/{id}/reveal-contact', () => {
     });
   });
 
+  describe('Codex round 2, Finding 1 — audit payload must never carry a raw subject identifier', () => {
+    it('does not write a subjectId key into the audit payload', async () => {
+      await revealContactHandler(request({ party: 'CUSTOMER' }), ctx, admin);
+      const entry = appendAuditEntry.mock.calls[0]![0] as { payload: Record<string, unknown> };
+      expect(entry.payload).not.toHaveProperty('subjectId');
+    });
+
+    it('writes a subjectRef that is a 16-character hex string', async () => {
+      await revealContactHandler(request({ party: 'CUSTOMER' }), ctx, admin);
+      const entry = appendAuditEntry.mock.calls[0]![0] as { payload: Record<string, unknown> };
+      expect(entry.payload['subjectRef']).toMatch(/^[0-9a-f]{16}$/);
+    });
+
+    it('does not leak a phone-shaped customerId into the serialized payload', async () => {
+      getOrderById.mockResolvedValue({
+        id: 'ord_1',
+        customerId: '+919999999999',
+        customerPhone: '+91 XXXXX-X9999',
+        technicianId: 'tech_1',
+      });
+      bookingRepoGetById.mockResolvedValue({ id: 'ord_1', customerId: '+919999999999', customerPhone: undefined });
+      getUsers.mockImplementation(async (identifiers: Array<{ uid: string }>) => ({
+        users: identifiers
+          .filter(({ uid }) => uid === '+919999999999')
+          .map(({ uid }) => ({ uid, phoneNumber: '+919999999999' })),
+      }));
+      await revealContactHandler(request({ party: 'CUSTOMER' }), ctx, admin);
+      const entry = appendAuditEntry.mock.calls[0]![0] as { payload: Record<string, unknown> };
+      expect(JSON.stringify(entry.payload)).not.toContain('9999999999');
+    });
+
+    it('derives the same subjectRef for the same subject id every time (stable hash)', async () => {
+      await revealContactHandler(request({ party: 'CUSTOMER' }), ctx, admin);
+      const first = (appendAuditEntry.mock.calls[0]![0] as { payload: Record<string, unknown> }).payload[
+        'subjectRef'
+      ];
+      appendAuditEntry.mockClear();
+      await revealContactHandler(request({ party: 'CUSTOMER' }), ctx, admin);
+      const second = (appendAuditEntry.mock.calls[0]![0] as { payload: Record<string, unknown> }).payload[
+        'subjectRef'
+      ];
+      expect(second).toBe(first);
+    });
+  });
+
   describe('Finding 1 — customer reveal must fall back to the booking-persisted phone', () => {
     it('returns the booking-persisted number when Auth holds none for the customer', async () => {
       bookingRepoGetById.mockResolvedValue({

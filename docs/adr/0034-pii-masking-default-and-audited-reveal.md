@@ -53,9 +53,17 @@ audited path back to the raw value.
   that silently stops limiting is an acceptable availability trade-off for live-location polling
   and an unacceptable one for PII disclosure.
 - **Audited, without re-leaking.** Every successful reveal writes a `PII_CONTACT_REVEALED` entry
-  to `audit_log` carrying `party`, `subjectId`, the **masked** number, and the last four digits —
-  never the full number. `audit_log` is readable by any role holding `audit.read`, so writing the
-  raw number into the audit payload would defeat the masking this ADR exists to establish.
+  to `audit_log` carrying `party`, a one-way `subjectRef` (SHA-256 of the subject id, truncated to
+  16 hex characters — never the raw subject id itself), the **masked** number, and the last four
+  digits — never the full number and never a raw subject identifier. `subjectId` (`order
+  .customerId` for customers, the technician's Firebase uid for technicians) is not itself
+  guaranteed non-PII: customer Firebase UIDs are minted as `createCustomToken(phoneNumber)` (see
+  `api/src/functions/auth/truecaller-verify.ts`, `TODO(E11-S01b)`), so for every
+  Truecaller-onboarded customer the raw subject id literally IS their phone number. `audit_log` is
+  readable by any role holding `audit.read` (broader than the two roles allowed to reveal), so
+  writing that value into the audit payload would defeat the masking this ADR exists to establish.
+  A breach investigator can still correlate a `subjectRef` back to a candidate id by hashing that
+  candidate the same way and comparing — the standard one-way-correlation pattern.
 - **Client re-masks itself.** The admin-web `ContactReveal` component holds the revealed number in
   component state only (never in a store, never in a URL), starts a 60-second countdown on reveal,
   and re-masks automatically when it elapses or when the operator clicks "Hide now" early.

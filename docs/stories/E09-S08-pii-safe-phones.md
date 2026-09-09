@@ -36,9 +36,11 @@ over-satisfied (with no access control) for the customer side.
    closed** (`503 RATE_LIMIT_UNAVAILABLE`) if the rate-limit store is unreachable, unlike the
    shared `consume()` helper (fail-open) used elsewhere in the API.
 6. Every successful reveal writes a `PII_CONTACT_REVEALED` audit entry carrying `party`,
-   `subjectId`, the **masked** number, and the last four digits — never the full number, because
-   `audit_log` is readable by any role holding `audit.read`. A phone that masks to the placeholder
-   (under four characters) writes `phoneLast4: ''`, never a slice of the raw value.
+   `subjectRef` (a one-way `sha256(subjectId).slice(0, 16)` — never the raw subject id, which for
+   Truecaller-onboarded customers can itself be a raw phone number), the **masked** number, and
+   the last four digits — never the full number, because `audit_log` is readable by any role
+   holding `audit.read`. A phone that masks to the placeholder (under four characters) writes
+   `phoneLast4: ''`, never a slice of the raw value.
 7. Technician-uid resolution is deterministic under `getTechniciansByIds`' unordered cross-key
    match (a booking's `technicianId` may match either a document's `id` or its `technicianId`
    field): an exact `id` match wins outright; otherwise a unique `technicianId` match is accepted;
