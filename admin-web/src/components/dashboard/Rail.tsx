@@ -47,11 +47,31 @@ const NAV_I18N_KEY: Record<string, string> = {
   '/settings/commission': 'settings',
 };
 
+// Fix round (P3): a plain "does the pathname start with this href" test matches every ancestor
+// prefix of the current route, not just the most specific one — on `/finance/commissions` both
+// `/finance` and `/finance/commissions` match, marking two nav items active and emitting two
+// `aria-current="page"` elements. Longest-match resolves this the same way a router would: among
+// every item whose href is an exact match or a `/`-bounded prefix of the pathname, only the
+// longest href is truly "where we are."
+function matchesPath(pathname: string, href: string): boolean {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function activeHrefFor(pathname: string, navItems: readonly { href: string }[]): string | null {
+  let best: string | null = null;
+  for (const item of navItems) {
+    if (!matchesPath(pathname, item.href)) continue;
+    if (best === null || item.href.length > best.length) best = item.href;
+  }
+  return best;
+}
+
 export function Rail() {
   const pathname = usePathname();
   const { auth } = useAdminAuth();
   const navItems = navItemsForRole(auth?.role);
   const t = useTranslations('nav');
+  const activeHref = activeHrefFor(pathname, navItems);
 
   return (
     <>
@@ -98,7 +118,7 @@ export function Rail() {
         </div>
 
         {navItems.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const isActive = item.href === activeHref;
           const Icon = NAV_ICON_MAP[item.icon] ?? Activity;
           const labelKey = NAV_I18N_KEY[item.href] ?? item.label;
           return (
@@ -151,7 +171,7 @@ export function Rail() {
         }}
       >
         {navItems.slice(0, 5).map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const isActive = item.href === activeHref;
           const Icon = NAV_ICON_MAP[item.icon] ?? Activity;
           const labelKey = NAV_I18N_KEY[item.href] ?? item.label;
           return (

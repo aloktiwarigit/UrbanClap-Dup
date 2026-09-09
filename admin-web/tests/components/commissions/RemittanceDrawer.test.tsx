@@ -48,6 +48,8 @@ vi.mock('next-intl', () => ({
         'A previous attempt for this technician has not been confirmed: {amount} via {method}, reference {ref}.',
       'remittance.errors.idempotencyMismatchGeneric':
         "A previous attempt for this technician has not been confirmed, but its details aren't available on this device.",
+      'remittance.errors.idempotencyMismatchResolved':
+        'A previous attempt for this technician has not been confirmed, but it has already been cleared — likely finished from another tab or device. Check the technician\'s ledger before retrying.',
       'remittance.outcomes.success': 'Payment recorded',
       'remittance.outcomes.replayed': 'Already recorded. This is the original receipt, not a second payment.',
       'remittance.outcomes.recomputePending': 'Recorded. The balance will catch up shortly.',
@@ -474,10 +476,18 @@ describe('RemittanceDrawer', () => {
   // that fresh key — leaving A and B holding two different keys for the same technician and
   // defeating the exact per-technician duplicate-payment protection this file exists to guarantee.
   // The fix re-reads storage before minting, so A's second submission reuses B's reserved key
-  // instead of clobbering it. To show the protection actually holds end to end, tab B then submits
-  // too: because both tabs now share one key, both real network calls carry the identical
-  // `idempotencyKey`, which is what lets the server's write-if-absent / 409 machinery — not a race
-  // between two independently-minted keys — be the thing deciding whether a second charge happens.
+  // instead of clobbering it.
+  //
+  // Fix round 8 correction: this test used to also assert that tab B's own *subsequent* submission
+  // reused the very same key, on the theory that "both tabs share one key" end to end. That relied
+  // on the round-6/7 fallback `stored?.key ?? ref ?? mintKey()` — by the time B submits, A's second
+  // submission has already succeeded and cleared the shared slot, so `stored` is null and the old
+  // code fell back to B's ref, which still held the reservation. But that reservation was already
+  // consumed by A's second (₹50) payment; B blindly reusing it for a *third*, genuinely different
+  // (₹75) payment is exactly the false-conflict pattern Codex's fifth finding on this resolution
+  // describes — B would hand the server an already-used key for new money and earn a real 409 for
+  // no reason. Round 8 disambiguates "storage empty" from "storage unavailable" precisely so this
+  // case mints fresh instead. See the two-tab test below for the direct version of this scenario.
   it('reuses another tab\'s reserved key instead of minting a fresh one after this tab\'s own success cleared its ref', async () => {
     recordRemittance.mockResolvedValueOnce(okResponse());
     render(
@@ -528,9 +538,66 @@ describe('RemittanceDrawer', () => {
     // minting its own — against the old fallback this fails, because A would have minted a fresh
     // key and clobbered B's reservation before B ever got to read it.
     expect(tabASecondCall[0].idempotencyKey).toBe(keyReservedByTabB);
-    // And because both tabs now hold the very same key, both real submissions carry it — the
-    // duplicate-payment protection this file exists to guarantee is intact across the two tabs.
-    expect(tabBCall[0].idempotencyKey).toBe(keyReservedByTabB);
+    // Fix round 8: by the time B submits, A's second submission already consumed and cleared the
+    // shared slot — storage reads 'empty', not merely "nothing new". B must mint a fresh key for
+    // its own genuinely different payment rather than reuse the now-consumed reservation still
+    // sitting in its ref.
+    expect(tabBCall[0].idempotencyKey).not.toBe(keyReservedByTabB);
+    expect(tabBCall[0].idempotencyKey).not.toBe(tabASecondCall[0].idempotencyKey);
+  });
+
+  // Fix round 8 (P2, the 5th finding on this same resolution) — the direct version of the scenario
+  // Codex described. Tab A and tab B both open on one technician and, per the open effect, share one
+  // reservation. A records a payment and succeeds, which clears both the shared storage record and
+  // A's own ref (the "Success. The key is retired now" branch). B — which never submitted, so its
+  // ref still holds the now-consumed shared key from when it opened — then submits a *genuinely
+  // distinct* payment. The old `stored?.key ?? ref ?? mintKey()` resolution read `stored` as null
+  // (storage is empty) and fell back to B's ref, reusing A's already-recorded key: a real request for
+  // new money sent under a key the server has already resolved, guaranteed to 409, with a banner that
+  // then misdescribes B's own current input as "the previous attempt" — Codex's exact finding. The
+  // fix disambiguates "empty" (storage read fine, nothing there) from "unavailable" (couldn't read
+  // storage at all) and mints fresh only on the former, never falling back to the ref for it.
+  it('mints a fresh key for a second tab\'s distinct payment after the first tab\'s success clears the shared key (fix round 8, P2)', async () => {
+    render(
+      <RemittanceDrawer open technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
+    );
+    // Tab B opens on the same technician while A's reservation is still live and reuses it verbatim
+    // — real cross-tab behaviour, exercised the same way the round-3 test above does.
+    render(
+      <RemittanceDrawer open technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
+    );
+    const sharedKey = readPendingAttempt('t1')?.key;
+    expect(sharedKey).toBeDefined();
+
+    // Tab A records successfully — clears the shared slot and A's own ref, but the drawer stays
+    // open (invariant 3), and tab B is never told anything happened.
+    recordRemittance.mockResolvedValueOnce(okResponse());
+    const dialogsAfterBOpened = screen.getAllByRole('dialog');
+    const tabADialog = dialogsAfterBOpened[0];
+    if (tabADialog === undefined) throw new Error("expected tab A's dialog to still be present");
+    const tabA = within(tabADialog);
+    fireEvent.change(tabA.getByLabelText(/amount/i), { target: { value: '200' } });
+    fireEvent.change(tabA.getByLabelText(/reference/i), { target: { value: 'ref-1' } });
+    fireEvent.click(tabA.getByRole('button', { name: /record payment/i }));
+    await waitFor(() => expect(recordRemittance).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(readPendingAttempt('t1')).toBeNull());
+
+    // Tab B, unaware A ever submitted, now records its own distinct payment. Its ref still holds
+    // `sharedKey` from when it opened.
+    recordRemittance.mockResolvedValueOnce(okResponse());
+    const dialogsAfterASubmitted = screen.getAllByRole('dialog');
+    const tabBDialog = dialogsAfterASubmitted[dialogsAfterASubmitted.length - 1];
+    if (tabBDialog === undefined) throw new Error("expected tab B's dialog to still be present");
+    const tabB = within(tabBDialog);
+    fireEvent.change(tabB.getByLabelText(/amount/i), { target: { value: '75' } });
+    fireEvent.change(tabB.getByLabelText(/reference/i), { target: { value: 'ref-2' } });
+    fireEvent.click(tabB.getByRole('button', { name: /record payment/i }));
+    await waitFor(() => expect(recordRemittance).toHaveBeenCalledTimes(2));
+
+    const [tabACall, tabBCall] = twoCalls(recordRemittance.mock.calls as [{ idempotencyKey: string }][]);
+    expect(tabACall[0].idempotencyKey).toBe(sharedKey);
+    // The core assertion: B mints a brand-new key rather than reusing the one A already consumed.
+    expect(tabBCall[0].idempotencyKey).not.toBe(sharedKey);
   });
 
   // Fix round 7 (P1) — the 4th finding on this same resolution, closing the direction round 6 left
@@ -641,6 +708,27 @@ describe('RemittanceDrawer', () => {
     } finally {
       getItemSpy.mockRestore();
     }
+  });
+
+  // Fix round 8 (P2): the third state `loadPendingAttempt` now distinguishes from 'unavailable' —
+  // storage is perfectly readable, but by the time the 409 is handled the record is gone (here,
+  // standing in for another tab consuming and clearing the shared key at the exact moment this
+  // request round-trips). This must NOT reuse the "details aren't available on this device" copy —
+  // that describes a device that cannot read storage at all, which is not what happened here — and
+  // must say the truer thing instead.
+  it('names the mismatch as already-cleared, not generically unreadable, when storage is empty rather than unavailable', async () => {
+    recordRemittance.mockImplementationOnce(() => {
+      window.localStorage.removeItem('commissions.remittance.pendingAttempt.t1');
+      return Promise.reject(Object.assign(new Error(), { status: 409, body: { code: 'IDEMPOTENCY_MISMATCH' } }));
+    });
+    render(
+      <RemittanceDrawer open technicianId="t1" receivables={dueRows} onClose={noop} onRecorded={noop} />,
+    );
+    await fillAndSubmit();
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(/already been cleared/i);
+    expect(alert).not.toHaveTextContent(/details aren't available/i);
+    expect(screen.getByRole('button', { name: /discard the pending attempt/i })).toBeInTheDocument();
   });
 
   // Fix round 3 (Important): a stale wedge should not require a failed round trip to discover.

@@ -672,7 +672,8 @@
         "recordFailed": "Could not confirm this payment was recorded. Check the technician's ledger before trying again.",
         "timeout": "This is taking longer than expected. The payment may or may not have gone through — check the technician's ledger before trying again.",
         "idempotencyMismatch": "A previous attempt for this technician has not been confirmed: {amount} via {method}, reference {ref}.",
-        "idempotencyMismatchGeneric": "A previous attempt for this technician has not been confirmed, but its details aren't available on this device."
+        "idempotencyMismatchGeneric": "A previous attempt for this technician has not been confirmed, but its details aren't available on this device.",
+        "idempotencyMismatchResolved": "A previous attempt for this technician has not been confirmed, but it has already been cleared — likely finished from another tab or device. Check the technician's ledger before retrying."
       },
       "outcomes": {
         "success": "Payment recorded",

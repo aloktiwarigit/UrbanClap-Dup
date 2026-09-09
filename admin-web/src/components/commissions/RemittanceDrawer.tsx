@@ -219,6 +219,27 @@ function mintKey(): string {
   return crypto.randomUUID();
 }
 
+// Fix round 8 (P2, the 5th finding on this resolution). The prior four rounds all patched
+// `loadPendingAttempt`'s return value — a bare `PendingAttempt | null` — from a different
+// direction each time, because that one nullable return conflates three states that call for
+// three different responses:
+//   - the record was read and is a genuine reservation ('found')
+//   - storage was read successfully and holds nothing for this technician ('empty') — another
+//     tab may have just consumed the key this tab's `idempotencyKeyRef` still remembers
+//   - storage itself could not be read at all ('unavailable') — privacy mode, an embedded
+//     webview, or similar
+// Collapsing 'empty' and 'unavailable' into the same `null` is what let a stale ref survive a
+// sibling tab's successful (and therefore key-clearing) submission: the resolution
+// `stored?.key ?? ref ?? mintKey()` could not tell "nothing is reserved, so this tab's ref may be
+// pointing at an already-used key" apart from "reservations are simply invisible to this tab
+// right now, so the ref is the only continuity available." Naming the three states explicitly —
+// rather than adding a sixth guard on top of the existing nullable — lets every caller give each
+// one the response it actually needs.
+type LoadPendingAttemptResult =
+  | { status: 'found'; attempt: PendingAttempt }
+  | { status: 'empty' }
+  | { status: 'unavailable' };
+
 /**
  * Fix round 1 (C1/C2) + fix round 2 (N1/N3) + fix round 3 (the N3 regression). The pending
  * idempotency key is scoped to the *technician*, not to the drawer's open/close lifecycle, and
@@ -244,10 +265,20 @@ function mintKey(): string {
  * overwrote the original fingerprint; this round's `hasFingerprint` check compares *fingerprint
  * presence*, which is what "absent" actually means here).
  */
-function loadPendingAttempt(technicianId: string): PendingAttempt | null {
+function loadPendingAttempt(technicianId: string): LoadPendingAttemptResult {
+  // Fix round 8: the two `try`s below are deliberately separate. `getItem` throwing means storage
+  // itself is unreachable — 'unavailable', the one case where falling back to the in-memory ref is
+  // still safe. `JSON.parse` throwing (or the parsed shape failing the guard) means storage *was*
+  // read successfully and simply holds nothing usable — 'empty', same as a readable-but-absent key,
+  // and must NOT fall back to the ref (see the class doc comment and `handleSubmit`).
+  let raw: string | null;
   try {
-    const raw = window.localStorage.getItem(pendingAttemptStorageName(technicianId));
-    if (raw === null) return null;
+    raw = window.localStorage.getItem(pendingAttemptStorageName(technicianId));
+  } catch {
+    return { status: 'unavailable' };
+  }
+  if (raw === null) return { status: 'empty' };
+  try {
     const parsed: unknown = JSON.parse(raw);
     if (
       isRecord(parsed) &&
@@ -256,17 +287,17 @@ function loadPendingAttempt(technicianId: string): PendingAttempt | null {
       (parsed.method === null || parsed.method === 'UPI' || parsed.method === 'CASH_DEPOSIT') &&
       (parsed.ref === null || typeof parsed.ref === 'string')
     ) {
-      return { key: parsed.key, amountPaise: parsed.amountPaise, method: parsed.method, ref: parsed.ref };
+      return {
+        status: 'found',
+        attempt: { key: parsed.key, amountPaise: parsed.amountPaise, method: parsed.method, ref: parsed.ref },
+      };
     }
-    return null;
+    // Shape guard failed — a malformed/legacy entry. Storage was readable; this is 'empty', not
+    // 'unavailable'.
+    return { status: 'empty' };
   } catch {
-    // localStorage unavailable (privacy mode, embedded webview), or a malformed/legacy entry —
-    // either way, treat it as "no pending attempt" rather than throwing. The ref-held key still
-    // protects retries within this page load even when storage cannot be read at all. Fix round 3
-    // (Important): this also means a live 409 can occur with nothing readable to explain it —
-    // callers must fall back to a generic disclosure rather than rendering nothing. See
-    // `handleSubmit`'s catch block.
-    return null;
+    // JSON.parse threw on a corrupted value. Still readable-and-nothing-usable — 'empty'.
+    return { status: 'empty' };
   }
 }
 
@@ -369,11 +400,16 @@ export function RemittanceDrawer({
   // submitted, which is the operator's *own* attempt rather than a wedge they walked into; see the
   // catch block for why describing that back to them is both wrong and self-contradictory.
   const [pendingDisclosure, setPendingDisclosure] = useState<PendingAttemptFingerprint | null>(null);
-  // Fix round 3 (Important): a 409 occurred but the pending record could not be read (storage
-  // unavailable, or — theoretically — present with no fingerprint yet). `conflict` alone cannot
-  // distinguish "no conflict" from "a conflict we can't describe", and rendering nothing on a money
-  // screen after a click reads as "the button is broken" and invites a real double-submit.
-  const [conflictUnreadable, setConflictUnreadable] = useState(false);
+  // Fix round 3 (Important): a 409 occurred but the pending record could not be described.
+  // `conflict` alone cannot distinguish "no conflict" from "a conflict we can't describe", and
+  // rendering nothing on a money screen after a click reads as "the button is broken" and invites a
+  // real double-submit. Fix round 8: this used to be a single boolean covering both "storage cannot
+  // be read at all" and "storage is readable but the record is already gone" identically, with one
+  // generic message for both. The tri-state `loadPendingAttempt` now tells these apart, so the
+  // reason is named instead of flattened — 'unavailable' keeps the original device-can't-read-this
+  // copy, 'empty' says the truer thing (the record has already been cleared, most likely by another
+  // tab that finished the very attempt this 409 refers to).
+  const [conflictReason, setConflictReason] = useState<'unavailable' | 'empty' | null>(null);
 
   // Never regenerated on retry — only reloaded/minted per technician when the drawer opens (see
   // `loadPendingAttempt`), and cleared only after a successful record or an explicit discard.
@@ -384,8 +420,8 @@ export function RemittanceDrawer({
   // ambiguous failure, timeout, 409) so the banner tracks what is actually wedged rather than
   // whatever the last request happened to do.
   function refreshPendingDisclosure() {
-    const stored = loadPendingAttempt(technicianId);
-    setPendingDisclosure(stored !== null && hasFingerprint(stored) ? stored : null);
+    const result = loadPendingAttempt(technicianId);
+    setPendingDisclosure(result.status === 'found' && hasFingerprint(result.attempt) ? result.attempt : null);
   }
 
   useEffect(() => {
@@ -395,22 +431,33 @@ export function RemittanceDrawer({
     // submit-time write reopened the two-tab race). An existing pending attempt for this technician
     // is reused verbatim, key and fingerprint alike; only when none exists is a fresh key minted —
     // and persisted immediately, with the fingerprint left `null` until a submission fills it in.
-    const existing = loadPendingAttempt(technicianId);
-    if (existing !== null) {
-      idempotencyKeyRef.current = existing.key;
+    // Fix round 8: 'found' reuses the stored reservation verbatim, as before. 'empty' and
+    // 'unavailable' both still need a usable key for this open — but per the tri-state rule
+    // ('unavailable' is the only case the in-memory ref may ever supply the key), 'unavailable'
+    // reuses the ref if this tab already has one (continuity within a session storage cannot see),
+    // while 'empty' means storage was readable and genuinely holds nothing, so any ref value would
+    // be a stale leftover — mint fresh.
+    const existingResult = loadPendingAttempt(technicianId);
+    if (existingResult.status === 'found') {
+      idempotencyKeyRef.current = existingResult.attempt.key;
     } else {
-      const minted = mintKey();
-      idempotencyKeyRef.current = minted;
-      savePendingAttempt(technicianId, { key: minted, amountPaise: null, method: null, ref: null });
+      const key =
+        existingResult.status === 'unavailable' && idempotencyKeyRef.current !== null
+          ? idempotencyKeyRef.current
+          : mintKey();
+      idempotencyKeyRef.current = key;
+      savePendingAttempt(technicianId, { key, amountPaise: null, method: null, ref: null });
     }
     // Fix round 3 (Important), reshaped in round 4: proactive disclosure. If this pending attempt
     // already has a fingerprint (someone — this tab or another — actually submitted it before it
     // went unconfirmed), say so now rather than waiting for a 409 that may never come if the
     // operator simply types a brand-new, non-colliding reference. A record with no fingerprint yet
     // (a bare reservation nobody has attempted) discloses nothing — there is nothing to disclose.
-    setPendingDisclosure(existing !== null && hasFingerprint(existing) ? existing : null);
+    setPendingDisclosure(
+      existingResult.status === 'found' && hasFingerprint(existingResult.attempt) ? existingResult.attempt : null,
+    );
     setConflict(null);
-    setConflictUnreadable(false);
+    setConflictReason(null);
     setAmount('');
     setMethod('UPI');
     setRef('');
@@ -487,7 +534,7 @@ export function RemittanceDrawer({
     // disclosure vanish while the wedge itself was untouched. It is re-derived from storage on every
     // settled outcome below instead.
     setConflict(null);
-    setConflictUnreadable(false);
+    setConflictReason(null);
 
     // Fix round 2 (N1): whatever key is currently pending for this technician is what gets sent —
     // never minted or swapped based on what the operator typed. Silently minting a new key here
@@ -509,16 +556,28 @@ export function RemittanceDrawer({
     // to overwrite B's live reservation with A's — leaving A and B holding different keys for the
     // same technician and defeating points 1-2 of the class doc comment.
     //
-    // The fix stops patching direction and removes the ambiguity: storage is authoritative whenever
-    // it has an answer, full stop. The ref only matters in the one case it was ever legitimate for —
-    // storage itself being unreadable (privacy mode, embedded webview) or genuinely empty (a fresh
-    // tab that raced ahead of its own open effect) — where it provides within-session continuity.
-    // Read storage exactly once here: the same value both resolves which key to submit AND decides
-    // whether a fingerprint still needs writing below, so the two can never disagree with each other
-    // the way two independent reads previously could (see the write-if-absent comment below).
-    // `loadPendingAttempt` already wraps its own storage access in try/catch.
-    const storedPendingAttempt = loadPendingAttempt(technicianId);
-    const idempotencyKey = storedPendingAttempt?.key ?? idempotencyKeyRef.current ?? mintKey();
+    // The fix stops patching direction and removes the ambiguity by naming, not conflating, the
+    // three things a nullable `loadPendingAttempt` used to collapse into one (fix round 8, see
+    // `LoadPendingAttemptResult`'s doc comment): 'found' is authoritative — the shared reservation
+    // wins, as round 3 established. 'empty' means storage was read successfully and genuinely holds
+    // nothing for this technician — which is exactly what a sibling tab's successful (and therefore
+    // key-clearing) submission looks like from here, so the ref must NOT be trusted in that case; it
+    // may be pointing at a key another tab already consumed, and reusing it reopens the false-409
+    // Codex found (the 5th finding on this resolution). 'unavailable' is the one case the ref was
+    // ever legitimate for: storage cannot be read at all, so within-session continuity is all that
+    // is left. Read storage exactly once here: the same result both resolves which key to submit AND
+    // decides whether a fingerprint still needs writing below, so the two can never disagree with
+    // each other the way two independent reads previously could (see the write-if-absent comment
+    // below). `loadPendingAttempt` already wraps its own storage access in try/catch.
+    const pendingResult = loadPendingAttempt(technicianId);
+    let idempotencyKey: string;
+    if (pendingResult.status === 'found') {
+      idempotencyKey = pendingResult.attempt.key;
+    } else if (pendingResult.status === 'empty') {
+      idempotencyKey = mintKey();
+    } else {
+      idempotencyKey = idempotencyKeyRef.current ?? mintKey();
+    }
     // Keep the ref in sync with whatever was just resolved so later reads in this same submit (and
     // any synchronous re-render before the request settles) see the same value this request uses.
     idempotencyKeyRef.current = idempotencyKey;
@@ -533,10 +592,12 @@ export function RemittanceDrawer({
     // Fix round 7: this used to re-read storage a second time into a separate `existingForThisKey`
     // and additionally guard on `existingForThisKey.key !== idempotencyKey`. With storage now
     // resolving `idempotencyKey` itself (above), that key can no longer differ from
-    // `storedPendingAttempt.key` whenever storage had an answer — the two are read once and the
+    // `pendingResult.attempt.key` whenever storage had an answer — the two are read once and the
     // same value — so that disjunct was dead code load-bearing only for the old ref-first bug. The
-    // remaining, real question is just whether a fingerprint has been written yet.
-    if (storedPendingAttempt === null || !hasFingerprint(storedPendingAttempt)) {
+    // remaining, real question is just whether a fingerprint has been written yet. Fix round 8: this
+    // reads the same single `pendingResult` from above rather than re-reading storage, so the
+    // resolved key and the write-if-absent decision can never disagree.
+    if (pendingResult.status !== 'found' || !hasFingerprint(pendingResult.attempt)) {
       savePendingAttempt(technicianId, { key: idempotencyKey, amountPaise: paise, method, ref: trimmedRef });
     }
 
@@ -573,14 +634,20 @@ export function RemittanceDrawer({
         // an earlier attempt on this same key (e.g. the ambiguous failure that left it pending) is
         // dismissed so it does not sit stale next to this new, more specific disclosure.
         dismiss();
-        const pending = loadPendingAttempt(technicianId);
-        // Fix round 3 (Important): a 409 with nothing readable to explain it (storage unavailable,
-        // or — in principle — a pending record with no fingerprint yet) must still say *something*.
-        // Rendering nothing here reads as "the button did nothing" and invites a real double-submit.
-        if (pending !== null && hasFingerprint(pending)) {
-          setConflict(pending);
+        const pendingAfterConflict = loadPendingAttempt(technicianId);
+        // Fix round 3 (Important): a 409 with nothing readable to explain it must still say
+        // *something*. Rendering nothing here reads as "the button did nothing" and invites a real
+        // double-submit. Fix round 8: the tri-state result now lets that "something" be accurate
+        // instead of one generic sentence for two different situations — 'unavailable' (this device
+        // cannot read storage at all) and 'empty' (storage is readable and the record is already
+        // gone, most likely because another tab just finished the attempt this 409 refers to) get
+        // their own copy.
+        if (pendingAfterConflict.status === 'found' && hasFingerprint(pendingAfterConflict.attempt)) {
+          setConflict(pendingAfterConflict.attempt);
+        } else if (pendingAfterConflict.status === 'unavailable') {
+          setConflictReason('unavailable');
         } else {
-          setConflictUnreadable(true);
+          setConflictReason('empty');
         }
       } else if (isTimeoutError(err)) {
         show(t('remittance.errors.timeout'), 'error');
@@ -606,11 +673,11 @@ export function RemittanceDrawer({
       // so reopening the drawer later still surfaces it through the open effect.
       const storedAfterFailure = loadPendingAttempt(technicianId);
       const isOwnJustSubmittedAttempt =
-        storedAfterFailure !== null &&
-        hasFingerprint(storedAfterFailure) &&
-        storedAfterFailure.amountPaise === paise &&
-        storedAfterFailure.method === method &&
-        storedAfterFailure.ref === trimmedRef;
+        storedAfterFailure.status === 'found' &&
+        hasFingerprint(storedAfterFailure.attempt) &&
+        storedAfterFailure.attempt.amountPaise === paise &&
+        storedAfterFailure.attempt.method === method &&
+        storedAfterFailure.attempt.ref === trimmedRef;
       if (!isOwnJustSubmittedAttempt) refreshPendingDisclosure();
       return;
     } finally {
@@ -672,7 +739,7 @@ export function RemittanceDrawer({
     clearPendingAttempt(technicianId);
     idempotencyKeyRef.current = null;
     setConflict(null);
-    setConflictUnreadable(false);
+    setConflictReason(null);
     // Storage is now empty for this technician; variant A must not outlive the record it mirrors.
     setPendingDisclosure(null);
   }
@@ -799,7 +866,7 @@ export function RemittanceDrawer({
           selector, so no `!important` is needed).
         */}
         <div role="status" data-testid="pending-attempt-disclosure" className="empty:m-0">
-          {pendingDisclosure !== null && conflict === null && !conflictUnreadable && !submitting && (
+          {pendingDisclosure !== null && conflict === null && conflictReason === null && !submitting && (
             <div className="space-y-[var(--space-2)] rounded border border-[var(--color-warn)] bg-[var(--color-surface-raised)] p-[var(--space-3)]">
               <p className="text-xs text-[var(--color-warn)]">
                 {t('remittance.warnings.pendingAttempt', {
@@ -819,10 +886,13 @@ export function RemittanceDrawer({
           Variant B — the live 409 IDEMPOTENCY_MISMATCH (fix round 2, N1). Red, assertive, and the
           one place the discard action is offered: by this point the server has proven the pending
           attempt is a *different* payment from the one being recorded, so freeing the slot is the
-          only way forward. `conflictUnreadable` covers a mismatch that is known to have happened
-          but has nothing left to quote (storage unreadable) — never silence.
+          only way forward. `conflictReason` covers a mismatch that is known to have happened but has
+          nothing left to quote — never silence — and, since fix round 8, says which of two different
+          reasons that is: 'unavailable' (this device cannot read storage) or 'empty' (storage is
+          readable and the record has already been cleared, most likely by another tab finishing the
+          very attempt this 409 refers to).
         */}
-        {(conflict !== null || conflictUnreadable) && (
+        {(conflict !== null || conflictReason !== null) && (
           <div
             role="alert"
             className="space-y-[var(--space-2)] rounded border border-[var(--color-danger)] bg-[var(--color-surface-raised)] p-[var(--space-3)]"
@@ -834,7 +904,9 @@ export function RemittanceDrawer({
                     method: methodLabel(conflict.method, t),
                     ref: conflict.ref,
                   })
-                : t('remittance.errors.idempotencyMismatchGeneric')}
+                : conflictReason === 'unavailable'
+                  ? t('remittance.errors.idempotencyMismatchGeneric')
+                  : t('remittance.errors.idempotencyMismatchResolved')}
             </p>
             <p className="text-xs text-[var(--color-text-muted)]">
               {t('remittance.warnings.discardRisk')}

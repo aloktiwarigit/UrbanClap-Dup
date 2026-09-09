@@ -92,4 +92,35 @@ describe('Rail capability filtering', () => {
     expect(screen.queryByText('Orders')).not.toBeInTheDocument();
     expect(screen.queryByText('Catalogue')).not.toBeInTheDocument();
   });
+
+  // Fix round (P3): `/finance/commissions` starts with `/finance`, so the naive
+  // `pathname.startsWith(item.href)` test matched BOTH the Finance (`/finance`) and Commissions
+  // (`/finance/commissions`) nav items, marking two links active and emitting two
+  // `aria-current="page"` elements at once. Longest-match must pick only the more specific one.
+  it('marks only the most specific nav item active on /finance/commissions, not Finance as well', () => {
+    pathname = '/finance/commissions';
+    renderRail('finance');
+    const current = document.querySelectorAll('[aria-current="page"]');
+    // One per nav surface (desktop rail + mobile bar), both for the same (Commissions) item.
+    expect(current.length).toBeGreaterThan(0);
+    for (const el of Array.from(current)) {
+      expect(el).toHaveAttribute('href', '/finance/commissions');
+    }
+    const financeLinks = screen.getAllByText('Finance').map((el) => el.closest('a'));
+    for (const link of financeLinks) {
+      expect(link).not.toHaveAttribute('aria-current', 'page');
+    }
+  });
+
+  // Mirror case: on the exact `/finance` route, Finance alone is active — Commissions must not
+  // light up just because it shares the `/finance` prefix.
+  it('marks Finance alone as active on /finance itself', () => {
+    pathname = '/finance';
+    renderRail('finance');
+    const current = document.querySelectorAll('[aria-current="page"]');
+    expect(current.length).toBeGreaterThan(0);
+    for (const el of Array.from(current)) {
+      expect(el).toHaveAttribute('href', '/finance');
+    }
+  });
 });
