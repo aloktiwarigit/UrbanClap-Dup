@@ -1,7 +1,7 @@
 # Dispatch Algorithm — Public Transparency Document
 
 **Owner:** Alok Tiwari
-**Last reviewed:** 2026-04-26
+**Last reviewed:** 2026-09-09
 **Authority:** Karnataka Platform Based Gig Workers (Social Security and Welfare) Act 2025, FR-9.1, NFR-C-1.
 **Companion artifacts:** `docs/adr/0006-dispatch-algorithm.md`, `docs/adr/0011-karnataka-decline-history-isolation.md`, `docs/adr/0032-commission-hold-is-an-eligibility-gate.md`, `api/src/services/dispatcher.service.ts`, `api/src/services/dispatch-eligibility.ts`, `api/.semgrep.yml`, `api/tests/integration/dispatcher-up-ranking.test.ts`, `api/tests/integration/dispatcher-data-isolation.test.ts`, `api/tests/unit/dispatch-ranking-invariance.test.ts`.
 
@@ -15,7 +15,7 @@ This document is the artifact handed to such an auditor. It describes — with n
 
 `rankTechnicians(candidates, bookingLat, bookingLng)` is a pure function in `api/src/services/dispatcher.service.ts`. It is invoked by `dispatchBookingToTechs` after Cosmos has returned a candidate set within the active dispatch radius (10 km, expanding to 15 km on no-show redispatch).
 
-The top-3 ranked technicians receive a 30-second FCM job offer simultaneously. The first to accept wins; the others receive a "no longer available" message. This document covers the **ranking** step only.
+Only the single nearest-ranked eligible technician receives the job offer, as a 90-second push notification. If that technician declines, or the offer expires without a response, the booking moves on to the next-nearest eligible technician on the ranked list, and so on until someone accepts or the candidate set is exhausted. No two technicians are ever offered the same booking at the same time. This document covers the **ranking** step only.
 
 ## 3. Input features actually used by `rankTechnicians`
 

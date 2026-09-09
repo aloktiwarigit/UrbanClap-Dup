@@ -128,6 +128,18 @@ export async function reconcileCommissionHolds(ctx: InvocationContext): Promise<
 }
 
 async function writeReconciliationSummary(ctx: InvocationContext): Promise<void> {
+  // KNOWN DUPLICATION (not closed here): on a FULL-sweep slot, step 3 above already ran
+  // `sweepAllHolds({ scope: 'FULL' })`, which internally calls `collectFullScopeIds()` inside
+  // `commission-hold.service.ts` — draining `listAllTechniciansWithHold()` and
+  // `commissionReceivableRepo.sumDueGroupedByTechnician()` in full once. This function drains
+  // both of those same cross-partition queries again to build the dashboard roster, because
+  // `sweepAllHolds` returns only `{ recomputed, drifted }` and neither it nor
+  // `collectFullScopeIds` exposes the ids/groups it already drained. On a full-sweep run
+  // (roughly every 90 minutes, ~16 times/day) that is 2 avoidable cross-partition drains per
+  // run, ~32/day. The clean fix is for `sweepAllHolds`/`collectFullScopeIds` to return (or
+  // accept) the drained data so this file can reuse it — but `commission-hold.service.ts` is a
+  // closed task for E21-S04 and out of scope to modify from this fix wave, so the duplication
+  // stays as a documented, accepted cost rather than a silently-reopened file.
   const [allWithHold, dueGroups] = await Promise.all([
     listAllTechniciansWithHold(),
     commissionReceivableRepo.sumDueGroupedByTechnician(),

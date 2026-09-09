@@ -385,8 +385,15 @@ endpoint in a parallel worktree; only the data source moves. Same fields, same o
 `relevant` filter (`outstandingPaise > 0 || state !== 'CLEAR'`). A test asserts the summary path
 and the fallback path produce identical output for the same underlying data.
 
-Technician display names: the summary stores `technicianName` resolved at write time via the
-same `getTechniciansByIds` lookup, so the read path needs no extra query.
+Technician display names: the summary stores `technicianName` straight from the same
+`listAllTechniciansWithHold()` drain used to build the rest of the summary (it already projects
+`c.displayName, c.name` and collapses them to `name`). The write path deliberately does **not**
+also call `getTechniciansByIds` as a backfill — that lookup reads the same two fields from the
+same container, so it could never resolve a name the roster row already lacks; it would only
+cost a cross-partition `ARRAY_CONTAINS` query over up to 100 ids on every 15-minute run for
+nothing. Consequently a row can still be written to the summary with no `technicianName`, and
+the read path (`commission-receivables.ts`) keeps its own `getTechniciansByIds` lookup for
+exactly those name-less rows.
 
 ### 5.8 Karnataka enforcement — Semgrep plus invariance test
 

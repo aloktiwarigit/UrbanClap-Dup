@@ -94,6 +94,21 @@ describe('reassignOrderHandler hold enrichment', () => {
     );
   });
 
+  it('records TECHNICIAN_NOT_FOUND and omits numeric fields when the target technician does not exist', async () => {
+    vi.mocked(readTechnicianGateState).mockResolvedValue({ exists: false, hold: null, suspended: false });
+    const res = await reassignOrderHandler(req({ technicianId: 'tech-typo', reason: 'owner request' }), {} as never, admin);
+    expect(res.status).toBe(200);
+    expect(appendAuditEntry).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payload: {
+          technicianId: 'tech-typo',
+          reason: 'owner request',
+          targetHoldState: 'TECHNICIAN_NOT_FOUND',
+        },
+      }),
+    );
+  });
+
   it('still completes the reassign and writes the audit entry when the gate-state read throws', async () => {
     vi.mocked(readTechnicianGateState).mockRejectedValue(new Error('cosmos down'));
     const res = await reassignOrderHandler(req({ technicianId: 'tech-9', reason: 'override request' }), {} as never, admin);

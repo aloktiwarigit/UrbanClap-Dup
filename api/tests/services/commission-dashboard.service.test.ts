@@ -100,9 +100,20 @@ describe('buildHoldRoster', () => {
   });
 
   it('is pure — calling twice on the same inputs gives deep-equal output and no mutation', () => {
-    const input = [{ id: 't1', commissionHold: hold({ outstandingPaise: 100, state: 'WARN' as const }) }];
+    // Three elements, deliberately NOT in sorted order: a single-element input can never reveal
+    // an in-place `.sort()` (it is a no-op on a 1-element array either way). With 3+ out-of-order
+    // elements, `allWithHold.sort(...)` (mutating) instead of `[...allWithHold].sort(...)`
+    // (copying) would reorder the caller's own array — this test asserts the INPUT array's
+    // element order is unchanged after the call, not just that the output is deep-equal.
+    const input = [
+      { id: 't1', commissionHold: hold({ outstandingPaise: 100, state: 'WARN' as const }) },
+      { id: 't2', commissionHold: hold({ outstandingPaise: 900, state: 'BLOCKED' as const }) },
+      { id: 't3', commissionHold: hold({ outstandingPaise: 500, state: 'WARN' as const }) },
+    ];
+    const inputOrderSnapshot = input.map((t) => t.id);
     const snapshot = JSON.stringify(input);
     expect(buildHoldRoster(input, [])).toEqual(buildHoldRoster(input, []));
     expect(JSON.stringify(input)).toBe(snapshot);
+    expect(input.map((t) => t.id)).toEqual(inputOrderSnapshot);
   });
 });

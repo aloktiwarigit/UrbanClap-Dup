@@ -51,9 +51,17 @@ export async function reassignOrderHandler(
   let targetSuspended: boolean | null = null;
   try {
     const gateState = await readTechnicianGateState(parsed.data.technicianId);
-    targetHoldState = gateState.hold?.state ?? 'CLEAR';
-    targetOutstandingPaise = gateState.hold?.outstandingPaise ?? 0;
-    targetSuspended = gateState.suspended;
+    if (!gateState.exists) {
+      // No technician exists at this id — a mistyped or non-existent technicianId. 'CLEAR'
+      // would falsely assert the target was solvent when there is no such technician at all;
+      // this audit entry is the only record that an owner knowingly dispatched work to an
+      // indebted technician, so numeric fields are omitted rather than defaulted to 0/false.
+      targetHoldState = 'TECHNICIAN_NOT_FOUND';
+    } else {
+      targetHoldState = gateState.hold?.state ?? 'CLEAR';
+      targetOutstandingPaise = gateState.hold?.outstandingPaise ?? 0;
+      targetSuspended = gateState.suspended;
+    }
   } catch (err: unknown) {
     console.error('REASSIGN_GATE_STATE_READ_FAILED', err);
   }

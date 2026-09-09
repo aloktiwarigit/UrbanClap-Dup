@@ -44,9 +44,13 @@ function tech(id: string, lngOffset: number, rating: number, hold?: CommissionHo
   };
 }
 
-const hold = (state: CommissionHold['state'], outstandingPaise: number): CommissionHold => ({
+const hold = (
+  state: CommissionHold['state'],
+  outstandingPaise: number,
+  dueCount = 3,
+): CommissionHold => ({
   outstandingPaise,
-  dueCount: 3,
+  dueCount,
   state,
   evaluatedAt: '2026-09-08T00:00:00.000Z',
 });
@@ -109,9 +113,12 @@ describe('rankTechnicians is invariant under commission hold state', () => {
 });
 
 describe('rankTechnicians tie-breaking is invariant under commission hold state', () => {
-  // Two technicians at IDENTICAL distance: distanceKm ties, so rating is the only thing that
-  // can decide order. If a hold-based tiebreaker were ever appended after rating, mutating
-  // hold state across this pair would flip the order — that is what these tests catch.
+  // Two technicians at IDENTICAL distance but DIFFERENT rating: distanceKm ties, so rating
+  // decides and always returns non-zero here — an appended tiebreaker (anything chained after
+  // the rating comparison) would never be reached for this pair, so mutating hold state across
+  // it cannot flip the order. What this pair actually catches is a hold key REPLACING rating as
+  // the secondary sort key outright (not one appended after it) — that is the only mutation that
+  // would show up here as a reordering.
   const tieExpectedOrder = ['tie-high-rating', 'tie-low-rating'];
 
   it('breaks a distance tie by rating with no holds present', () => {
@@ -136,7 +143,10 @@ describe('rankTechnicians tie-breaking is invariant under commission hold state'
   // returns 0, so the only thing that can determine their relative order is
   // Array.prototype.sort's stability (guaranteed by spec since ES2019 / stable in V8 since
   // 7.0). ANY tiebreaker appended after rating — hold state included — would show up here as
-  // a reordering that a plain distance/rating equality check could never exercise.
+  // a reordering that a plain distance/rating equality check could never exercise. The pair's
+  // outstandingPaise and dueCount are deliberately DISTINCT (not tied to the `state` values
+  // looped below) so a tiebreaker keyed on either balance or due-count — not just hold `state`
+  // — has something to act on and would actually flip this pair's order if appended.
   const identicalPairExpectedOrder = ['dup-first', 'dup-second'];
 
   it('preserves input order for technicians identical in distance and rating, with no holds', () => {
@@ -149,8 +159,8 @@ describe('rankTechnicians tie-breaking is invariant under commission hold state'
     for (const a of states) {
       for (const b of states) {
         const mutated = [
-          tech('dup-first', 0.030, 3.5, hold(a, 500_000)),
-          tech('dup-second', 0.030, 3.5, hold(b, 500_000)),
+          tech('dup-first', 0.030, 3.5, hold(a, 500_000, 5)),
+          tech('dup-second', 0.030, 3.5, hold(b, 10_000, 1)),
         ];
         expect(rankTechnicians(mutated, LAT, LNG).map((t) => t.id)).toEqual(identicalPairExpectedOrder);
       }
@@ -198,9 +208,13 @@ describe('rankTechnicians source contains no hold reference', () => {
     );
     const body = extractFunctionSource(src, 'export function rankTechnicians');
     expect(body, 'rankTechnicians not found — was it renamed?').not.toBe('');
-    // Sanity check on the extraction itself: if a refactor (e.g. the comparator moved into a
-    // helper) makes this slice stop containing the ranking logic, fail loudly here rather than
-    // silently passing the hold-reference check below against an unrepresentative body.
+    // Sanity check on the extraction itself: guards against `rankTechnicians` being renamed or
+    // its signature changing so the slice above grabs the wrong span entirely (e.g. an empty or
+    // truncated body). It does NOT guard against the comparator being extracted into a separate
+    // helper function — the `.map` step that computes `distanceKm` stays inline in
+    // `rankTechnicians` either way, so this assertion keeps matching and passing even if the
+    // `.sort()` comparator (and any hold-based tiebreaker hidden inside it) moves out into a
+    // helper the `commissionHold|outstandingPaise|dueCount|holdState` check below never sees.
     expect(body, 'extracted body does not look like the ranking function — check the slice').toMatch(
       /distanceKm/,
     );
