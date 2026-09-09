@@ -41,6 +41,12 @@ export const TechnicianProfileSchema = z.object({
   completedJobCount: z.number().int().min(0).optional(),
   updatedAt: z.string().datetime().optional(),
   blockedCustomerIds: z.array(z.string()).optional(),
+  /**
+   * Set by patchTechnicianAdminFields when an admin suspends a technician. Absent on every
+   * document written before E21-S04, which is why every predicate that reads it must be written
+   * `(NOT IS_DEFINED(c.suspended) OR c.suspended != true)` — a bare `!=` drops undefined rows.
+   */
+  suspended: z.boolean().optional(),
   payoutCadence: z.enum(['WEEKLY', 'NEXT_DAY', 'INSTANT']).optional(),
   payoutCadenceUpdatedAt: z.string().optional(),
   commissionHold: CommissionHoldSchema.optional(),
