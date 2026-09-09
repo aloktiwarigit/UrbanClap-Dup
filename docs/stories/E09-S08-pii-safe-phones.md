@@ -32,15 +32,35 @@ over-satisfied (with no access control) for the customer side.
 4. `POST /v1/admin/orders/{id}/reveal-contact` resolves the full number fresh from Firebase Auth
    on every call (never from a cached response), returns it with `Cache-Control: no-store`, and
    is reachable only by `super-admin` and `ops-manager` (403 for `finance` and `support-agent`).
-5. The endpoint is rate-limited to 30 reveals/minute/admin via `consumeStrict`, which **fails
-   closed** (`503 RATE_LIMIT_UNAVAILABLE`) if the rate-limit store is unreachable, unlike the
-   shared `consume()` helper (fail-open) used elsewhere in the API.
+5. The endpoint is rate-limited to 30 reveals/minute/admin **and** 50 reveals/rolling-24h/admin via
+   `consumeStrict` (checked in that order), which **fails closed** (`503 RATE_LIMIT_UNAVAILABLE`)
+   if the rate-limit store is unreachable, unlike the shared `consume()` helper (fail-open) used
+   elsewhere in the API. A spent per-minute budget returns `429 RATE_LIMITED`; a spent daily budget
+   (with the per-minute budget still available) returns `429 RATE_LIMITED_DAILY`.
 6. Every successful reveal writes a `PII_CONTACT_REVEALED` audit entry carrying `party`,
    `subjectRef` (a one-way `sha256(subjectId).slice(0, 16)` — never the raw subject id, which for
    Truecaller-onboarded customers can itself be a raw phone number), the **masked** number, and
    the last four digits — never the full number, because `audit_log` is readable by any role
    holding `audit.read`. A phone that masks to the placeholder (under four characters) writes
    `phoneLast4: ''`, never a slice of the raw value.
+6a. Every **non-200** outcome that reaches an identified admin — `FORBIDDEN` (403, wrong role),
+    `RATE_LIMITED` / `RATE_LIMITED_DAILY` (429), `NOT_FOUND` (404, covering `ORDER_NOT_FOUND`,
+    `PARTY_NOT_AVAILABLE`, and `PHONE_UNAVAILABLE`), `LOOKUP_FAILED` (502), and
+    `RATE_LIMIT_UNAVAILABLE` (503) — writes a `PII_CONTACT_REVEAL_DENIED` audit entry with payload
+    `{ party?, subjectRef?, reason }`. `subjectRef` is included only when a subject was actually
+    resolved before the denial; `party` is included whenever known (not yet known for `FORBIDDEN`,
+    which is checked before the body is parsed). Never a raw id or a raw phone. Denials are written
+    via `auditLog()` (best-effort, swallows its own failure to Sentry) rather than
+    `appendAuditEntry()` (fails closed, used by the success path) — a lost denial-audit write must
+    never turn an otherwise-correct 403/404/429 into a 500.
+6b. The `FORBIDDEN` check runs inside `revealContactHandler` itself, as the first thing the handler
+    does, rather than inside `requireAdmin` middleware — `requireAdmin` now authenticates any admin
+    role for this route (`ALL_ADMIN_ROLES`) so an `AdminContext`/`adminId` exists to attribute the
+    denial to. The 403 response body is unchanged
+    (`{ code: 'FORBIDDEN', requiredRoles: ['super-admin', 'ops-manager'] }`), built from the same
+    exported `PII_REVEAL_ALLOWED_ROLES` const the authorization check itself uses so the two cannot
+    drift. The pre-existing composed-handler RBAC test continues to pass unchanged against the
+    actually-registered handler.
 7. Technician-uid resolution is deterministic under `getTechniciansByIds`' unordered cross-key
    match (a booking's `technicianId` may match either a document's `id` or its `technicianId`
    field): an exact `id` match wins outright; otherwise a unique `technicianId` match is accepted;
@@ -90,8 +110,15 @@ Headers: `Cache-Control: no-store`.
 | 404 | `PHONE_UNAVAILABLE` | The subject genuinely has no `phoneNumber` on their Firebase Auth user. |
 | 422 | `VALIDATION_ERROR` | Malformed or non-JSON body, unknown `party`, or an unexpected extra key. |
 | 429 | `RATE_LIMITED` | The admin's 30/min budget is spent. `Retry-After` header + `retryAfterMs` in the body. |
+| 429 | `RATE_LIMITED_DAILY` | The admin's 50/rolling-24h budget is spent (per-minute budget still had room). `Retry-After` header + `retryAfterMs` in the body. |
 | 502 | `CONTACT_LOOKUP_FAILED` | Firebase Auth lookup threw (reported to Sentry). |
 | 503 | `RATE_LIMIT_UNAVAILABLE` | The rate-limit store itself is unreachable; the endpoint fails closed by design. |
+
+Every outcome above except `200`, `401`, and `422` also writes a `PII_CONTACT_REVEAL_DENIED` audit
+entry (see Acceptance 6a/6b and `docs/runbook.md` → "Contact reveal (E09-S08)"). `401` is not
+audited: `requireAdmin` rejects the request before an `AdminContext`/`adminId` exists to attribute
+the row to. `422` is not audited: a malformed body carries no useful denial information beyond
+what request logs already capture.
 
 ## RBAC matrix
 

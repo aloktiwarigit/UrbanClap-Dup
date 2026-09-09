@@ -68,6 +68,56 @@ audited path back to the raw value.
   component state only (never in a store, never in a URL), starts a 60-second countdown on reveal,
   and re-masks automatically when it elapses or when the operator clicks "Hide now" early.
 
+## Update 2026-09-09 — denial auditing, daily cap, and authorize-in-handler
+
+Two of this ADR's own accepted negatives — "denied and failed reveal attempts are not audited"
+and "no daily cap" (below, and `docs/threat-model.md` I-PII3/I-PII4) — are closed.
+
+- **Every non-200 outcome that reached an identified admin is now audited**, not just successes.
+  `PII_CONTACT_REVEAL_DENIED` (added to `AuditAction`) is written by a new `auditDenied()` helper
+  for reason `FORBIDDEN`, `RATE_LIMITED`, `RATE_LIMITED_DAILY`, `NOT_FOUND` (covers
+  `ORDER_NOT_FOUND`, `PARTY_NOT_AVAILABLE`, and `PHONE_UNAVAILABLE`), `LOOKUP_FAILED`, or
+  `RATE_LIMIT_UNAVAILABLE`, with payload `{ party?, subjectRef?, reason }` — `subjectRef` included
+  only when a subject was actually resolved, `party` included whenever it is known at the point of
+  denial, never a raw id or a raw phone. It deliberately calls `auditLog()` (which swallows its own
+  write failure to Sentry), not `appendAuditEntry()` (which the success path still uses and
+  deliberately does not swallow): a lost denial-audit row is a monitoring gap, not a security
+  incident, and must never turn an otherwise-correct 403/404/429 into a 500. A lost *success* audit
+  must still fail closed, because a silently-unaudited disclosure is exactly the failure mode this
+  whole ADR exists to prevent — hence the asymmetry between the two audit calls is deliberate, not
+  an oversight.
+- **A second daily budget closes the volume gap.** `consumeStrict` now also gates
+  `rl:pii-reveal-day:${adminId}` at capacity 50, refilling `50/86400` per second — a token bucket
+  at that refill rate approximates a rolling 24h window (it never hard-resets at midnight) rather
+  than implementing a literal calendar-day reset, the same approximation the per-minute budget
+  already makes. Checked after the per-minute budget on every attempt. Sizing: production has had
+  11 completed bookings in the product's entire history; the pilot ceiling is 5,000 bookings/month
+  ≈ 167/day; a single dispute may reasonably need two reveals (customer + technician). 50/day is
+  ~30% of all bookings at the *planned* pilot ceiling — generous for a legitimately busy dispute
+  day, while turning bulk exfiltration into a months-long operation that now writes one queryable
+  `PII_CONTACT_REVEAL_DENIED` row per attempt once the cap bites. This is explicitly a detection
+  mechanism, not an alerting one: **there is no alerting layer in this environment**
+  (`func-homeservices-prod` has no `SENTRY_DSN`, and `rg-homeservices-prod` has no Azure
+  metric-alert rules, scheduled-query rules, or action groups), so cap-hits become queryable rather
+  than paged — see `docs/runbook.md` → "Contact reveal (E09-S08)".
+- **Authorization moved from `requireAdmin` middleware into the handler — a deliberate, mitigated
+  reduction in defence in depth.** Auditing a FORBIDDEN denial requires the denying admin's
+  identity, but `requireAdmin(['super-admin','ops-manager'])` rejects an unauthorized caller
+  before an `AdminContext` (and therefore an `adminId`) ever reaches the handler — there is no one
+  to attribute the row to. The endpoint is now registered as `requireAdmin(ALL_ADMIN_ROLES)` (every
+  authenticated admin, of any role, reaches `revealContactHandler`), and the handler itself rejects
+  any role that is not `super-admin`/`ops-manager` as the *first* thing it does — before parsing
+  the body, before touching the rate limiter, before any Cosmos/Firebase I/O. The 403 response is
+  unchanged byte-for-byte (`{ code: 'FORBIDDEN', requiredRoles: ['super-admin', 'ops-manager'] }`).
+  This is a real trade-off: a bug in this one handler's role check is no longer backstopped by
+  middleware rejecting the request before the handler runs at all. Mitigated two ways: (1)
+  `PII_REVEAL_ALLOWED_ROLES` is a single exported const used for both the check and the
+  `requiredRoles` body field, so the two cannot silently drift; (2) the pre-existing composed-handler
+  RBAC test in `reveal-contact.test.ts` — which asserts 403 for `finance`/`support-agent` and
+  non-403 for `super-admin`/`ops-manager` against the actual registered handler — was verified to
+  still pass unchanged, proving the net access-control behaviour is identical even though the layer
+  enforcing it moved. Tracked as `docs/threat-model.md` I-PII8.
+
 ## Consequences
 
 - **Positive:** `finance` and `support-agent` — roles with no operational need to contact a
@@ -86,16 +136,14 @@ audited path back to the raw value.
 - **Negative:** `maskVpa` deliberately leaves the PSP suffix (e.g. `@okhdfcbank`) readable, which
   is a smaller but real disclosure (which bank the technician uses) accepted for the same
   operator-recognition reason as the last-four digits.
-- **Negative:** denied and failed reveal attempts are not audited — only successes write to
-  `audit_log`. An `ops-manager` probing which orders have reachable numbers, or any role hitting
-  the endpoint and getting a 403/404, leaves no trace. Recorded as an open gap in
-  `docs/threat-model.md` with a recommended `PII_CONTACT_REVEAL_DENIED` audit action, deferred
-  because it requires expanding an audit-action enum the spec defines as closed for this story and
-  hooking auditing into shared `requireAdmin` middleware.
-- **Neutral:** 30 reveals/minute/admin is 43,200/day with no per-subject or daily cap and no
-  volume alerting, while the same role can already page the full orders list for ids. This is the
-  single most important open item from this story — see `docs/threat-model.md` for the full
-  writeup and the recommended daily-cap-plus-anomaly-threshold control.
+- **~~Negative: denied and failed reveal attempts are not audited~~ — closed 2026-09-09.** See
+  "Update 2026-09-09" above: every non-200 outcome that reached an identified admin now writes a
+  `PII_CONTACT_REVEAL_DENIED` row.
+- **~~Neutral: 30 reveals/minute/admin is 43,200/day with no daily cap~~ — closed 2026-09-09.** See
+  "Update 2026-09-09" above: a second 50/rolling-24h budget now caps every admin regardless of the
+  per-minute rate. Volume alerting (paging someone automatically) remains explicitly out of scope
+  for this pilot environment, which has no Sentry DSN and no Azure alert rules configured — cap
+  hits are queryable via the audit log, not pushed to anyone.
 
 ## Alternatives considered
 

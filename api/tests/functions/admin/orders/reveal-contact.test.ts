@@ -10,6 +10,7 @@ const getOrderById = vi.fn();
 const getTechniciansByIds = vi.fn();
 const bookingRepoGetById = vi.fn();
 const appendAuditEntry = vi.fn().mockResolvedValue(undefined);
+const auditLog = vi.fn().mockResolvedValue(undefined);
 const consumeStrict = vi.fn().mockResolvedValue({ allowed: true });
 const getUsers = vi.fn();
 const touchAndGetSession = vi.fn();
@@ -20,6 +21,7 @@ vi.mock('../../../../src/cosmos/booking-repository.js', () => ({
   bookingRepo: { getById: bookingRepoGetById },
 }));
 vi.mock('../../../../src/cosmos/audit-log-repository.js', () => ({ appendAuditEntry }));
+vi.mock('../../../../src/services/auditLog.service.js', () => ({ auditLog }));
 vi.mock('../../../../src/cosmos/rate-limit-repository.js', () => ({ consumeStrict }));
 vi.mock('../../../../src/services/firebaseAdmin.js', () => ({
   getFirebaseAdmin: () => ({ auth: () => ({ getUsers }) }),
@@ -311,6 +313,124 @@ describe('POST /v1/admin/orders/{id}/reveal-contact', () => {
       const res = await revealContactHandler(request({ party: 'CUSTOMER' }), ctx, admin);
       expect(res.status).toBe(404);
       expect((res.jsonBody as { code: string }).code).toBe('PHONE_UNAVAILABLE');
+    });
+  });
+
+  describe('E09-S08 hardening — denial auditing (Change 1) and daily cap (Change 2)', () => {
+    it('FORBIDDEN — finance and support-agent get 403 and a PII_CONTACT_REVEAL_DENIED row', async () => {
+      for (const role of ['finance', 'support-agent'] as const) {
+        auditLog.mockClear();
+        const forbiddenAdmin: AdminContext = { adminId: 'adm_2', role, sessionId: 'sess_2' };
+        const res = await revealContactHandler(request({ party: 'CUSTOMER' }), ctx, forbiddenAdmin);
+        expect(res.status).toBe(403);
+        expect(res.jsonBody).toEqual({ code: 'FORBIDDEN', requiredRoles: ['super-admin', 'ops-manager'] });
+        expect(auditLog).toHaveBeenCalledTimes(1);
+        const [, action, resourceType, resourceId, payload] = auditLog.mock.calls[0]!;
+        expect(action).toBe('PII_CONTACT_REVEAL_DENIED');
+        expect(resourceType).toBe('booking');
+        expect(resourceId).toBe('ord_1');
+        expect((payload as Record<string, unknown>)['reason']).toBe('FORBIDDEN');
+        expect(appendAuditEntry).not.toHaveBeenCalled();
+      }
+    });
+
+    it('per-minute exhaustion returns 429 RATE_LIMITED and writes a denial row', async () => {
+      consumeStrict.mockResolvedValue({ allowed: false, retryAfterMs: 4000 });
+      const res = await revealContactHandler(request({ party: 'CUSTOMER' }), ctx, admin);
+      expect(res.status).toBe(429);
+      expect((res.jsonBody as { code: string }).code).toBe('RATE_LIMITED');
+      expect(auditLog).toHaveBeenCalledTimes(1);
+      const [, action, , , payload] = auditLog.mock.calls[0]!;
+      expect(action).toBe('PII_CONTACT_REVEAL_DENIED');
+      expect((payload as Record<string, unknown>)['reason']).toBe('RATE_LIMITED');
+      expect((payload as Record<string, unknown>)['party']).toBe('CUSTOMER');
+      expect(payload).not.toHaveProperty('subjectRef');
+    });
+
+    it('daily exhaustion (minute allowed, daily denied) returns 429 RATE_LIMITED_DAILY, consumes the daily bucket, and writes a denial row', async () => {
+      consumeStrict.mockImplementation(async (key: string) => {
+        if (key.startsWith('rl:pii-reveal-day:')) return { allowed: false, retryAfterMs: 9000 };
+        return { allowed: true };
+      });
+      const res = await revealContactHandler(request({ party: 'CUSTOMER' }), ctx, admin);
+      expect(res.status).toBe(429);
+      expect((res.jsonBody as { code: string }).code).toBe('RATE_LIMITED_DAILY');
+      expect((res.jsonBody as { retryAfterMs: number }).retryAfterMs).toBe(9000);
+      expect(consumeStrict).toHaveBeenCalledWith('rl:pii-reveal-day:adm_1', 50, 50 / 86400);
+      expect(auditLog).toHaveBeenCalledTimes(1);
+      const [, action, , , payload] = auditLog.mock.calls[0]!;
+      expect(action).toBe('PII_CONTACT_REVEAL_DENIED');
+      expect((payload as Record<string, unknown>)['reason']).toBe('RATE_LIMITED_DAILY');
+    });
+
+    it('order not found writes a denial row reason NOT_FOUND (no subjectRef — no subject resolved)', async () => {
+      getOrderById.mockResolvedValue(null);
+      const res = await revealContactHandler(request({ party: 'CUSTOMER' }), ctx, admin);
+      expect(res.status).toBe(404);
+      const [, action, , , payload] = auditLog.mock.calls[0]!;
+      expect(action).toBe('PII_CONTACT_REVEAL_DENIED');
+      expect((payload as Record<string, unknown>)['reason']).toBe('NOT_FOUND');
+      expect(payload).not.toHaveProperty('subjectRef');
+    });
+
+    it('no phone on file writes a denial row reason NOT_FOUND (subjectRef present — subject WAS resolved)', async () => {
+      getUsers.mockImplementation(async () => ({ users: [] }));
+      const res = await revealContactHandler(request({ party: 'CUSTOMER' }), ctx, admin);
+      expect(res.status).toBe(404);
+      expect((res.jsonBody as { code: string }).code).toBe('PHONE_UNAVAILABLE');
+      const [, action, , , payload] = auditLog.mock.calls[0]!;
+      expect(action).toBe('PII_CONTACT_REVEAL_DENIED');
+      expect((payload as Record<string, unknown>)['reason']).toBe('NOT_FOUND');
+      expect((payload as Record<string, unknown>)['subjectRef']).toMatch(/^[0-9a-f]{16}$/);
+    });
+
+    it('502 lookup failure writes a denial row reason LOOKUP_FAILED', async () => {
+      getUsers.mockRejectedValue(new Error('firebase outage'));
+      const res = await revealContactHandler(request({ party: 'CUSTOMER' }), ctx, admin);
+      expect(res.status).toBe(502);
+      const [, action, , , payload] = auditLog.mock.calls[0]!;
+      expect(action).toBe('PII_CONTACT_REVEAL_DENIED');
+      expect((payload as Record<string, unknown>)['reason']).toBe('LOOKUP_FAILED');
+    });
+
+    it('503 rate-limit-store failure writes a denial row reason RATE_LIMIT_UNAVAILABLE', async () => {
+      consumeStrict.mockRejectedValue(new Error('Cosmos throttled'));
+      const res = await revealContactHandler(request({ party: 'CUSTOMER' }), ctx, admin);
+      expect(res.status).toBe(503);
+      const [, action, , , payload] = auditLog.mock.calls[0]!;
+      expect(action).toBe('PII_CONTACT_REVEAL_DENIED');
+      expect((payload as Record<string, unknown>)['reason']).toBe('RATE_LIMIT_UNAVAILABLE');
+    });
+
+    it('a successful reveal still writes exactly one PII_CONTACT_REVEALED row and no denial row', async () => {
+      const res = await revealContactHandler(request({ party: 'CUSTOMER' }), ctx, admin);
+      expect(res.status).toBe(200);
+      expect(appendAuditEntry).toHaveBeenCalledTimes(1);
+      expect((appendAuditEntry.mock.calls[0]![0] as { action: string }).action).toBe('PII_CONTACT_REVEALED');
+      expect(auditLog).not.toHaveBeenCalled();
+    });
+
+    it('never puts a raw phone number or a raw subject id into any denial payload', async () => {
+      // Phone-shaped customerId, mirroring truecaller-verify's phone-as-uid pattern —
+      // exercises the PHONE_UNAVAILABLE (NOT_FOUND) path, which DOES include subjectRef.
+      getOrderById.mockResolvedValue({
+        id: 'ord_1',
+        customerId: '+919999999999',
+        customerPhone: '+91 XXXXX-X9999',
+        technicianId: 'tech_1',
+      });
+      bookingRepoGetById.mockResolvedValue({
+        id: 'ord_1',
+        customerId: '+919999999999',
+        customerPhone: undefined,
+      });
+      getUsers.mockImplementation(async () => ({ users: [] }));
+      await revealContactHandler(request({ party: 'CUSTOMER' }), ctx, admin);
+      expect(auditLog).toHaveBeenCalledTimes(1);
+      const payload = auditLog.mock.calls[0]![4];
+      const serialized = JSON.stringify(payload);
+      expect(serialized).not.toContain('9999999999');
+      expect(serialized).not.toContain('+919999999999');
     });
   });
 });

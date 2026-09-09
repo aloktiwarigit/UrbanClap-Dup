@@ -74,6 +74,7 @@ export type AuditAction =
   | 'REFUND_APPROVE'
   // PII
   | 'PII_CONTACT_REVEALED'
+  | 'PII_CONTACT_REVEAL_DENIED'
   // Reconciliation
   | 'RECON_MISMATCH_ALERT'
   | 'RECON_RETRY_ATTEMPT'
