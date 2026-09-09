@@ -16,6 +16,10 @@ import {
   adminCommissionReceivablesPerTechHandler,
   adminCommissionReceivablesRecomputeHandler,
 } from '../../../../src/functions/admin/finance/commission-receivables.js';
+import {
+  HOLD_RECONCILIATION_SUMMARY_DOC_ID,
+  type HoldReconciliationSummaryDoc,
+} from '../../../../src/schemas/hold-reconciliation-summary.js';
 
 const ctx = { adminId: 'a1', role: 'super-admin' as const, sessionId: 's1' };
 const getReq = (url = 'http://localhost/api/v1/admin/finance/commission-receivables') =>
@@ -46,7 +50,10 @@ describe('adminCommissionReceivablesDashboardHandler', () => {
     const holdWarn = { outstandingPaise: 5000, dueCount: 1, state: 'WARN' as const, evaluatedAt: '2026-09-01T00:00:00.000Z' };
     const holdClearZero = { outstandingPaise: 0, dueCount: 0, state: 'CLEAR' as const, evaluatedAt: '2026-09-01T00:00:00.000Z' };
     vi.mocked(techRepo.listAllTechniciansWithHold).mockResolvedValue([
-      { id: 'tech-1', name: 'Ravi', commissionHold: holdWarn },
+      // tech-1 deliberately has no roster `name` (E21-S04: the read path only calls
+      // getTechniciansByIds for rows lacking a resolved technicianName — see
+      // commission-receivables.ts) so this still exercises the profile-lookup enrichment path.
+      { id: 'tech-1', commissionHold: holdWarn },
       { id: 'tech-2', name: 'Suresh', commissionHold: holdClearZero }, // filtered out: CLEAR + 0
     ]);
     vi.mocked(commissionReceivableRepo.sumDueGroupedByTechnician).mockResolvedValue([]);
@@ -71,7 +78,7 @@ describe('adminCommissionReceivablesDashboardHandler', () => {
       outstandingPaise: 5000,
       dueCount: 1,
       state: 'WARN',
-      staleAfter: '2026-09-01T06:00:00.000Z', // evaluatedAt + 6h
+      staleAfter: '2026-09-01T01:30:00.000Z', // evaluatedAt + 90min (E21-S04 corrected HOLD_STALE_AFTER_MS, was 6h)
     });
     expect(body.totalOutstanding).toBe(5000);
     expect(body.continuationToken).toBeUndefined();
@@ -418,5 +425,122 @@ describe('adminCommissionReceivablesRecomputeHandler', () => {
     const res = (await adminCommissionReceivablesRecomputeHandler(req, {} as never, ctx)) as HttpResponseInit;
 
     expect(res.status).toBe(502);
+  });
+});
+
+// ── E21-S04: summary-backed dashboard ────────────────────────────────────────
+
+const freshSummary = (over: Partial<HoldReconciliationSummaryDoc> = {}): HoldReconciliationSummaryDoc => ({
+  id: HOLD_RECONCILIATION_SUMMARY_DOC_ID,
+  computedAt: new Date().toISOString(),
+  totalTechnicianCount: 1,
+  totalOutstandingPaise: 5000,
+  unreconciledTechnicianCount: 0,
+  topN: 100,
+  top: [{
+    technicianId: 'tech-1', technicianName: 'Ravi Kumar', outstandingPaise: 5000,
+    dueCount: 1, state: 'WARN', evaluatedAt: '2026-09-08T00:00:00.000Z',
+  }],
+  ...over,
+});
+
+describe('dashboard summary fast path', () => {
+  it('serves from the summary and performs NO drain', async () => {
+    vi.mocked(systemDocsRepo.getHoldReconciliationSummary).mockResolvedValue(freshSummary());
+
+    const res = (await adminCommissionReceivablesDashboardHandler(getReq(), {} as never, ctx)) as HttpResponseInit;
+
+    expect(res.status).toBe(200);
+    expect(techRepo.listAllTechniciansWithHold).not.toHaveBeenCalled();
+    expect(commissionReceivableRepo.sumDueGroupedByTechnician).not.toHaveBeenCalled();
+    expect(res.jsonBody).toMatchObject({
+      totalOutstanding: 5000,
+      unreconciledTechnicianCount: 0,
+      technicians: [expect.objectContaining({ technicianId: 'tech-1', technicianName: 'Ravi Kumar' })],
+    });
+  });
+
+  it('falls back to the live drain when the summary is absent', async () => {
+    vi.mocked(systemDocsRepo.getHoldReconciliationSummary).mockResolvedValue(null);
+    vi.mocked(techRepo.listAllTechniciansWithHold).mockResolvedValue([]);
+    vi.mocked(commissionReceivableRepo.sumDueGroupedByTechnician).mockResolvedValue([]);
+
+    const res = (await adminCommissionReceivablesDashboardHandler(getReq(), {} as never, ctx)) as HttpResponseInit;
+
+    expect(res.status).toBe(200);
+    expect(techRepo.listAllTechniciansWithHold).toHaveBeenCalled();
+  });
+
+  it('falls back when the summary is older than 45 minutes', async () => {
+    vi.mocked(systemDocsRepo.getHoldReconciliationSummary).mockResolvedValue(
+      freshSummary({ computedAt: new Date(Date.now() - 46 * 60 * 1000).toISOString() }),
+    );
+    vi.mocked(techRepo.listAllTechniciansWithHold).mockResolvedValue([]);
+    vi.mocked(commissionReceivableRepo.sumDueGroupedByTechnician).mockResolvedValue([]);
+
+    await adminCommissionReceivablesDashboardHandler(getReq(), {} as never, ctx);
+
+    expect(techRepo.listAllTechniciansWithHold).toHaveBeenCalled();
+  });
+
+  it('falls back when the requested page runs past topN', async () => {
+    vi.mocked(systemDocsRepo.getHoldReconciliationSummary).mockResolvedValue(
+      freshSummary({ topN: 100, totalTechnicianCount: 500 }),
+    );
+    vi.mocked(techRepo.listAllTechniciansWithHold).mockResolvedValue([]);
+    vi.mocked(commissionReceivableRepo.sumDueGroupedByTechnician).mockResolvedValue([]);
+    const token = Buffer.from('100').toString('base64');
+
+    await adminCommissionReceivablesDashboardHandler(
+      getReq(`http://localhost/api/v1/admin/finance/commission-receivables?continuationToken=${token}`),
+      {} as never, ctx,
+    );
+
+    expect(techRepo.listAllTechniciansWithHold).toHaveBeenCalled();
+  });
+
+  it('falls back when reading the summary throws', async () => {
+    vi.mocked(systemDocsRepo.getHoldReconciliationSummary).mockRejectedValue(new Error('boom'));
+    vi.mocked(techRepo.listAllTechniciansWithHold).mockResolvedValue([]);
+    vi.mocked(commissionReceivableRepo.sumDueGroupedByTechnician).mockResolvedValue([]);
+
+    const res = (await adminCommissionReceivablesDashboardHandler(getReq(), {} as never, ctx)) as HttpResponseInit;
+
+    expect(res.status).toBe(200);
+    expect(techRepo.listAllTechniciansWithHold).toHaveBeenCalled();
+  });
+
+  it('summary path and drain path produce identical JSON for the same underlying data', async () => {
+    const hold = {
+      outstandingPaise: 5000, dueCount: 1, state: 'WARN' as const,
+      evaluatedAt: '2026-09-08T00:00:00.000Z',
+    };
+
+    vi.mocked(systemDocsRepo.getHoldReconciliationSummary).mockResolvedValue(null);
+    vi.mocked(techRepo.listAllTechniciansWithHold).mockResolvedValue([
+      { id: 'tech-1', name: 'Ravi Kumar', commissionHold: hold },
+    ]);
+    vi.mocked(commissionReceivableRepo.sumDueGroupedByTechnician).mockResolvedValue([
+      { technicianId: 'tech-1', outstandingPaise: 5000, dueCount: 1, oldestDueAt: '2026-09-01T00:00:00.000Z' },
+    ]);
+    vi.mocked(techRepo.getTechniciansByIds).mockResolvedValue([
+      { id: 'tech-1', technicianId: 'tech-1', displayName: 'Ravi Kumar' },
+    ]);
+    const drained = (await adminCommissionReceivablesDashboardHandler(getReq(), {} as never, ctx)) as HttpResponseInit;
+
+    vi.clearAllMocks();
+    vi.mocked(systemDocsRepo.getHoldReconciliationSummary).mockResolvedValue(freshSummary());
+    const fromSummary = (await adminCommissionReceivablesDashboardHandler(getReq(), {} as never, ctx)) as HttpResponseInit;
+
+    expect(fromSummary.jsonBody).toEqual(drained.jsonBody);
+  });
+});
+
+describe('HOLD_STALE_AFTER_MS matches the reconciler cadence', () => {
+  it('staleAfter is 90 minutes after evaluatedAt, not 6 hours', async () => {
+    vi.mocked(systemDocsRepo.getHoldReconciliationSummary).mockResolvedValue(freshSummary());
+    const res = (await adminCommissionReceivablesDashboardHandler(getReq(), {} as never, ctx)) as HttpResponseInit;
+    const row = (res.jsonBody as { technicians: Array<{ evaluatedAt: string; staleAfter: string }> }).technicians[0]!;
+    expect(new Date(row.staleAfter).getTime() - new Date(row.evaluatedAt).getTime()).toBe(90 * 60 * 1000);
   });
 });
