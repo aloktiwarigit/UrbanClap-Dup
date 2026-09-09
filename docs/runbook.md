@@ -1732,6 +1732,26 @@ automated outcomes; there is no admin field an operator can set to admit a techn
 other means. If such a path is added, add a real completion fact for the predicate to read — do not
 loosen it back toward `kyc.kycStatus` (see ADR-0032, Consequences — negative).
 
+**BLOCKING: do not flip `enforceKycInDispatch` until the KYC flow can actually be completed.**
+This is a hard precondition, not a caution. `upsertKycStatus` reconstructs the `kyc` sub-object
+with defaults (`aadhaarVerified: false`, `panHash: null`) on the *first* write, so the moment a
+technician touches either KYC endpoint they stop failing open and start being **excluded** — and
+they stay excluded until *both* facts land. That is correct behaviour for a half-verified
+technician, but it collides with a known gap in the flow itself: `POST /v1/kyc/pan-ocr` writes
+`PAN_DONE` without checking Aadhaar, and nothing ever writes a terminal status. A technician who
+does PAN first therefore acquires a `kyc` sub-object, becomes excluded, and has no path to finish.
+Flipping the flag in that state would strand them silently.
+
+Two consequences for whoever operates this:
+
+1. **Before flipping**, confirm the KYC flow has a completable path in both orderings — not just
+   that the query above is clear. The follow-up ticket covering the missing terminal state and the
+   missing step-order enforcement must be closed first.
+2. **Reading the shadow log**, expect would-be exclusions to appear the day technicians start
+   touching KYC, and do **not** read that as the gate misfiring. It is the gate working correctly
+   against a flow that cannot currently be completed. The number to act on is whether those
+   technicians have a route to finish, not whether the count is non-zero.
+
 
 ### Timers
 
