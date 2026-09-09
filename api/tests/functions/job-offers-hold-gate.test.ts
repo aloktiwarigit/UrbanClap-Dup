@@ -137,6 +137,73 @@ describe('acceptJobOfferHandler — commission hold gate', () => {
     expect(res.status).toBe(403);
   });
 
+  // The attempt is DECLINED by the time continueDispatch runs, so expireStaleOffers — which only
+  // matches PENDING — can never reclaim this booking. Without the reset it sits in SEARCHING
+  // forever: retryAwaitingDispatch takes only PAID/UNFULFILLED, and reconcileStaleBookings only
+  // logs. Resetting to PAID hands it back to a lane that is actually swept (every 5 minutes).
+  it('BLOCKED: a continueDispatch failure resets the booking to PAID so the retry lane reclaims it', async () => {
+    vi.mocked(assertCanAccept).mockResolvedValue({
+      decision: 'BLOCKED', outstandingPaise: 620000, blockThresholdPaise: 500000,
+    });
+    vi.mocked(dispatcherService.continueDispatchAfterOfferOutcome).mockRejectedValue(new Error('boom'));
+    const res = await acceptJobOfferHandler(req(), ctx);
+    expect(updateBookingFields).toHaveBeenCalledWith('bk-1', { status: 'PAID' });
+    expect(res.status).toBe(403);
+  });
+
+  it('BLOCKED: still returns 403 when the booking reset itself also fails', async () => {
+    vi.mocked(assertCanAccept).mockResolvedValue({
+      decision: 'BLOCKED', outstandingPaise: 620000, blockThresholdPaise: 500000,
+    });
+    vi.mocked(dispatcherService.continueDispatchAfterOfferOutcome).mockRejectedValue(new Error('boom'));
+    vi.mocked(updateBookingFields).mockRejectedValue(new Error('cosmos down'));
+    const res = await acceptJobOfferHandler(req(), ctx);
+    expect(res.status).toBe(403);
+    expect(res.jsonBody).toEqual({
+      code: 'COMMISSION_HOLD_BLOCKED', outstandingPaise: 620000, blockThresholdPaise: 500000,
+    });
+  });
+
+  // The contract for this path is "always 403 with the dues payload". A side-effect that throws
+  // must never become a 500 — that would tell the technician nothing about why they were refused,
+  // and would hide a real block from ops.
+  it.each([
+    ['declineAttempt', () => vi.mocked(dispatchAttemptRepo.declineAttempt).mockRejectedValue(new Error('boom'))],
+    ['bookingEventRepo.append', () => vi.mocked(bookingEventRepo.append).mockRejectedValue(new Error('boom'))],
+    ['systemAudit', () => vi.mocked(systemAudit).mockRejectedValue(new Error('boom'))],
+  ])('BLOCKED: still returns 403 with both figures when %s throws', async (_name, arrange) => {
+    vi.mocked(assertCanAccept).mockResolvedValue({
+      decision: 'BLOCKED', outstandingPaise: 620000, blockThresholdPaise: 500000,
+    });
+    arrange();
+    const res = await acceptJobOfferHandler(req(), ctx);
+    expect(res.status).toBe(403);
+    expect(res.jsonBody).toEqual({
+      code: 'COMMISSION_HOLD_BLOCKED', outstandingPaise: 620000, blockThresholdPaise: 500000,
+    });
+  });
+
+  // Event + audit are written before dispatch moves on, so the record of a block that really
+  // happened cannot land after another technician already holds the offer.
+  it('BLOCKED: writes the audit trail before handing the booking on', async () => {
+    vi.mocked(assertCanAccept).mockResolvedValue({
+      decision: 'BLOCKED', outstandingPaise: 620000, blockThresholdPaise: 500000,
+    });
+    const order: string[] = [];
+    vi.mocked(bookingEventRepo.append).mockImplementation(async () => { order.push('event'); });
+    vi.mocked(systemAudit).mockImplementation(async () => { order.push('audit'); });
+    vi.mocked(dispatchAttemptRepo.declineAttempt).mockImplementation(async () => {
+      order.push('decline');
+      return pendingAttempt as never;
+    });
+    vi.mocked(dispatcherService.continueDispatchAfterOfferOutcome).mockImplementation(async () => {
+      order.push('continue');
+      return true;
+    });
+    await acceptJobOfferHandler(req(), ctx);
+    expect(order).toEqual(['event', 'audit', 'decline', 'continue']);
+  });
+
   it('BLOCKED: still continues dispatch when declineAttempt returns null (already terminal)', async () => {
     vi.mocked(assertCanAccept).mockResolvedValue({
       decision: 'BLOCKED', outstandingPaise: 620000, blockThresholdPaise: 500000,

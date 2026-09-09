@@ -1,5 +1,6 @@
 import { app, type HttpRequest, type HttpResponseInit, type InvocationContext, type Timer } from '@azure/functions';
 import { getMessaging } from 'firebase-admin/messaging';
+import * as Sentry from '@sentry/node';
 import type { Resource } from '@azure/cosmos';
 import { verifyTechnicianToken } from '../middleware/verifyTechnicianToken.js';
 import { dispatchAttemptRepo } from '../cosmos/dispatch-attempt-repository.js';
@@ -43,33 +44,64 @@ export async function acceptJobOfferHandler(
   const gate = await assertCanAccept(technicianId);
 
   if (gate.decision === 'INDETERMINATE') {
-    // Fail closed: the accept does not succeed. But the attempt stays PENDING — the technician
-    // can retry inside the 90s offer window, and expireStaleOffers (every 30s) is the backstop.
+    // Fail closed: the accept does not succeed. But the attempt stays PENDING — the technician can
+    // retry inside the 90s offer window, and expireStaleOffers (a ≤30s tick, matching PENDING
+    // attempts past expiresAt) is the backstop once that window lapses.
     // Declining here would permanently exclude a possibly-solvent technician over an infra blip.
     ctx.error(`ACCEPT_HOLD_INDETERMINATE bookingId=${bookingId} technicianId=${technicianId} reason=${gate.reason}`);
     return { status: 503, jsonBody: { code: 'HOLD_CHECK_UNAVAILABLE' } };
   }
 
   if (gate.decision === 'BLOCKED') {
-    // Attempts are single-technician: leaving this one PENDING would stall the booking for the
-    // full 30s expiry cycle. Decline it and immediately walk to the next-nearest candidate.
-    await dispatchAttemptRepo.declineAttempt(attempt.id, bookingId);
+    // This path always answers 403 with the dues payload. Every write below is best-effort: a
+    // failed side-effect must not surface as a 500, which would tell the technician nothing about
+    // why they were refused and would hide a real block from ops.
     try {
-      await dispatcherService.continueDispatchAfterOfferOutcome(bookingId, attempt.technicianIds);
+      // Audit trail first, before dispatch hands the booking on. A block is a fact the moment it
+      // is decided, and writing it here means the record can never land after another technician
+      // already holds the offer.
+      await bookingEventRepo.append({
+        event: 'TECH_ACCEPT_BLOCKED_BY_HOLD',
+        technicianId,
+        bookingId,
+      });
+      await systemAudit('JOB_ACCEPT_BLOCKED_BY_HOLD', 'booking', bookingId, {
+        technicianId,
+        outstandingPaise: gate.outstandingPaise,
+        blockThresholdPaise: gate.blockThresholdPaise,
+      });
+
+      // Attempts are single-technician: leaving this one PENDING would stall the booking for the
+      // rest of the 90s offer window plus up to one ≤30s expireStaleOffers tick — around two
+      // minutes. Decline it and walk straight to the next-nearest candidate.
+      await dispatchAttemptRepo.declineAttempt(attempt.id, bookingId);
+
+      try {
+        await dispatcherService.continueDispatchAfterOfferOutcome(bookingId, attempt.technicianIds);
+      } catch (err: unknown) {
+        Sentry.captureException(err);
+        ctx.error('ACCEPT_HOLD_CONTINUE_DISPATCH_FAILED', err);
+        // No timer can recover the booking from here. The attempt is DECLINED, so
+        // expireStaleOffers (PENDING-only) will never match it again; retryAwaitingDispatch takes
+        // only PAID/UNFULFILLED; reconcileStaleBookings only logs, daily, after 24h. Left alone
+        // the booking sits in SEARCHING forever. Reset it into the PAID lane — the same idiom
+        // dispatchBookingToTechs already uses when no technician is available — so
+        // retryAwaitingDispatch reclaims it on its next 5-minute pass, with the blocked
+        // technician excluded via getAttemptedTechnicianIds.
+        try {
+          await updateBookingFields(bookingId, { status: 'PAID' });
+        } catch (resetErr: unknown) {
+          Sentry.captureException(resetErr);
+          ctx.error('ACCEPT_HOLD_BOOKING_RESET_FAILED', resetErr);
+        }
+      }
     } catch (err: unknown) {
-      // The expiry timer will pick the booking up; the technician still gets a truthful 403.
-      ctx.error('ACCEPT_HOLD_CONTINUE_DISPATCH_FAILED', err);
+      // A throw before the decline leaves the attempt PENDING, so the expiry timer still recovers
+      // the booking. The technician's answer does not change either way.
+      Sentry.captureException(err);
+      ctx.error('ACCEPT_HOLD_BLOCK_SIDE_EFFECT_FAILED', err);
     }
-    await bookingEventRepo.append({
-      event: 'TECH_ACCEPT_BLOCKED_BY_HOLD',
-      technicianId,
-      bookingId,
-    });
-    await systemAudit('JOB_ACCEPT_BLOCKED_BY_HOLD', 'booking', bookingId, {
-      technicianId,
-      outstandingPaise: gate.outstandingPaise,
-      blockThresholdPaise: gate.blockThresholdPaise,
-    });
+
     return {
       status: 403,
       jsonBody: {
