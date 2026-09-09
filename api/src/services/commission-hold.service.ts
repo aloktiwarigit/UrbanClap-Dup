@@ -168,3 +168,83 @@ async function collectFullScopeIds(): Promise<string[]> {
   for (const t of holders) seen.add(t.id);
   return [...seen];
 }
+
+/**
+ * Outcome of the job-accept commission gate (E21-S04).
+ *
+ * `INDETERMINATE` is deliberately distinct from `BLOCKED`. Fail-closed means the accept must not
+ * succeed; it does NOT mean the technician should be told they owe money, nor that their offer
+ * should be destroyed. The handler maps INDETERMINATE to 503 and leaves the dispatch attempt
+ * PENDING so the technician can retry inside the offer window — see ADR-0032.
+ */
+export type AcceptGateResult =
+  | { decision: 'ALLOW' }
+  | { decision: 'BLOCKED'; outstandingPaise: number; blockThresholdPaise: number }
+  | { decision: 'INDETERMINATE'; reason: string };
+
+/**
+ * The job-accept commission gate. Read-only: it never writes the hold cache.
+ *
+ * Uses `computeCommissionHold`, which performs the LIVE single-partition sum of outstanding
+ * receivables (not the cached `commissionHold`, which may lag by up to the reconciler cadence),
+ * reads the config, reads the current hold for its override, and evaluates state against one
+ * consistent `now`. Reusing it is deliberate: the gate and the reconciler can then never
+ * disagree about what BLOCKED means.
+ *
+ * Fail direction (spec 3.6, ADR-0032):
+ *   - enforcement OFF → always ALLOW. Nothing user-visible may change while the flag is off, so
+ *     even a total failure of the ledger read is swallowed. A would-be block is shadow-logged.
+ *   - enforcement ON  → fail CLOSED. BLOCKED blocks; anything indeterminate also refuses, but as
+ *     INDETERMINATE rather than as a false accusation of debt.
+ *
+ * Every read is individually guarded. The config is read twice — once to learn whether
+ * enforcement is on, once after the compute to report `blockThresholdPaise` (normally the same
+ * 5-minute cache entry, and re-read rather than reused so the number reported matches the one
+ * `computeCommissionHold` just evaluated against). The second read is allowed to fail: it falls
+ * back to the first read's snapshot, because an unhandled rejection there would make the
+ * enforcement-OFF path throw, which is exactly what a dark launch must never do.
+ */
+export async function assertCanAccept(technicianId: string): Promise<AcceptGateResult> {
+  // Enforcement can only be ON if we positively read that it is ON. An unreadable config is
+  // treated as the dark-launch default (OFF), which allows.
+  const configSnapshot = await getCommissionConfig().catch(() => null);
+  if (!configSnapshot) return { decision: 'ALLOW' };
+  const enforcementEnabled = configSnapshot.holdEnforcementEnabled;
+
+  let computed: Awaited<ReturnType<typeof computeCommissionHold>>;
+  try {
+    computed = await computeCommissionHold(technicianId);
+  } catch (err: unknown) {
+    if (!enforcementEnabled) return { decision: 'ALLOW' };
+    const reason = err instanceof Error ? err.message : String(err);
+    console.error(`ACCEPT_HOLD_CHECK_FAILED technicianId=${technicianId} reason=${reason}`);
+    return { decision: 'INDETERMINATE', reason };
+  }
+
+  if (!computed) {
+    if (!enforcementEnabled) return { decision: 'ALLOW' };
+    return { decision: 'INDETERMINATE', reason: 'TECHNICIAN_NOT_FOUND' };
+  }
+
+  const { hold } = computed;
+  const cfg = (await getCommissionConfig().catch(() => null)) ?? configSnapshot;
+
+  if (!enforcementEnabled) {
+    if (hold.state === 'BLOCKED') {
+      console.log(
+        `ACCEPT_HOLD_SHADOW_BLOCK technicianId=${technicianId} outstandingPaise=${hold.outstandingPaise} ` +
+          `blockThresholdPaise=${cfg.blockThresholdPaise}`,
+      );
+    }
+    return { decision: 'ALLOW' };
+  }
+
+  if (hold.state === 'BLOCKED') {
+    return {
+      decision: 'BLOCKED',
+      outstandingPaise: hold.outstandingPaise,
+      blockThresholdPaise: cfg.blockThresholdPaise,
+    };
+  }
+  return { decision: 'ALLOW' };
+}
