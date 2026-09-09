@@ -666,6 +666,8 @@ function toHoldItem(r: TechnicianWithHoldRow): { id: string; name?: string; comm
  * whole roster at once. Sorted by outstandingPaise desc within the page only — no composite
  * index required; ordering across pages is not guaranteed.
  */
+// SEMGREP-JUSTIFIED: cross-partition by design — an admin-only roster view. Callers are gated by
+// requireAdmin (admin/finance/commission-receivables.ts); no user-controlled filter reaches the query.
 export async function listTechniciansWithHold(continuationToken?: string): Promise<{
   items: Array<{ id: string; name?: string; commissionHold: CommissionHold }>;
   continuationToken?: string;
@@ -686,6 +688,9 @@ export async function listTechniciansWithHold(continuationToken?: string): Promi
  * single page — a technician whose balance just dropped to zero must still be found here so it
  * can be recomputed down to CLEAR/0.
  */
+// SEMGREP-JUSTIFIED: cross-partition by design — the hold sweep and the reconciliation summary
+// need the whole roster. Callers are requireAdmin handlers or the app.timer reconciler; the query
+// takes no parameters at all, so no user input can reach it.
 export async function listAllTechniciansWithHold(): Promise<
   Array<{ id: string; name?: string; commissionHold: CommissionHold }>
 > {
@@ -706,6 +711,8 @@ export async function listAllTechniciansWithHold(): Promise<
  * touches that technician's receivables and triggers a recompute, silently under-enforcing a hold
  * that should have resumed.
  */
+// SEMGREP-JUSTIFIED: cross-partition by design — drives the reconciler's EXPIRED_OVERRIDES sweep.
+// Sole caller is the app.timer reconciler; the only parameter is a server-generated timestamp.
 export async function listTechniciansWithExpiredOverride(nowIso: string): Promise<string[]> {
   const container = getCosmosClient().database(DB_NAME).container(CONTAINER);
   const iterator = container.items.query<{ id: string }>(

@@ -205,6 +205,8 @@ export const commissionReceivableRepo = {
    * to the caller. Safe at pilot scale (bounded number of technicians); revisit if the technician
    * roster grows large enough that a full drain becomes expensive.
    */
+  // SEMGREP-JUSTIFIED: cross-partition GROUP BY by design — the platform-wide DUE aggregate.
+  // Callers are requireAdmin handlers and the app.timer reconciler; the query takes no parameters.
   async sumDueGroupedByTechnician(): Promise<
     Array<{
       technicianId: string;
