@@ -5,6 +5,10 @@ import {
   type TechnicianClientConfigDoc,
   type UpdateTechnicianClientConfigBody,
 } from '../schemas/technician-client-config.js';
+import {
+  HOLD_RECONCILIATION_SUMMARY_DOC_ID,
+  type HoldReconciliationSummaryDoc,
+} from '../schemas/hold-reconciliation-summary.js';
 
 const HOLD_REPAIR_DOC_ID = 'hold-repair';
 const HOLD_REPAIR_MAX_IDS = 5000;
@@ -143,5 +147,28 @@ export const systemDocsRepo = {
       }
     }
     throw lastErr instanceof Error ? lastErr : new Error('drainHoldRepair: exhausted retries');
+  },
+
+  /**
+   * Point read of `system/hold-reconciliation-summary`. Returns null when the document has never
+   * been written (first deploy, before the reconciler's first run) — the dashboard then falls
+   * back to a live drain, so a null here is a degraded path, never an error.
+   */
+  async getHoldReconciliationSummary(): Promise<HoldReconciliationSummaryDoc | null> {
+    const { resource } = await getSystemContainer()
+      .item(HOLD_RECONCILIATION_SUMMARY_DOC_ID, HOLD_RECONCILIATION_SUMMARY_DOC_ID)
+      .read<HoldReconciliationSummaryDoc>();
+    return resource ?? null;
+  },
+
+  /**
+   * Blind upsert. Unlike hold-repair and technician-client-config there is no read-merge-under-
+   * IfMatch loop here: this document has exactly one writer (the 15-minute reconciler timer),
+   * it is derived state that is fully recomputed on every run, and it is disposable — a lost
+   * write costs at most one cycle of dashboard freshness, after which the dashboard falls back
+   * to draining live. An ETag loop would add contention and buy nothing.
+   */
+  async putHoldReconciliationSummary(doc: HoldReconciliationSummaryDoc): Promise<void> {
+    await getSystemContainer().items.upsert(doc);
   },
 };
