@@ -65,6 +65,17 @@ const pendingAttempt = {
   status: 'PENDING' as const,
 };
 
+// After declineAttempt runs, the attempt is EXPIRED (declineAttempt writes 'EXPIRED', not
+// 'DECLINED' — dispatch-attempt-repository.ts:70). The handler re-reads the attempt before
+// resetting the booking, so the mock has to model that transition rather than keep answering
+// PENDING forever; an idealised mock here would hide the very guard it is meant to exercise.
+function attemptGoesExpiredAfterDecline(): void {
+  vi.mocked(dispatchAttemptRepo.getByBookingId)
+    .mockReset()
+    .mockResolvedValueOnce(pendingAttempt as never)
+    .mockResolvedValue({ ...pendingAttempt, status: 'EXPIRED' } as never);
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-1' } as never);
@@ -137,14 +148,55 @@ describe('acceptJobOfferHandler — commission hold gate', () => {
     expect(res.status).toBe(403);
   });
 
-  // The attempt is DECLINED by the time continueDispatch runs, so expireStaleOffers — which only
-  // matches PENDING — can never reclaim this booking. Without the reset it sits in SEARCHING
-  // forever: retryAwaitingDispatch takes only PAID/UNFULFILLED, and reconcileStaleBookings only
-  // logs. Resetting to PAID hands it back to a lane that is actually swept (every 5 minutes).
+  // declineAttempt has written the attempt to EXPIRED by the time continueDispatch runs (it writes
+  // 'EXPIRED', not 'DECLINED'), so expireStaleOffers — which only matches PENDING — can never
+  // reclaim this booking. Without the reset it sits in SEARCHING forever: retryAwaitingDispatch
+  // takes only PAID/UNFULFILLED, and reconcileStaleBookings only logs. Resetting to PAID hands it
+  // back to a lane that is actually swept (every 5 minutes).
   it('BLOCKED: a continueDispatch failure resets the booking to PAID so the retry lane reclaims it', async () => {
     vi.mocked(assertCanAccept).mockResolvedValue({
       decision: 'BLOCKED', outstandingPaise: 620000, blockThresholdPaise: 500000,
     });
+    attemptGoesExpiredAfterDecline();
+    vi.mocked(dispatcherService.continueDispatchAfterOfferOutcome).mockRejectedValue(new Error('boom'));
+    const res = await acceptJobOfferHandler(req(), ctx);
+    expect(updateBookingFields).toHaveBeenCalledWith('bk-1', { status: 'PAID' });
+    expect(res.status).toBe(403);
+  });
+
+  // continueDispatchAfterOfferOutcome can throw AFTER dispatchBookingToTechs has already created
+  // the next attempt (it fails at the following updateBookingFields to SEARCHING), and a
+  // concurrent expireStaleOffers may have re-dispatched too. Resetting to PAID then would let
+  // retryAwaitingDispatch mint a SECOND attempt; getByBookingId returns only the newest, so
+  // technician B — accepting the offer they were actually pushed — would get a spurious 403
+  // FORBIDDEN. A live PENDING attempt means dispatch did move on, so there is nothing to reclaim.
+  it('BLOCKED: does NOT reset the booking when a live PENDING attempt already exists', async () => {
+    vi.mocked(assertCanAccept).mockResolvedValue({
+      decision: 'BLOCKED', outstandingPaise: 620000, blockThresholdPaise: 500000,
+    });
+    vi.mocked(dispatchAttemptRepo.getByBookingId)
+      .mockReset()
+      .mockResolvedValueOnce(pendingAttempt as never)
+      .mockResolvedValue({
+        ...pendingAttempt, id: 'att-2', technicianIds: ['tech-2'], status: 'PENDING',
+      } as never);
+    vi.mocked(dispatcherService.continueDispatchAfterOfferOutcome).mockRejectedValue(new Error('boom'));
+    const res = await acceptJobOfferHandler(req(), ctx);
+    expect(updateBookingFields).not.toHaveBeenCalledWith('bk-1', { status: 'PAID' });
+    expect(res.status).toBe(403);
+  });
+
+  // Best-effort: an unreadable attempt must not cost us the reset. The pre-guard behaviour (reset
+  // unconditionally, worst case a spurious FORBIDDEN for one technician) still beats a permanent
+  // stall in SEARCHING.
+  it('BLOCKED: falls back to the reset when the guard read itself throws', async () => {
+    vi.mocked(assertCanAccept).mockResolvedValue({
+      decision: 'BLOCKED', outstandingPaise: 620000, blockThresholdPaise: 500000,
+    });
+    vi.mocked(dispatchAttemptRepo.getByBookingId)
+      .mockReset()
+      .mockResolvedValueOnce(pendingAttempt as never)
+      .mockRejectedValue(new Error('read failed'));
     vi.mocked(dispatcherService.continueDispatchAfterOfferOutcome).mockRejectedValue(new Error('boom'));
     const res = await acceptJobOfferHandler(req(), ctx);
     expect(updateBookingFields).toHaveBeenCalledWith('bk-1', { status: 'PAID' });
@@ -155,6 +207,7 @@ describe('acceptJobOfferHandler — commission hold gate', () => {
     vi.mocked(assertCanAccept).mockResolvedValue({
       decision: 'BLOCKED', outstandingPaise: 620000, blockThresholdPaise: 500000,
     });
+    attemptGoesExpiredAfterDecline();
     vi.mocked(dispatcherService.continueDispatchAfterOfferOutcome).mockRejectedValue(new Error('boom'));
     vi.mocked(updateBookingFields).mockRejectedValue(new Error('cosmos down'));
     const res = await acceptJobOfferHandler(req(), ctx);
@@ -162,6 +215,21 @@ describe('acceptJobOfferHandler — commission hold gate', () => {
     expect(res.jsonBody).toEqual({
       code: 'COMMISSION_HOLD_BLOCKED', outstandingPaise: 620000, blockThresholdPaise: 500000,
     });
+  });
+
+  // The safe direction, pinned explicitly: if the audit trail cannot be written we stop before
+  // touching the attempt, so it stays PENDING and expireStaleOffers still reclaims the booking.
+  // A reorder that moved the decline ahead of the audit writes would reintroduce the
+  // unreclaimable-booking defect, and must fail here rather than only in the write-order test.
+  it('BLOCKED: a failed booking-event write skips the decline and the dispatch hand-off', async () => {
+    vi.mocked(assertCanAccept).mockResolvedValue({
+      decision: 'BLOCKED', outstandingPaise: 620000, blockThresholdPaise: 500000,
+    });
+    vi.mocked(bookingEventRepo.append).mockRejectedValue(new Error('boom'));
+    const res = await acceptJobOfferHandler(req(), ctx);
+    expect(dispatchAttemptRepo.declineAttempt).not.toHaveBeenCalled();
+    expect(dispatcherService.continueDispatchAfterOfferOutcome).not.toHaveBeenCalled();
+    expect(res.status).toBe(403);
   });
 
   // The contract for this path is "always 403 with the dues payload". A side-effect that throws

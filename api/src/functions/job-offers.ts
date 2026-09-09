@@ -81,15 +81,37 @@ export async function acceptJobOfferHandler(
       } catch (err: unknown) {
         Sentry.captureException(err);
         ctx.error('ACCEPT_HOLD_CONTINUE_DISPATCH_FAILED', err);
-        // No timer can recover the booking from here. The attempt is DECLINED, so
-        // expireStaleOffers (PENDING-only) will never match it again; retryAwaitingDispatch takes
-        // only PAID/UNFULFILLED; reconcileStaleBookings only logs, daily, after 24h. Left alone
-        // the booking sits in SEARCHING forever. Reset it into the PAID lane — the same idiom
-        // dispatchBookingToTechs already uses when no technician is available — so
-        // retryAwaitingDispatch reclaims it on its next 5-minute pass, with the blocked
-        // technician excluded via getAttemptedTechnicianIds.
+        // No timer can recover the booking from here. declineAttempt writes status EXPIRED, so
+        // expireStaleOffers (which matches PENDING past expiresAt) will never see it again;
+        // retryAwaitingDispatch takes only PAID/UNFULFILLED; reconcileStaleBookings only logs,
+        // daily, after 24h. Left alone the booking sits in SEARCHING forever. Reset it into the
+        // PAID lane — the same idiom dispatchBookingToTechs already uses when no technician is
+        // available — so retryAwaitingDispatch reclaims it on its next 5-minute pass, with the
+        // blocked technician excluded via getAttemptedTechnicianIds.
+        //
+        // Guarded on the attempt, NOT on booking status: continueDispatch can throw after
+        // dispatchBookingToTechs has already created the next attempt (it fails at the following
+        // write to SEARCHING), and a concurrent expireStaleOffers may have re-dispatched too. Both
+        // interleavings leave the booking legitimately in SEARCHING, so a status check would not
+        // catch them. Resetting to PAID there would let retryAwaitingDispatch mint a second
+        // attempt; getByBookingId returns only the newest, so technician B would get a spurious
+        // 403 FORBIDDEN on the offer they were actually pushed. A live PENDING attempt means
+        // dispatch did move on and expireStaleOffers already covers the booking.
         try {
-          await updateBookingFields(bookingId, { status: 'PAID' });
+          let liveAttemptExists = false;
+          try {
+            const current = await dispatchAttemptRepo.getByBookingId(bookingId);
+            liveAttemptExists = current?.status === 'PENDING';
+          } catch (readErr: unknown) {
+            // Unreadable: fall through to the reset. A spurious FORBIDDEN for one technician is
+            // recoverable; a permanent stall in SEARCHING is not.
+            ctx.error('ACCEPT_HOLD_RESET_GUARD_READ_FAILED', readErr);
+          }
+          if (liveAttemptExists) {
+            ctx.log(`ACCEPT_HOLD_BOOKING_RESET_SKIPPED bookingId=${bookingId} reason=LIVE_PENDING_ATTEMPT`);
+          } else {
+            await updateBookingFields(bookingId, { status: 'PAID' });
+          }
         } catch (resetErr: unknown) {
           Sentry.captureException(resetErr);
           ctx.error('ACCEPT_HOLD_BOOKING_RESET_FAILED', resetErr);
