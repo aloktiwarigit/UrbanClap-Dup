@@ -21,6 +21,8 @@ export interface Order {
   customerPhone: string;
   technicianId?: string;
   technicianName?: string;
+  /** Masked technician phone from the API. Absent when unassigned or unresolvable. */
+  technicianPhoneMasked?: string;
   serviceId?: string;
   serviceName?: string;
   categoryId?: string;
@@ -77,4 +79,12 @@ export interface OrdersQueryParams {
   maxAmount?: string;
   page?: number;
   pageSize?: number;
+}
+
+export type RevealParty = 'CUSTOMER' | 'TECHNICIAN';
+
+export interface RevealContactResponse {
+  party: RevealParty;
+  phone: string;
+  revealedAt: string;
 }

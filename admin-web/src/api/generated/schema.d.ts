@@ -252,6 +252,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/orders/{id}/reveal-contact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reveal the full phone number for one party on an order
+         * @description The only endpoint that returns an unmasked phone number. Restricted to super-admin and ops-manager, rate-limited to 30 reveals per minute per admin and 50 per rolling 24 hours per admin, and audit-logged as PII_CONTACT_REVEALED (success) or PII_CONTACT_REVEAL_DENIED (rate-limit denial). See ADR 0034.
+         */
+        post: operations["adminRevealOrderContact"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/complaints": {
         parameters: {
             query?: never;
@@ -882,6 +902,16 @@ export interface components {
             updatedAt: string;
             workStart?: string;
             workEnd?: string;
+        };
+        RevealContactBody: {
+            /** @enum {string} */
+            party: "CUSTOMER" | "TECHNICIAN";
+        };
+        RevealContactResponse: {
+            /** @enum {string} */
+            party: "CUSTOMER" | "TECHNICIAN";
+            phone: string;
+            revealedAt: string;
         };
         InternalNote: {
             adminId: string;
@@ -2237,6 +2267,89 @@ export interface operations {
             };
             /** @description Order not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    adminRevealOrderContact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    party: "CUSTOMER" | "TECHNICIAN";
+                };
+            };
+        };
+        responses: {
+            /** @description Revealed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        party: "CUSTOMER" | "TECHNICIAN";
+                        phone: string;
+                        revealedAt: string;
+                    };
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Order not found, party not on the order, or no number on file */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid party */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit exceeded: either per-minute budget (RATE_LIMITED) or daily budget (RATE_LIMITED_DAILY) exhausted */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Contact lookup backend failed */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate-limit budget could not be established; the endpoint fails closed */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

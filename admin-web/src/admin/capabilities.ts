@@ -12,6 +12,7 @@ export type Capability =
   | 'orders.read'
   | 'orders.override'
   | 'orders.financialOverride'
+  | 'orders.revealContact'
   | 'catalogue.manage'
   | 'finance.read'
   | 'finance.approvePayouts'
@@ -29,6 +30,7 @@ export const ALL_CAPABILITIES = [
   'orders.read',
   'orders.override',
   'orders.financialOverride',
+  'orders.revealContact',
   'catalogue.manage',
   'finance.read',
   'finance.approvePayouts',
@@ -53,6 +55,7 @@ export const ROLE_CAPABILITIES: Record<AdminRole, readonly Capability[]> = {
     'complaints.manage',
     'technicians.manage',
     'customers.manage',
+    'orders.revealContact',
   ],
   finance: ['finance.read', 'finance.settleCommission'],
   'support-agent': [],

@@ -29,6 +29,7 @@ describe('admin capability matrix', () => {
       'complaints.manage',
       'technicians.manage',
       'customers.manage',
+      'orders.revealContact',
     ]);
     expect(hasCapability('ops-manager', 'orders.financialOverride')).toBe(false);
     expect(hasCapability('ops-manager', 'audit.read')).toBe(false);
@@ -117,5 +118,31 @@ describe('admin capability matrix', () => {
     expect(canAccessAdminPath('ops-manager', '/finance/commissions')).toBe(false);
     // Plain /finance still resolves to finance.read as before.
     expect(capabilityForPath('/finance')).toBe('finance.read');
+  });
+});
+
+describe('orders.revealContact capability', () => {
+  it('is granted to super-admin', () => {
+    expect(hasCapability('super-admin', 'orders.revealContact')).toBe(true);
+  });
+
+  it('is granted to ops-manager', () => {
+    expect(hasCapability('ops-manager', 'orders.revealContact')).toBe(true);
+  });
+
+  it('is denied to finance', () => {
+    expect(hasCapability('finance', 'orders.revealContact')).toBe(false);
+  });
+
+  it('is denied to support-agent', () => {
+    expect(hasCapability('support-agent', 'orders.revealContact')).toBe(false);
+  });
+
+  it('is denied to an unauthenticated caller', () => {
+    expect(hasCapability(null, 'orders.revealContact')).toBe(false);
+  });
+
+  it('is listed in ALL_CAPABILITIES', () => {
+    expect(ALL_CAPABILITIES).toContain('orders.revealContact');
   });
 });

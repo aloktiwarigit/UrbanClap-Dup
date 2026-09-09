@@ -6,11 +6,7 @@ import { listAllTechniciansForAdmin } from '../../../cosmos/technician-repositor
 import { getActiveBookingCountForTechnician } from '../../../cosmos/booking-repository.js';
 import { getFirebaseAdmin } from '../../../services/firebaseAdmin.js';
 import type { AdminTechnician } from '../../../schemas/admin-technician.js';
-
-function maskPhone(phone: string): string {
-  if (!phone || phone.length < 4) return '••••••••••';
-  return `+91 XXXXX-X${phone.slice(-4)}`;
-}
+import { maskPhone } from '../../../lib/pii/mask.js';
 
 function mapKycStatus(raw?: string): AdminTechnician['kycStatus'] {
   if (raw === 'APPROVED') return 'VERIFIED';

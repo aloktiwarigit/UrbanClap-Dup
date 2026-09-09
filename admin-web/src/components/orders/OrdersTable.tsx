@@ -16,9 +16,10 @@ interface OrdersTableProps {
   isLoading: boolean;
   onRowClick: (o: Order) => void;
   onPageChange: (p: number) => void;
+  canReveal: boolean;
 }
 
-export function OrdersTable({ orders, total, page, pageSize, totalPages, isLoading, onRowClick, onPageChange }: OrdersTableProps) {
+export function OrdersTable({ orders, total, page, pageSize, totalPages, isLoading, onRowClick, onPageChange, canReveal }: OrdersTableProps) {
   void pageSize;
   void isLoading;
   const t = useTranslations('orders');
@@ -56,7 +57,12 @@ export function OrdersTable({ orders, total, page, pageSize, totalPages, isLoadi
               >
                 <td className="px-4 py-3 font-mono">{order.id.slice(0, 8)}</td>
                 <td className="px-4 py-3">
-                  <CustomerCell name={order.customerName} phone={order.customerPhone} />
+                  <CustomerCell
+                    orderId={order.id}
+                    name={order.customerName}
+                    phone={order.customerPhone}
+                    canReveal={canReveal}
+                  />
                 </td>
                 <td className="px-4 py-3">{order.serviceName ?? '—'}</td>
                 <td className="px-4 py-3">

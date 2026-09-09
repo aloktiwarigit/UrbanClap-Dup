@@ -73,6 +73,7 @@ export function OrdersClient() {
   // orders but does not hold `audit.read` — gate the link's visibility on that capability rather
   // than rendering it unconditionally.
   const canViewAuditLog = hasCapability(auth?.role, 'audit.read');
+  const canReveal = hasCapability(auth?.role, 'orders.revealContact');
   const router = useRouter();
   const searchParams = useSearchParams();
   const [, startTransition] = useTransition();
@@ -165,6 +166,7 @@ export function OrdersClient() {
           isLoading={false}
           onRowClick={openOrder}
           onPageChange={(p) => updateUrl({ page: p })}
+          canReveal={canReveal}
         />
       )}
 
@@ -174,6 +176,7 @@ export function OrdersClient() {
           canOverride={canOverride}
           canFinancialOverride={canFinancialOverride}
           canViewAuditLog={canViewAuditLog}
+          canReveal={canReveal}
           onClose={() => setSelectedOrder(null)}
           onOrderUpdated={updated => {
             setSelectedOrder(updated);

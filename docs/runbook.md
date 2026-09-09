@@ -1505,3 +1505,80 @@ moved and every cached hold needs re-evaluating against them.
 Change the technician-app feature flags: `PUT` on the technician-client-config doc (E21-S03 admin
 UI; until that ships, edit the `system/technician-client-config` doc directly via the Cosmos data
 explorer for a controlled pilot rollout to a specific cohort).
+
+## Contact reveal (E09-S08)
+
+Customer and technician phone numbers are masked everywhere in admin orders (list, drawer, CSV
+export) by default. The only way to see a full number is
+`POST /v1/admin/orders/{id}/reveal-contact` (`super-admin` or `ops-manager` only), which is
+rate-limited (30/min AND 50/rolling-24h per admin) and audit-logs both every successful reveal and
+every denial. See `docs/adr/0034-pii-masking-default-and-audited-reveal.md` for the design
+rationale and `docs/threat-model.md` → Addendum 2026-09-08 (Update 2026-09-09) for the accepted
+residuals — the main one being that there is no automated alerting on top of any of this (below).
+
+### Audit who revealed which contact
+
+Every successful reveal writes a `PII_CONTACT_REVEALED` entry to `audit_log`, partition key
+`YYYY-MM` (the month of the reveal, `revealedAt.slice(0, 7)`). The payload carries:
+
+```json
+{ "party": "CUSTOMER", "subjectRef": "3f9a1c2e7b4d5061", "phoneMasked": "+91 XXXXX-X4821", "phoneLast4": "4821" }
+```
+
+Every **denied** attempt that reached an identified admin (i.e. everything past `requireAdmin`'s
+authentication check) writes a `PII_CONTACT_REVEAL_DENIED` entry to the same container, same
+partitioning, with payload:
+
+```json
+{ "party": "CUSTOMER", "subjectRef": "3f9a1c2e7b4d5061", "reason": "RATE_LIMITED_DAILY" }
+```
+
+`party` is present whenever it was known at the point of denial (it is not yet known for a
+`FORBIDDEN` denial, which is checked before the request body is parsed). `subjectRef` is present
+only when a subject was actually resolved before the denial (e.g. `PHONE_UNAVAILABLE`, or a 502
+`LOOKUP_FAILED`) — never for `FORBIDDEN`, a rate-limit denial, or `ORDER_NOT_FOUND`/
+`PARTY_NOT_AVAILABLE`, since no subject was resolved at that point.
+
+`subjectRef` is `sha256(subjectId).slice(0, 16)`, not the raw subject id — customer Firebase UIDs
+are phone-derived (`createCustomToken(phoneNumber)` in `truecaller-verify.ts`), so the raw
+`subjectId` can literally BE the customer's phone number, and `audit_log` is readable by any role
+holding `audit.read` (broader than the two roles allowed to reveal). To correlate a specific
+customer or technician to an entry, hash the candidate id the same way
+(`sha256(candidateId).slice(0, 16)`) and compare against `subjectRef`.
+
+Query successes via `queryAuditLog({ action: 'PII_CONTACT_REVEALED', dateFrom, dateTo })` and
+denials via `queryAuditLog({ action: 'PII_CONTACT_REVEAL_DENIED', dateFrom, dateTo })` (same helper
+OP-A7 uses), or filter on the admin-web Audit Log page by action — check **both** actions when
+investigating a suspected PII probe or exfiltration attempt; a clean `PII_CONTACT_REVEALED` history
+does not mean nothing was attempted. There is no raw phone number or raw subject identifier
+anywhere in either entry type — `subjectRef`, `phoneMasked`/`phoneLast4` (success only), and
+`reason` (denial only) are the only representations of the subject/number/outcome that ever reach
+the audit log, deliberately, since `audit_log` is readable by any role holding `audit.read`
+(broader than the two roles allowed to reveal).
+
+### What each `reason` on a `PII_CONTACT_REVEAL_DENIED` row means, and what to do
+
+| `reason` | When it's written | What an operator should do |
+|---|---|---|
+| `FORBIDDEN` | The caller is an authenticated admin whose role is neither `super-admin` nor `ops-manager`. | Isolated occurrences are routine (a `finance`/`support-agent` admin clicking the wrong thing, or exploring the API). A cluster of these from one admin, especially alongside other denial reasons, is worth a direct conversation with that admin. |
+| `RATE_LIMITED` | That admin's 30/min budget is spent. | Normal under heavy legitimate use. Repeated occurrences across many sessions are the first signal worth cross-checking against `RATE_LIMITED_DAILY` below. |
+| `RATE_LIMITED_DAILY` | That admin's 50/rolling-24h budget is spent — the per-minute budget still had room. | **This is the bulk-exfiltration signal to look for.** A legitimate admin handling disputes should rarely, if ever, exhaust 50 reveals in a day (see ADR 0034's sizing rationale: ~30% of all bookings at the pilot ceiling). A run of these for one admin — especially spread across many distinct orders/subjects rather than a handful of disputes — warrants pulling that admin's full `PII_CONTACT_REVEALED` + `PII_CONTACT_REVEAL_DENIED` history for the day and asking why. |
+| `NOT_FOUND` | The order doesn't exist, no technician is assigned (or technician-uid resolution was genuinely ambiguous — an exact `id` match refused in favour of not guessing), or the resolved subject has no phone on file. | Usually benign (stale order id, technician not yet dispatched, subject signed in via a channel with no phone). A cluster of `NOT_FOUND` denials sweeping through many order ids from one admin in a short window can indicate someone probing which orders have a resolvable party — same investigative posture as `RATE_LIMITED_DAILY`. |
+| `LOOKUP_FAILED` | Either the Firebase Auth `getUsers` call (customer/technician phone lookup) or the `getTechniciansByIds` call (technician-uid resolution) threw — an outage, not a genuine absence (mirrors the caller's `502 CONTACT_LOOKUP_FAILED`). | Check Sentry for the captured exception (see "Firebase Auth outage" in the Disaster Recovery Drill section if it's a full Firebase outage; a Cosmos `technicians` container throttle/outage needs the usual Cosmos triage instead). Not itself a PII-probe signal. |
+| `RATE_LIMIT_UNAVAILABLE` | The rate-limit store (Cosmos) is unreachable for either budget, and the endpoint failed **closed on purpose** (mirrors the caller's `503`). A concurrent create race on a brand-new per-admin bucket (two first-of-the-window requests both read 404; one loses the create with a `409`) is retried against the winner's doc and does **not** produce this reason — only a genuine Cosmos error, or exhausted retries, does. | Investigate Cosmos (connectivity, throttling, an outage) via the usual Cosmos triage. **Do not "fix" this by making the endpoint fail open** — that would silently remove the only rate limits standing between an admin session and unlimited PII reveals. |
+
+**No alerting layer exists in this environment — detection depends on a human reading the audit
+log.** `func-homeservices-prod` has no `SENTRY_DSN` configured (`captureException` calls are a
+no-op in production), and `rg-homeservices-prod` has no Azure metric-alert rules, scheduled-query
+rules, or action groups. A run of `RATE_LIMITED_DAILY` rows for one admin will sit in `audit_log`
+until someone queries for it — nothing pages anyone automatically. This is a deliberate choice
+(see ADR 0034): building an alert path that reaches nobody would manufacture false assurance.
+
+### Reveal-volume monitoring (still manual by design)
+
+Until this pilot has a real alerting layer (Sentry DSN + Azure alert rules/action groups), a manual
+spot-check during any security review or incident is the mechanism:
+`queryAuditLog({ action: 'PII_CONTACT_REVEALED', adminId, dateFrom, dateTo })` and
+`queryAuditLog({ action: 'PII_CONTACT_REVEAL_DENIED', adminId, dateFrom, dateTo })` per admin,
+flagging any admin whose combined daily count looks disproportionate to their normal order-review
+workload, and treating any `RATE_LIMITED_DAILY` occurrence as the priority signal to chase first.

@@ -37,6 +37,7 @@ import {
   SscLevyStatusSchema,
 } from '../schemas/ssc-levy.js';
 import { TechnicianCandidateListResponseSchema } from '../schemas/order.js';
+import { RevealContactBodySchema, RevealContactResponseSchema } from '../schemas/order-reveal.js';
 import {
   UpdateCommissionConfigBodySchema,
   EffectiveCommissionConfigSchema,
@@ -325,6 +326,35 @@ registry.registerPath({
     401: { description: 'Unauthenticated' },
     403: { description: 'Forbidden' },
     404: { description: 'Order not found' },
+  },
+});
+
+registry.register('RevealContactBody', RevealContactBodySchema);
+registry.register('RevealContactResponse', RevealContactResponseSchema);
+
+registry.registerPath({
+  method: 'post',
+  path: '/v1/admin/orders/{id}/reveal-contact',
+  operationId: 'adminRevealOrderContact',
+  tags: ['orders'],
+  security: [{ cookieAuth: [] }],
+  summary: 'Reveal the full phone number for one party on an order',
+  description:
+    'The only endpoint that returns an unmasked phone number. Restricted to super-admin and '
+    + 'ops-manager, rate-limited to 30 reveals per minute per admin and 50 per rolling 24 hours '
+    + 'per admin, and audit-logged as PII_CONTACT_REVEALED (success) or PII_CONTACT_REVEAL_DENIED '
+    + '(rate-limit denial). See ADR 0034.',
+  parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+  request: { body: { content: { 'application/json': { schema: RevealContactBodySchema } } } },
+  responses: {
+    200: { description: 'Revealed', content: { 'application/json': { schema: RevealContactResponseSchema } } },
+    401: { description: 'Unauthenticated' },
+    403: { description: 'Forbidden' },
+    404: { description: 'Order not found, party not on the order, or no number on file' },
+    422: { description: 'Invalid party' },
+    429: { description: 'Rate limit exceeded: either per-minute budget (RATE_LIMITED) or daily budget (RATE_LIMITED_DAILY) exhausted' },
+    502: { description: 'Contact lookup backend failed' },
+    503: { description: 'Rate-limit budget could not be established; the endpoint fails closed' },
   },
 });
 

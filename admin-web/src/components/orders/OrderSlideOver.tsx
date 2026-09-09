@@ -8,6 +8,7 @@ import { formatINR, formatDateTime } from '@/lib/format/intl';
 import type { Order } from '@/types/order';
 import { StatusBadge } from './StatusBadge';
 import { OverridePanel } from './OverridePanel';
+import { ContactReveal } from './ContactReveal';
 import { TrustDossierPanel } from '@/components/technicians/TrustDossierPanel';
 
 interface OrderSlideOverProps {
@@ -24,6 +25,7 @@ interface OrderSlideOverProps {
   // passing the caller's own `hasCapability(auth?.role, 'audit.read')` check, the same pattern
   // `canOverride`/`canFinancialOverride` already use.
   canViewAuditLog?: boolean | undefined;
+  canReveal?: boolean;
 }
 
 type Toast = { message: string; type: 'success' | 'error' };
@@ -46,6 +48,7 @@ export function OrderSlideOver({
   canOverride,
   canFinancialOverride,
   canViewAuditLog,
+  canReveal = false,
 }: OrderSlideOverProps) {
   const t = useTranslations('orders');
   const locale = useLocale();
@@ -84,11 +87,34 @@ export function OrderSlideOver({
         </div>
         <div className="p-4 space-y-4 text-sm">
           <section><h3 className="text-xs text-gray-500 font-medium mb-1">{t('detail.sections.status')}</h3><StatusBadge status={currentOrder.status} /></section>
-          <section><h3 className="text-xs text-gray-500 font-medium mb-1">{t('detail.sections.customer')}</h3><p>{currentOrder.customerName}</p><p className="text-gray-500">{currentOrder.customerPhone}</p></section>
+          <section>
+            <h3 className="text-xs text-gray-500 font-medium mb-1">{t('detail.sections.customer')}</h3>
+            <p>{currentOrder.customerName}</p>
+            <p className="text-xs text-gray-500 font-medium mt-2 mb-1">{t('detail.sections.customerPhone')}</p>
+            <ContactReveal
+              orderId={currentOrder.id}
+              party="CUSTOMER"
+              maskedPhone={currentOrder.customerPhone || undefined}
+              canReveal={canReveal}
+              variant="block"
+            />
+          </section>
           <section>
             <h3 className="text-xs text-gray-500 font-medium mb-1">{t('detail.sections.technician')}</h3>
             <p>{currentOrder.technicianName ?? '—'}</p>
             <p className="text-gray-500 font-mono text-xs">{currentOrder.technicianId ?? '—'}</p>
+            {currentOrder.technicianId && (
+              <>
+                <p className="text-xs text-gray-500 font-medium mt-2 mb-1">{t('detail.sections.technicianPhone')}</p>
+                <ContactReveal
+                  orderId={currentOrder.id}
+                  party="TECHNICIAN"
+                  maskedPhone={currentOrder.technicianPhoneMasked}
+                  canReveal={canReveal}
+                  variant="block"
+                />
+              </>
+            )}
             <TrustDossierPanel technicianId={currentOrder.technicianId} />
           </section>
           <section><h3 className="text-xs text-gray-500 font-medium mb-1">{t('detail.sections.service')}</h3><p>{currentOrder.serviceName ?? '—'}</p></section>
