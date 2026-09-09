@@ -3,7 +3,7 @@
 **Owner:** Alok Tiwari
 **Last reviewed:** 2026-04-26
 **Authority:** Karnataka Platform Based Gig Workers (Social Security and Welfare) Act 2025, FR-9.1, NFR-C-1.
-**Companion artifacts:** `docs/adr/0006-dispatch-algorithm.md`, `docs/adr/0011-karnataka-decline-history-isolation.md`, `api/src/services/dispatcher.service.ts`, `api/.semgrep.yml`, `api/tests/integration/dispatcher-up-ranking.test.ts`, `api/tests/integration/dispatcher-data-isolation.test.ts`.
+**Companion artifacts:** `docs/adr/0006-dispatch-algorithm.md`, `docs/adr/0011-karnataka-decline-history-isolation.md`, `docs/adr/0032-commission-hold-is-an-eligibility-gate.md`, `api/src/services/dispatcher.service.ts`, `api/src/services/dispatch-eligibility.ts`, `api/.semgrep.yml`, `api/tests/integration/dispatcher-up-ranking.test.ts`, `api/tests/integration/dispatcher-data-isolation.test.ts`, `api/tests/unit/dispatch-ranking-invariance.test.ts`.
 
 ## 1. Purpose
 
@@ -26,17 +26,47 @@ The top-3 ranked technicians receive a 30-second FCM job offer simultaneously. T
 
 That is the complete list. No other field on `TechnicianProfile` is read by the ranking function.
 
-## 4. Implicit prerequisite filters (not ranking inputs)
+## 4. Eligibility filters (not ranking inputs)
 
-These are applied by the Cosmos query in `getTechniciansWithinRadius` **before** ranking, so they never participate in scoring:
+Before `rankTechnicians` ever runs, the candidate set for a booking is narrowed down to
+technicians who are actually eligible for the job. None of these checks influence a
+technician's **position** within the ranked list — they only decide whether a technician
+appears in it at all. A technician is either offered the job in their normal ranked position,
+or not offered it at all; there is no "offered, but lower down" outcome for any of these filters.
 
-- `tech.skills` — must contain the booking's `serviceId`
-- `tech.kycStatus` — must equal `'APPROVED'`
-- `tech.isOnline` — must be `true`
-- `tech.isAvailable` — must be `true`
-- Geographic bounding-box predicate `ST_WITHIN`
+The candidate set is filtered by:
 
-Plus a service-side circle filter on the haversine distance (square → circle), and exclusion of the no-show technician on redispatch.
+- **Service area and radius** — the booking's location must fall within the technician's
+  service-area polygon and the active dispatch radius (10 km, expanding to 15 km on a no-show
+  redispatch).
+- **Skill match** — `tech.skills` must contain the booking's `serviceId`.
+- **Online and available** — `tech.isOnline` and `tech.isAvailable` must both be `true`.
+- **Not suspended** — an admin-suspended technician (`tech.suspended`) is excluded
+  unconditionally, regardless of their online/available status. (Suspension previously only took
+  effect as a side effect of an admin action also setting the technician offline; a technician
+  who later toggled themselves back online could silently re-enter the candidate pool. Fixed as
+  part of E21-S04; see ADR-0032.)
+- **Not blocked by the customer** — a technician on that customer's `blockedCustomerIds` list for
+  the booking's customer is excluded.
+- **Not already attempted for this booking** — a technician who already held (and lost, declined,
+  or timed out on) an offer attempt for the same booking is excluded from a redispatch.
+- **Not currently blocked by an unpaid commission balance — only when the operator has this
+  enabled.** When enabled (`holdEnforcementEnabled` on the `system/commission-config` document),
+  a technician whose cached `commissionHold.state` is `BLOCKED` is excluded from the candidate
+  set for new job offers. **This filter is off by default and is a per-deployment operator
+  setting** — see §7 and ADR-0032 for the enforcement mechanics, the shadow-mode readout
+  procedure, and why the underlying predicate is written to fail open on a technician document
+  that has never had a hold computed.
+- Geographic bounding-box predicate `ST_WITHIN` (a square, refined to the true circular radius by
+  an in-process haversine filter after the Cosmos query returns).
+
+**The ranked order is distance, then rating. Nothing else.** Neither decline history (ADR-0011)
+nor commission-hold state (ADR-0032) may influence a technician's position within the candidate
+list — both are eligibility filters applied before ranking, never ranking inputs. A technician
+who owes money above the block threshold, like a technician with a large but compliant decline
+history, is either offered the job in their normal position or excluded from the candidate set
+entirely; neither is ever sorted lower within it. This is enforced structurally, mechanically
+(Semgrep), and at runtime (an invariance test) for both fields — see §7.
 
 ## 5. Input features deliberately NOT used
 
@@ -90,6 +120,20 @@ The compliance invariant is enforced at four independent layers so that any sing
    - `dispatcher-up-ranking.test.ts` — asserts ranking is invariant to phantom decline fields and stable across all input permutations.
    - `dispatcher-data-isolation.test.ts` — file-scans the dispatcher source for forbidden tokens and inspects schema shapes.
 4. **Process layer.** ADR-0011 requires explicit owner approval to relax this invariant.
+
+**Commission-hold state is held to the same gate-not-ranking standard (ADR-0032), enforced at
+three layers** (no schema layer is needed here — the risk is an existing field, `commissionHold`,
+leaking into the wrong function, not a new field needing to be kept off a schema):
+
+1. **Structural layer.** `api/src/services/dispatch-eligibility.ts` is the only module allowed to
+   turn hold/config state into anything the dispatcher acts on, and it only ever produces a
+   boolean pair of predicate options or a logging side effect — never an ordering.
+2. **Source-code lint layer.** `api/.semgrep.yml` rule `no-commission-hold-in-ranking` blocks
+   merges that reference `commissionHold`, `outstandingPaise`, `dueCount`, or `holdState` inside a
+   `.sort()` comparator or the body of `rankTechnicians`.
+3. **Runtime test layer.** `api/tests/unit/dispatch-ranking-invariance.test.ts` asserts
+   `rankTechnicians`'s output order is unchanged under arbitrary mutation of `commissionHold`
+   across the candidate set.
 
 ## 8. Audit response procedure
 

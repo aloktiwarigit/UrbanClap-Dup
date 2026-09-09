@@ -1582,3 +1582,67 @@ spot-check during any security review or incident is the mechanism:
 `queryAuditLog({ action: 'PII_CONTACT_REVEAL_DENIED', adminId, dateFrom, dateTo })` per admin,
 flagging any admin whose combined daily count looks disproportionate to their normal order-review
 workload, and treating any `RATE_LIMITED_DAILY` occurrence as the priority signal to chase first.
+
+## Dues-gated dispatch (E21-S04)
+
+Wires the E21-S02 commission-hold cache into dispatch (candidate exclusion) and job acceptance
+(a hard gate) — both behind `holdEnforcementEnabled` (see the Flags table above), default `false`.
+See `docs/adr/0032-commission-hold-is-an-eligibility-gate.md` for the design rationale, and the
+"Technician says he is blocked / hold looks wrong" section above for diagnosing the underlying
+ledger — this section is specifically about the enforcement *behaviour* (dispatch exclusion,
+accept refusal), not the ledger math.
+
+### Technician says he is blocked from accepting jobs
+
+1. **Confirm enforcement is actually on.** `GET /v1/admin/catalogue/commission-config` →
+   `holdEnforcementEnabled`. If `false`, this feature is not the cause of the block — look
+   elsewhere (suspension, KYC, a client-side bug).
+2. **Read the technician's live position.** `GET
+   /v1/admin/finance/commission-receivables/{technicianId}` → `hold.state`,
+   `hold.outstandingPaise`, and the underlying receivable rows.
+3. **If they have paid:** record the remittance (`POST
+   /v1/admin/finance/commission-remittances`, see above). The hold clears on the recompute the
+   remittance itself triggers — no need to wait for the reconciler timer.
+4. **If they have not paid but must work now:** `POST
+   /v1/admin/finance/commission-hold/{technicianId}/override` with an expiry and a reason.
+   Audited as `COMMISSION_HOLD_OVERRIDDEN`. The override lapses automatically at its `until`
+   timestamp; the reconciler's `EXPIRED_OVERRIDES` sweep re-blocks the technician within 15
+   minutes of expiry, not immediately.
+5. **If the console shows `CLEAR` but the technician still gets a 403:** the cached hold and the
+   live sum have drifted — the accept gate always reads the live sum via `computeCommissionHold`,
+   never the console's cached figure, so a stale cache is not the source of a real 403. Force a
+   repair with `POST /v1/admin/finance/commission-receivables/recompute` and confirm
+   `unreconciledTechnicianCount` on the dashboard returns to (or stays at) zero afterward.
+6. **If the technician sees `503 HOLD_CHECK_UNAVAILABLE` rather than a 403,** this is not a dues
+   problem — the hold could not be read at all. Check Sentry for `ACCEPT_HOLD_CHECK_FAILED` /
+   `ACCEPT_HOLD_INDETERMINATE` and Cosmos health. The offer attempt stays `PENDING`; retrying
+   inside the 90-second offer window usually succeeds once the underlying read failure clears.
+
+### Shadow-mode readout before flipping `holdEnforcementEnabled`
+
+1. With the flag off, dispatch logs one `DISPATCH_HOLD_SHADOW_EXCLUSION` line per candidate that
+   enforcement would have excluded, and the accept path logs `ACCEPT_HOLD_SHADOW_BLOCK` whenever
+   a would-be-blocked technician accepts anyway.
+2. Collect at least seven days of these logs. Count distinct `technicianId` values and total line
+   counts for each log type.
+3. Cross-check each distinct technician against the commission dashboard
+   (`GET /v1/admin/finance/commission-receivables/{technicianId}`): is the balance real and
+   current, or does it look like an unreconciled cache artifact?
+4. Flip `holdEnforcementEnabled` to `true` only when **all** of the following hold: every
+   shadow-blocked technician has a genuinely unpaid balance at or above the block threshold; no
+   booking in the observed window would have gone `UNFULFILLED` for lack of any unblocked
+   candidate; and the technician-app release carrying the dues banner (E21-S05) has reached at
+   least 90% adoption among active technicians.
+5. After flipping, watch for `DISPATCH_NO_TECHS ... blockedByHold=<n>` in the logs. A non-zero
+   count there means a booking genuinely failed to dispatch *because of* the hold gate — the
+   signal to reconsider the block threshold or investigate coverage gaps, not to ignore.
+6. Rollback is the flag alone, nothing else. Setting `holdEnforcementEnabled` back to `false`
+   immediately stops both the dispatch exclusion and the accept refusal (subject to the existing
+   5-minute config-cache propagation delay on the dispatch side). No data migration, no code
+   change, no redeploy.
+
+### Timers
+
+| Timer | Schedule | Does |
+|---|---|---|
+| `triggerReconcileCommissionHolds` | every 15 minutes | Drains `system/hold-repair` (repairs queued technician holds, or triggers a `FULL` sweep on an `all` flag); sweeps `EXPIRED_OVERRIDES` unconditionally on every run; runs a `FULL` sweep on roughly every 6th invocation (~90 minutes, clock-derived — see ADR-0032); writes `system/hold-reconciliation-summary` for the admin dashboard every run. |
