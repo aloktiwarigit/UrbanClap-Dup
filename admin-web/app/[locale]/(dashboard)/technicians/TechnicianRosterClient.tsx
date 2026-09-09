@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useTranslations } from 'next-intl';
-import { useAdminAuth } from '@/lib/auth/context';
+import { useTranslations, useLocale } from 'next-intl';
 import { patchTechnician } from '@/api/technicians';
+import { HoldChip } from '@/components/commissions/HoldChip';
+import { formatINR } from '@/lib/format/intl';
 import type { AdminTechnician, TechnicianStatus } from '@/types/technician-admin';
 
 interface Props {
@@ -26,14 +27,11 @@ const KYC_COLORS: Record<string, string> = {
 
 export function TechnicianRosterClient({ initialTechnicians }: Props) {
   const t = useTranslations('technicians');
-  const { auth } = useAdminAuth();
-  const isSuperAdmin = auth?.role === 'super-admin';
+  const locale = useLocale();
 
   const [technicians, setTechnicians] = useState(initialTechnicians);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
-  const [editingCommission, setEditingCommission] = useState<string | null>(null);
-  const [commissionDraft, setCommissionDraft] = useState('');
   const [loading, setLoading] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
@@ -56,21 +54,6 @@ export function TechnicianRosterClient({ initialTechnicians }: Props) {
       );
     } finally {
       setLoading(null);
-    }
-  }
-
-  async function handleCommissionSave(id: string) {
-    const pct = parseInt(commissionDraft, 10);
-    if (isNaN(pct) || pct < 0 || pct > 100) return;
-    setLoading(id);
-    try {
-      await patchTechnician(id, { commissionPct: pct });
-      setTechnicians((prev) =>
-        prev.map((tech) => (tech.id === id ? { ...tech, commissionPct: pct } : tech)),
-      );
-    } finally {
-      setLoading(null);
-      setEditingCommission(null);
     }
   }
 
@@ -115,7 +98,8 @@ export function TechnicianRosterClient({ initialTechnicians }: Props) {
                 <th style={{ padding: '8px 12px' }}>{t('columns.categories')}</th>
                 <th style={{ padding: '8px 12px' }}>{t('columns.status')}</th>
                 <th style={{ padding: '8px 12px' }}>{t('columns.kyc')}</th>
-                {isSuperAdmin && <th style={{ padding: '8px 12px' }}>{t('columns.commission')}</th>}
+                <th style={{ padding: '8px 12px' }}>{t('columns.hold')}</th>
+                <th style={{ padding: '8px 12px', textAlign: 'right' }}>{t('columns.balance')}</th>
                 <th style={{ padding: '8px 12px' }}>{t('columns.activeJobs')}</th>
                 <th style={{ padding: '8px 12px' }}>{t('columns.actions')}</th>
               </tr>
@@ -154,25 +138,21 @@ export function TechnicianRosterClient({ initialTechnicians }: Props) {
                       )}
                     </div>
                   </td>
-                  {isSuperAdmin && (
-                    <td style={{ padding: '10px 12px' }}>
-                      {editingCommission === tech.id ? (
-                        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                          <input type="number" value={commissionDraft} onChange={(e) => setCommissionDraft(e.target.value)} min={0} max={100}
-                            style={{ width: 52, padding: '3px 6px', background: 'var(--ink-2)', border: '1px solid var(--ink-4)', color: 'var(--fog-2)', borderRadius: 3, fontSize: '0.8rem' }} />
-                          <button onClick={() => void handleCommissionSave(tech.id)} disabled={loading === tech.id}
-                            style={{ padding: '3px 8px', background: 'var(--teal)', color: 'var(--ink-0)', borderRadius: 3, border: 'none', cursor: 'pointer', fontSize: '0.75rem' }}>&#x2713;</button>
-                          <button onClick={() => setEditingCommission(null)}
-                            style={{ padding: '3px 6px', background: 'transparent', color: 'var(--fog-0)', border: 'none', cursor: 'pointer', fontSize: '0.75rem' }}>&#x2715;</button>
-                        </div>
-                      ) : (
-                        <button onClick={() => { setEditingCommission(tech.id); setCommissionDraft(String(tech.commissionPct)); }}
-                          style={{ background: 'transparent', border: '1px solid var(--ink-4)', padding: '3px 8px', borderRadius: 3, color: 'var(--fog-2)', cursor: 'pointer', fontSize: '0.8rem' }}>
-                          {tech.commissionPct}%
-                        </button>
-                      )}
-                    </td>
-                  )}
+                  <td style={{ padding: '10px 12px' }}>
+                    {tech.commissionHold ? (
+                      <HoldChip
+                        state={tech.commissionHold.state}
+                        {...(tech.commissionHold.override !== undefined
+                          ? { override: tech.commissionHold.override }
+                          : {})}
+                      />
+                    ) : (
+                      <span style={{ color: 'var(--fog-0)' }}>—</span>
+                    )}
+                  </td>
+                  <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--fog-2)' }}>
+                    {tech.commissionHold ? formatINR(tech.commissionHold.outstandingPaise, locale) : '—'}
+                  </td>
                   <td style={{ padding: '10px 12px', textAlign: 'center', color: tech.activeBookingCount > 0 ? 'var(--teal-soft)' : 'var(--fog-0)' }}>
                     {tech.activeBookingCount}
                   </td>

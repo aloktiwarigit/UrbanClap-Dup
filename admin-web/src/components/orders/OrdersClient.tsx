@@ -69,6 +69,10 @@ export function OrdersClient() {
   const { auth } = useAdminAuth();
   const canOverride = hasCapability(auth?.role, 'orders.override');
   const canFinancialOverride = hasCapability(auth?.role, 'orders.financialOverride');
+  // Fix round (P2): the audit-trail deep link 403s for a role like `ops-manager` that can open
+  // orders but does not hold `audit.read` — gate the link's visibility on that capability rather
+  // than rendering it unconditionally.
+  const canViewAuditLog = hasCapability(auth?.role, 'audit.read');
   const router = useRouter();
   const searchParams = useSearchParams();
   const [, startTransition] = useTransition();
@@ -169,6 +173,7 @@ export function OrdersClient() {
           order={selectedOrder}
           canOverride={canOverride}
           canFinancialOverride={canFinancialOverride}
+          canViewAuditLog={canViewAuditLog}
           onClose={() => setSelectedOrder(null)}
           onOrderUpdated={updated => {
             setSelectedOrder(updated);

@@ -89,7 +89,9 @@
     "adminUsers": "एडमिन उपयोगकर्ता",
     "compliance": "अनुपालन",
     "technicians": "तकनीशियन",
-    "customers": "ग्राहक"
+    "customers": "ग्राहक",
+    "commissions": "कमीशन",
+    "settings": "सेटिंग्स"
   },
   "locale": {
     "switcher": {
@@ -108,7 +110,8 @@
       "categories": "श्रेणियाँ",
       "status": "स्थिति",
       "kyc": "KYC",
-      "commission": "कमीशन %",
+      "hold": "होल्ड",
+      "balance": "बकाया राशि",
       "activeJobs": "सक्रिय काम",
       "actions": "कार्रवाई"
     },
@@ -242,11 +245,13 @@
         "payment": "भुगतान",
         "created": "बनाया गया",
         "evidencePhotos": "काम की तस्वीरें",
+        "auditLog": "ऑडिट ट्रेल",
         "actions": {
           "heading": "कार्रवाइयां",
           "noPermission": "आपकी भूमिका इस ऑर्डर की समीक्षा कर सकती है लेकिन परिचालन बदलाव नहीं कर सकती।"
         }
       },
+      "auditLogLink": "ऑडिट ट्रेल देखें",
       "toast": {
         "success": "कार्रवाई सफलतापूर्वक पूरी हुई।"
       }
@@ -479,6 +484,283 @@
       }
     }
   },
+  "commissions": {
+    "title": "कमीशन",
+    "subtitle": "नकद जॉब पर कमीशन बकाया वाले तकनीशियन।",
+    "metadata": {
+      "title": "कमीशन — HomeHeroo एडमिन",
+      "detailTitle": "तकनीशियन कमीशन लेजर — HomeHeroo एडमिन",
+      "settingsTitle": "कमीशन सेटिंग्स — HomeHeroo एडमिन"
+    },
+    "loading": "कमीशन डैशबोर्ड लोड हो रहा है…",
+    "errors": {
+      "loadFailed": "कमीशन डैशबोर्ड लोड नहीं हो सका।",
+      "recomputeFailed": "रीकंप्यूट कतार में नहीं जोड़ा जा सका। पुनः प्रयास करें।",
+      "detailLoadFailed": "इस तकनीशियन का लेजर लोड नहीं हो सका।",
+      "overrideFailed": "होल्ड ओवरराइड सहेजा नहीं जा सका। पुनः प्रयास करें।",
+      "clearOverrideFailed": "होल्ड ओवरराइड हटाया नहीं जा सका। पुनः प्रयास करें।",
+      "configLoadFailed": "कमीशन सीमाएँ उपलब्ध नहीं हैं — कारण के बिना होल्ड स्थिति दिखाई जा रही है।"
+    },
+    "messages": {
+      "recomputeQueued": "रीकंप्यूट कतार में जोड़ा गया। शेष राशि जल्द ही अपडेट होगी।",
+      "overrideSaved": "होल्ड ओवरराइड सहेजा गया।",
+      "overrideCleared": "होल्ड ओवरराइड हटाया गया।"
+    },
+    "summaryBand": {
+      "outstandingLabel": "बकाया कमीशन",
+      "cachedTotal": "कैश्ड कुल राशि",
+      "technicianCount": "{count, plural, one {# तकनीशियन} other {# तकनीशियन}}",
+      "technicianCountPartial": "{count, plural, one {इस पेज पर # तकनीशियन} other {इस पेज पर # तकनीशियन}}",
+      "oldest": "सबसे पुराना {date}",
+      "oldestPartial": "इस पेज पर सबसे पुराना {date}",
+      "asOf": "अद्यतन: {date}",
+      "asOfPartial": "अद्यतन: {date} (इस पेज पर)",
+      "reconciled": "सभी शेष राशियाँ समाधानित हैं",
+      "unreconciled": "{count, plural, one {# तकनीशियन की शेष राशि असमाधानित है} other {# तकनीशियनों की शेष राशियाँ असमाधानित हैं}} — नीचे दिए गए आंकड़े पुराने हो सकते हैं।",
+      "recompute": "रीकंप्यूट करें"
+    },
+    "holdChip": {
+      "warn": "चेतावनी",
+      "blocked": "अवरुद्ध",
+      "override": "ओवरराइड · {actor} · {date}"
+    },
+    "table": {
+      "columns": {
+        "technician": "तकनीशियन",
+        "outstanding": "बकाया",
+        "jobs": "जॉब्स",
+        "oldestDue": "सबसे पुरानी देय तारीख",
+        "lastChecked": "अंतिम जांच",
+        "state": "स्थिति"
+      },
+      "stale": "पुराना"
+    },
+    "emptyState": {
+      "eyebrow": "कमीशन",
+      "headline": "कोई बकाया कमीशन नहीं",
+      "copy": "सभी तकनीशियन समाधानित हैं। नए नकद-जॉब कमीशन यहाँ जमा होते ही दिखाई देंगे।"
+    },
+    "pagination": {
+      "previous": "पिछला",
+      "next": "अगला"
+    },
+    "detail": {
+      "backLink": "कमीशन पर वापस जाएँ",
+      "heading": "तकनीशियन {technicianId}",
+      "loading": "तकनीशियन लेजर लोड हो रहा है…",
+      "hold": {
+        "heading": "होल्ड स्थिति",
+        "setOverride": "होल्ड ओवरराइड सेट करें",
+        "clearOverride": "ओवरराइड हटाएँ",
+        "reason": {
+          "blocked": "अवरुद्ध: बकाया कमीशन {outstanding}, {limit} की अवरोध सीमा से अधिक है ({count, plural, one {# बुकिंग} other {# बुकिंग}} बकाया)।",
+          "warn": "चेतावनी: बकाया कमीशन {outstanding}, {limit} की चेतावनी सीमा पार कर चुका है ({count, plural, one {# बुकिंग} other {# बुकिंग}} बकाया)।",
+          "clear": "स्पष्ट: बकाया कमीशन {outstanding} ({count, plural, one {# बुकिंग} other {# बुकिंग}} बकाया)।",
+          "default": "बकाया कमीशन {outstanding} ({count, plural, one {# बुकिंग} other {# बुकिंग}} बकाया)।"
+        }
+      },
+      "balance": {
+        "heading": "शेष राशि",
+        "due": "नकद जॉब से देय कमीशन",
+        "repaid": "भुगतान और लागू क्रेडिट",
+        "creditAnnotation": "इसमें क्रेडिट से लागू {amount} शामिल है",
+        "settled": "माफ या निपटाया गया",
+        "total": "देय शेष राशि"
+      },
+      "cashContext": {
+        "heading": "नकद-जॉब संदर्भ",
+        "line": "दरवाज़े पर एकत्रित, {count, plural, one {# जॉब} other {# जॉब्स}}",
+        "caveat": "यह शेष राशि का हिस्सा नहीं है"
+      },
+      "events": {
+        "heading": "शेष राशि की घटनाएँ",
+        "columns": {
+          "date": "तारीख",
+          "event": "घटना",
+          "change": "परिवर्तन",
+          "balance": "शेष राशि",
+          "recordedBy": "दर्ज करने वाला"
+        },
+        "copyReference": "संदर्भ कॉपी करें",
+        "copied": "कॉपी किया गया",
+        "empty": "अभी तक कोई शेष राशि घटना नहीं है।",
+        "labels": {
+          "due": "देय कमीशन",
+          "dueWithService": "देय कमीशन — {serviceName}",
+          "waiver": "कमीशन माफ किया गया",
+          "remittance": "भुगतान दर्ज किया गया — {method}",
+          "credit": "क्रेडिट लागू किया गया — {source}"
+        }
+      },
+      "receivables": {
+        "heading": "प्राप्य राशियाँ",
+        "recordPayment": "भुगतान दर्ज करें",
+        "columns": {
+          "service": "सेवा",
+          "date": "तारीख",
+          "amount": "देय कमीशन",
+          "status": "स्थिति"
+        },
+        "technicianDeclared": "तकनीशियन-घोषित",
+        "statusDue": "देय",
+        "statusRemitted": "भेजा गया",
+        "statusWaived": "माफ किया गया",
+        "empty": "अभी तक कोई प्राप्य राशि नहीं है।"
+      },
+      "remittanceHistory": {
+        "heading": "भुगतान इतिहास",
+        "columns": {
+          "date": "तारीख",
+          "amount": "राशि",
+          "method": "तरीका",
+          "ref": "संदर्भ",
+          "recordedBy": "दर्ज करने वाला"
+        },
+        "empty": "अभी तक कोई भुगतान दर्ज नहीं हुआ है।"
+      },
+      "credits": {
+        "heading": "क्रेडिट",
+        "columns": {
+          "source": "स्रोत",
+          "original": "मूल",
+          "remaining": "शेष"
+        },
+        "empty": "इस खाते में कोई क्रेडिट नहीं है।"
+      },
+      "override": {
+        "dialogTitle": "होल्ड ओवरराइड सेट करें",
+        "untilLabel": "ओवरराइड कब तक",
+        "untilRequired": "तारीख आवश्यक है।",
+        "reasonLabel": "कारण",
+        "reasonRequired": "कारण आवश्यक है।",
+        "save": "ओवरराइड सहेजें",
+        "cancel": "रद्द करें"
+      }
+    },
+    "remittance": {
+      "title": "भुगतान दर्ज करें",
+      "fields": {
+        "amountLabel": "राशि (₹)",
+        "methodLabel": "तरीका",
+        "methodUpi": "UPI",
+        "methodCash": "नकद जमा",
+        "refLabel": "संदर्भ",
+        "noteLabel": "नोट (वैकल्पिक)"
+      },
+      "preview": {
+        "label": "पूर्वावलोकन। दर्ज करने पर सर्वर पुनर्गणना करेगा।",
+        "empty": "अभी तक कोई राशि दर्ज नहीं की गई।",
+        "unallocated": "{amount} किसी भी देय जॉब को आवंटित नहीं होगा — यह क्रेडिट बन जाएगा।"
+      },
+      "actual": {
+        "label": "दर्ज किया गया आवंटन",
+        "creditCreated": "क्रेडिट बनाया गया: {amount}।"
+      },
+      "actions": {
+        "cancel": "रद्द करें",
+        "submit": "भुगतान दर्ज करें",
+        "discardPending": "यह एक अलग भुगतान है। लंबित प्रयास को हटाएं।"
+      },
+      "warnings": {
+        "discardRisk": "अगर पहला प्रयास वास्तव में सफल हो गया था, तो उसे हटाकर यह भुगतान दर्ज करने से तकनीशियन से दो बार शुल्क लिया जाएगा।",
+        "pendingAttempt": "इस तकनीशियन के लिए पिछले प्रयास की अभी तक पुष्टि नहीं हुई है: {amount}, {method} के ज़रिए, संदर्भ {ref}।",
+        "pendingAttemptSafeMove": "अगर यह वही भुगतान है, तो इसे दोबारा दर्ज करें — आपको मूल रसीद ही वापस मिलेगी, दूसरा शुल्क नहीं लगेगा।"
+      },
+      "errors": {
+        "invalidAmount": "₹0 से अधिक राशि दर्ज करें, अधिकतम 2 दशमलव अंकों के साथ।",
+        "refRequired": "संदर्भ आवश्यक है।",
+        "recordFailed": "यह पुष्टि नहीं हो सकी कि यह भुगतान दर्ज हुआ। पुनः प्रयास करने से पहले तकनीशियन का लेजर जांचें।",
+        "timeout": "इसमें अपेक्षा से अधिक समय लग रहा है। भुगतान हुआ हो सकता है या नहीं भी — पुनः प्रयास करने से पहले तकनीशियन का लेजर जांचें।",
+        "idempotencyMismatch": "इस तकनीशियन के लिए पिछले प्रयास की अभी तक पुष्टि नहीं हुई है: {amount}, {method} के ज़रिए, संदर्भ {ref}।",
+        "idempotencyMismatchGeneric": "इस तकनीशियन के लिए पिछले प्रयास की अभी तक पुष्टि नहीं हुई है, लेकिन इसका विवरण इस डिवाइस पर उपलब्ध नहीं है।",
+        "idempotencyMismatchResolved": "इस तकनीशियन के लिए पिछले प्रयास की अभी तक पुष्टि नहीं हुई है, लेकिन यह पहले ही साफ़ हो चुका है — संभवतः किसी अन्य टैब या डिवाइस से पूरा हुआ। पुनः प्रयास करने से पहले तकनीशियन का लेजर जांचें।"
+      },
+      "outcomes": {
+        "success": "भुगतान दर्ज किया गया",
+        "replayed": "पहले से दर्ज है। यह मूल रसीद है, दूसरा भुगतान नहीं।",
+        "recomputePending": "दर्ज किया गया। शेष राशि जल्द ही अपडेट होगी।",
+        "allocationMismatch": "पूर्वावलोकन से अलग आवंटित किया गया। कोई अन्य निपटान पहले पहुंच गया। पूर्वावलोकन में {previewCount, plural, one {# जॉब} other {# जॉब्स}} में {previewAmount} दिखाया गया था; {actualCount, plural, one {# जॉब} other {# जॉब्स}} में {actualAmount} दर्ज किया गया।",
+        "allocationResplit": "पूर्वावलोकन से अलग आवंटित किया गया। {bookings} को कुल राशि का अलग हिस्सा मिला।"
+      }
+    },
+    "settings": {
+      "heading": "कमीशन सेटिंग्स",
+      "loading": "कमीशन सेटिंग्स लोड हो रही हैं…",
+      "notAuthorized": {
+        "eyebrow": "सेटिंग्स",
+        "headline": "आपके पास कमीशन सेटिंग्स तक पहुंच नहीं है।",
+        "copy": "यह क्षेत्र केवल सुपर-एडमिन के लिए सीमित है।"
+      },
+      "errors": {
+        "configLoadFailed": "कमीशन कॉन्फ़िगरेशन लोड नहीं हो सका।",
+        "featuresLoadFailed": "तकनीशियन ऐप फ़ीचर फ़्लैग लोड नहीं हो सके।",
+        "categoriesLoadFailed": "प्रति-श्रेणी दर तालिका लोड नहीं हो सकी।",
+        "rowsLoadFailed": "थ्रेशोल्ड प्रभाव उपलब्ध नहीं है — तकनीशियन शेष राशियाँ लोड नहीं हो सकीं।",
+        "rateSaveFailed": "कमीशन दर सहेजी नहीं जा सकी। पुनः प्रयास करें।",
+        "thresholdOrder": "चेतावनी सीमा अवरोध सीमा से कम होनी चाहिए।",
+        "invalidThresholdAmount": "दोनों सीमाओं के लिए मान्य रुपये राशि दर्ज करें।",
+        "enforcementSaveFailed": "प्रवर्तन सेटिंग्स सहेजी नहीं जा सकीं। पुनः प्रयास करें।",
+        "holdEnforcementSaveFailed": "होल्ड प्रवर्तन सेटिंग सहेजी नहीं जा सकी। पुनः प्रयास करें।",
+        "featuresSaveFailed": "तकनीशियन ऐप फ़ीचर सहेजे नहीं जा सके। पुनः प्रयास करें।",
+        "categorySaveFailed": "इस श्रेणी की दर सहेजी नहीं जा सकी। पुनः प्रयास करें।"
+      },
+      "messages": {
+        "rateSaved": "कमीशन दर सहेजी गई।",
+        "enforcementSaved": "प्रवर्तन सेटिंग्स सहेजी गईं।",
+        "holdEnforcementSaved": "होल्ड प्रवर्तन सेटिंग सहेजी गई।",
+        "featuresSaved": "तकनीशियन ऐप फ़ीचर सहेजे गए।",
+        "categorySaved": "श्रेणी दर सहेजी गई।"
+      },
+      "updatedBy": "अंतिम बार {actor} द्वारा {date} को बदला गया",
+      "rates": {
+        "heading": "दरें",
+        "globalLabel": "वैश्विक कमीशन दर (%)",
+        "globalSave": "दर सहेजें",
+        "consequence": "यह अब से बनने वाली बुकिंग पर लागू होता है। पुरानी बुकिंग वही दर बनाए रखेंगी जिस पर वे बनी थीं।",
+        "invalidRate": "15% और 35% के बीच की दर दर्ज करें।",
+        "categoryTableHeading": "प्रति-श्रेणी दरें",
+        "categoryTableEmpty": "अभी तक कोई श्रेणी नहीं है।",
+        "columns": {
+          "category": "श्रेणी",
+          "effectiveRate": "प्रभावी दर",
+          "status": "स्थिति",
+          "override": "ओवरराइड (%)"
+        },
+        "statusOverride": "ओवरराइड",
+        "statusInherited": "इनहेरिटेड",
+        "setOverride": "सहेजें",
+        "clearOverride": "वैश्विक दर अपनाएँ"
+      },
+      "enforcement": {
+        "heading": "प्रवर्तन",
+        "warnLabel": "चेतावनी सीमा (₹)",
+        "blockLabel": "अवरोध सीमा (₹)",
+        "save": "प्रवर्तन सेटिंग्स सहेजें",
+        "appliesWithin": "5 मिनट के भीतर लागू होता है।",
+        "impactNone": "{amount} पर, बकाया राशि रखने वाला कोई भी तकनीशियन आज अवरुद्ध नहीं होगा।",
+        "impact": "{amount} पर, बकाया राशि रखने वाले {count, plural, one {# तकनीशियन} other {# तकनीशियन}} आज अवरुद्ध हो जाएंगे ({names})।",
+        "impactNonePartial": "{amount} पर, इस पेज पर बकाया राशि रखने वाला कोई भी तकनीशियन आज अवरुद्ध नहीं होगा।",
+        "impactPartial": "{amount} पर, इस पेज पर बकाया राशि रखने वाले {count, plural, one {# तकनीशियन} other {# तकनीशियन}} आज अवरुद्ध हो जाएंगे ({names})।",
+        "holdEnforcementLabel": "जो तकनीशियन बहुत अधिक बकाया रखते हैं उन्हें रोकें",
+        "enforceKycLabel": "डिस्पैच से पहले KYC आवश्यक करें",
+        "confirmEnableTitle": "होल्ड प्रवर्तन चालू करें?",
+        "confirmEnableBody": "जिन तकनीशियनों की शेष राशि अवरोध सीमा से अधिक हो जाएगी, उन्हें भुगतान करने तक काम मिलना बंद हो जाएगा। 5 मिनट के भीतर लागू होता है।",
+        "confirmDisableTitle": "होल्ड प्रवर्तन बंद करें?",
+        "confirmDisableBody": "पहले से अवरुद्ध तकनीशियनों को तुरंत फिर से काम मिलना शुरू हो जाएगा, भले ही उन पर अभी भी कमीशन बकाया हो।",
+        "confirmConfirm": "पुष्टि करें",
+        "confirmCancel": "रद्द करें"
+      },
+      "features": {
+        "heading": "तकनीशियन ऐप फ़ीचर",
+        "save": "फ़ीचर सहेजें",
+        "wallet": "वॉलेट",
+        "duesBanner": "बकाया बैनर",
+        "upiQr": "UPI QR कलेक्शन",
+        "incentives": "प्रोत्साहन",
+        "addOnRequests": "ऐड-ऑन अनुरोध"
+      }
+    }
+  },
   "auditLog": {
     "title": "ऑडिट लॉग",
     "metadata": {
@@ -601,9 +883,10 @@
       "pricePlaceholder": "59900",
       "durationLabel": "अवधि (मिनट)",
       "durationPlaceholder": "60",
-      "commissionLabel": "कमीशन (basis points — 2250 = 22.5%, सीमा 1500–3500)",
-      "commissionPlaceholder": "2250",
-      "validationError": "मूल्य, अवधि और कमीशन वैध संख्याएं होनी चाहिए।",
+      "commissionLabel": "कमीशन ओवरराइड (basis points — 2250 = 22.5%, सीमा 1500–3500)",
+      "commissionPlaceholder": "खाली छोड़ें — विरासत में मिलेगा",
+      "commissionHint": "केवल सुपर-एडमिन के लिए। श्रेणी या वैश्विक दर विरासत में लेने के लिए खाली छोड़ें — यह केवल तभी भेजा जाता है जब आप नया मान दर्ज करें।",
+      "validationError": "मूल्य और अवधि वैध संख्याएं होनी चाहिए।",
       "commissionRangeError": "कमीशन 1500 और 3500 basis points के बीच होना चाहिए।",
       "submissionError": "सबमिशन विफल हुआ।",
       "savingState": "सहेजा जा रहा है…",

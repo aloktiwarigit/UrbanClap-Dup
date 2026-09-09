@@ -89,7 +89,9 @@
     "adminUsers": "Admin Users",
     "compliance": "Compliance",
     "technicians": "Technicians",
-    "customers": "Customers"
+    "customers": "Customers",
+    "commissions": "Commissions",
+    "settings": "Settings"
   },
   "locale": {
     "switcher": {
@@ -108,7 +110,8 @@
       "categories": "Categories",
       "status": "Status",
       "kyc": "KYC",
-      "commission": "Commission %",
+      "hold": "Hold",
+      "balance": "Balance",
       "activeJobs": "Active Jobs",
       "actions": "Actions"
     },
@@ -242,11 +245,13 @@
         "payment": "Payment",
         "created": "Created",
         "evidencePhotos": "Job Photos",
+        "auditLog": "Audit trail",
         "actions": {
           "heading": "Actions",
           "noPermission": "Your role can review this order but cannot run operational overrides."
         }
       },
+      "auditLogLink": "View audit trail",
       "toast": {
         "success": "Action completed successfully."
       }
@@ -479,6 +484,283 @@
       }
     }
   },
+  "commissions": {
+    "title": "Commissions",
+    "subtitle": "Technicians who owe commission on cash jobs.",
+    "metadata": {
+      "title": "Commissions — HomeHeroo admin",
+      "detailTitle": "Technician commission ledger — HomeHeroo admin",
+      "settingsTitle": "Commission settings — HomeHeroo admin"
+    },
+    "loading": "Loading commission dashboard…",
+    "errors": {
+      "loadFailed": "Could not load the commission dashboard.",
+      "recomputeFailed": "Could not queue the recompute. Try again.",
+      "detailLoadFailed": "Could not load this technician's ledger.",
+      "overrideFailed": "Could not save the hold override. Try again.",
+      "clearOverrideFailed": "Could not clear the hold override. Try again.",
+      "configLoadFailed": "Commission thresholds unavailable — showing hold status without the reason."
+    },
+    "messages": {
+      "recomputeQueued": "Recompute queued. Balances will update shortly.",
+      "overrideSaved": "Hold override saved.",
+      "overrideCleared": "Hold override cleared."
+    },
+    "summaryBand": {
+      "outstandingLabel": "Outstanding commission",
+      "cachedTotal": "Cached total",
+      "technicianCount": "{count, plural, one {# technician} other {# technicians}}",
+      "technicianCountPartial": "{count, plural, one {# technician on this page} other {# technicians on this page}}",
+      "oldest": "oldest {date}",
+      "oldestPartial": "oldest on this page {date}",
+      "asOf": "as of {date}",
+      "asOfPartial": "as of {date} (this page)",
+      "reconciled": "All balances reconciled",
+      "unreconciled": "{count, plural, one {# technician has} other {# technicians have}} unreconciled balances — figures below may be out of date.",
+      "recompute": "Recompute"
+    },
+    "holdChip": {
+      "warn": "Warn",
+      "blocked": "Blocked",
+      "override": "Override · {actor} · {date}"
+    },
+    "table": {
+      "columns": {
+        "technician": "Technician",
+        "outstanding": "Outstanding",
+        "jobs": "Jobs",
+        "oldestDue": "Oldest due",
+        "lastChecked": "Last checked",
+        "state": "State"
+      },
+      "stale": "stale"
+    },
+    "emptyState": {
+      "eyebrow": "Commissions",
+      "headline": "No outstanding commission",
+      "copy": "Every technician is reconciled. New cash-job commission will appear here as it accrues."
+    },
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "detail": {
+      "backLink": "Back to commissions",
+      "heading": "Technician {technicianId}",
+      "loading": "Loading technician ledger…",
+      "hold": {
+        "heading": "Hold status",
+        "setOverride": "Set hold override",
+        "clearOverride": "Clear override",
+        "reason": {
+          "blocked": "Blocked: outstanding commission of {outstanding} exceeds the {limit} block threshold ({count, plural, one {# booking} other {# bookings}} due).",
+          "warn": "Warning: outstanding commission of {outstanding} has passed the {limit} warn threshold ({count, plural, one {# booking} other {# bookings}} due).",
+          "clear": "Clear: outstanding commission of {outstanding} ({count, plural, one {# booking} other {# bookings}} due).",
+          "default": "Outstanding commission of {outstanding} ({count, plural, one {# booking} other {# bookings}} due)."
+        }
+      },
+      "balance": {
+        "heading": "Balance",
+        "due": "Commission due from cash jobs",
+        "repaid": "Payments and credits applied",
+        "creditAnnotation": "includes {amount} applied from credit",
+        "settled": "Waived or settled",
+        "total": "Balance due"
+      },
+      "cashContext": {
+        "heading": "Cash-job context",
+        "line": "Collected at the door, {count, plural, one {# job} other {# jobs}}",
+        "caveat": "not part of the balance"
+      },
+      "events": {
+        "heading": "Balance events",
+        "columns": {
+          "date": "Date",
+          "event": "Event",
+          "change": "Change",
+          "balance": "Balance",
+          "recordedBy": "Recorded by"
+        },
+        "copyReference": "Copy reference",
+        "copied": "Copied",
+        "empty": "No balance events yet.",
+        "labels": {
+          "due": "Commission due",
+          "dueWithService": "Commission due — {serviceName}",
+          "waiver": "Commission waived",
+          "remittance": "Remittance recorded — {method}",
+          "credit": "Credit applied — {source}"
+        }
+      },
+      "receivables": {
+        "heading": "Receivables",
+        "recordPayment": "Record payment",
+        "columns": {
+          "service": "Service",
+          "date": "Date",
+          "amount": "Commission due",
+          "status": "Status"
+        },
+        "technicianDeclared": "Technician-declared",
+        "statusDue": "Due",
+        "statusRemitted": "Remitted",
+        "statusWaived": "Waived",
+        "empty": "No receivables yet."
+      },
+      "remittanceHistory": {
+        "heading": "Remittance history",
+        "columns": {
+          "date": "Date",
+          "amount": "Amount",
+          "method": "Method",
+          "ref": "Reference",
+          "recordedBy": "Recorded by"
+        },
+        "empty": "No remittances recorded yet."
+      },
+      "credits": {
+        "heading": "Credits",
+        "columns": {
+          "source": "Source",
+          "original": "Original",
+          "remaining": "Remaining"
+        },
+        "empty": "No credits on this account."
+      },
+      "override": {
+        "dialogTitle": "Set hold override",
+        "untilLabel": "Override until",
+        "untilRequired": "A date is required.",
+        "reasonLabel": "Reason",
+        "reasonRequired": "A reason is required.",
+        "save": "Save override",
+        "cancel": "Cancel"
+      }
+    },
+    "remittance": {
+      "title": "Record payment",
+      "fields": {
+        "amountLabel": "Amount (₹)",
+        "methodLabel": "Method",
+        "methodUpi": "UPI",
+        "methodCash": "Cash deposit",
+        "refLabel": "Reference",
+        "noteLabel": "Note (optional)"
+      },
+      "preview": {
+        "label": "Preview. The server recalculates when you record this.",
+        "empty": "No amount entered yet.",
+        "unallocated": "{amount} will not be allocated to any due job — it will become a credit."
+      },
+      "actual": {
+        "label": "Recorded allocation",
+        "creditCreated": "Credit created: {amount}."
+      },
+      "actions": {
+        "cancel": "Cancel",
+        "submit": "Record payment",
+        "discardPending": "This is a different payment. Discard the pending attempt."
+      },
+      "warnings": {
+        "discardRisk": "If that earlier attempt did land, discarding it and recording this payment will charge the technician twice.",
+        "pendingAttempt": "An earlier attempt for this technician has not been confirmed: {amount} via {method}, reference {ref}.",
+        "pendingAttemptSafeMove": "If this is that same payment, record it again — you will get the original receipt back, not a second charge."
+      },
+      "errors": {
+        "invalidAmount": "Enter an amount greater than ₹0, with at most 2 decimal places.",
+        "refRequired": "A reference is required.",
+        "recordFailed": "Could not confirm this payment was recorded. Check the technician's ledger before trying again.",
+        "timeout": "This is taking longer than expected. The payment may or may not have gone through — check the technician's ledger before trying again.",
+        "idempotencyMismatch": "A previous attempt for this technician has not been confirmed: {amount} via {method}, reference {ref}.",
+        "idempotencyMismatchGeneric": "A previous attempt for this technician has not been confirmed, but its details aren't available on this device.",
+        "idempotencyMismatchResolved": "A previous attempt for this technician has not been confirmed, but it has already been cleared — likely finished from another tab or device. Check the technician's ledger before retrying."
+      },
+      "outcomes": {
+        "success": "Payment recorded",
+        "replayed": "Already recorded. This is the original receipt, not a second payment.",
+        "recomputePending": "Recorded. The balance will catch up shortly.",
+        "allocationMismatch": "Allocated differently than previewed. Another settlement landed first. Preview showed {previewAmount} across {previewCount, plural, one {# job} other {# jobs}}; recorded {actualAmount} across {actualCount, plural, one {# job} other {# jobs}}.",
+        "allocationResplit": "Allocated differently than previewed. {bookings} received a different share of the same total."
+      }
+    },
+    "settings": {
+      "heading": "Commission settings",
+      "loading": "Loading commission settings…",
+      "notAuthorized": {
+        "eyebrow": "Settings",
+        "headline": "You do not have access to commission settings.",
+        "copy": "This area is limited to super-admins."
+      },
+      "errors": {
+        "configLoadFailed": "Could not load the commission configuration.",
+        "featuresLoadFailed": "Could not load the technician app feature flags.",
+        "categoriesLoadFailed": "Could not load the per-category rate table.",
+        "rowsLoadFailed": "Threshold impact unavailable — could not load technician balances.",
+        "rateSaveFailed": "Could not save the commission rate. Try again.",
+        "thresholdOrder": "The warn threshold must be below the block threshold.",
+        "invalidThresholdAmount": "Enter valid rupee amounts for both thresholds.",
+        "enforcementSaveFailed": "Could not save enforcement settings. Try again.",
+        "holdEnforcementSaveFailed": "Could not save the hold enforcement setting. Try again.",
+        "featuresSaveFailed": "Could not save the technician app features. Try again.",
+        "categorySaveFailed": "Could not save this category's rate. Try again."
+      },
+      "messages": {
+        "rateSaved": "Commission rate saved.",
+        "enforcementSaved": "Enforcement settings saved.",
+        "holdEnforcementSaved": "Hold enforcement setting saved.",
+        "featuresSaved": "Technician app features saved.",
+        "categorySaved": "Category rate saved."
+      },
+      "updatedBy": "Last changed by {actor} · {date}",
+      "rates": {
+        "heading": "Rates",
+        "globalLabel": "Global commission rate (%)",
+        "globalSave": "Save rate",
+        "consequence": "Applies to bookings created from now on. Past bookings keep the rate they were priced at.",
+        "invalidRate": "Enter a rate between 15% and 35%.",
+        "categoryTableHeading": "Per-category rates",
+        "categoryTableEmpty": "No categories yet.",
+        "columns": {
+          "category": "Category",
+          "effectiveRate": "Effective rate",
+          "status": "Status",
+          "override": "Override (%)"
+        },
+        "statusOverride": "Override",
+        "statusInherited": "Inherited",
+        "setOverride": "Save",
+        "clearOverride": "Inherit global"
+      },
+      "enforcement": {
+        "heading": "Enforcement",
+        "warnLabel": "Warn threshold (₹)",
+        "blockLabel": "Block threshold (₹)",
+        "save": "Save enforcement settings",
+        "appliesWithin": "Applies within 5 minutes.",
+        "impactNone": "At {amount}, no technicians currently carrying a balance would be blocked today.",
+        "impact": "At {amount}, {count, plural, one {# technician} other {# technicians}} currently carrying a balance would be blocked today ({names}).",
+        "impactNonePartial": "At {amount}, no technicians on this page currently carrying a balance would be blocked today.",
+        "impactPartial": "At {amount}, {count, plural, one {# technician} other {# technicians}} on this page currently carrying a balance would be blocked today ({names}).",
+        "holdEnforcementLabel": "Block technicians who owe too much",
+        "enforceKycLabel": "Require KYC before dispatch",
+        "confirmEnableTitle": "Turn on hold enforcement?",
+        "confirmEnableBody": "Technicians whose balance crosses the block threshold will stop receiving work until they pay down. Applies within 5 minutes.",
+        "confirmDisableTitle": "Turn off hold enforcement?",
+        "confirmDisableBody": "Technicians already blocked will start receiving work again immediately, even if they still owe commission.",
+        "confirmConfirm": "Confirm",
+        "confirmCancel": "Cancel"
+      },
+      "features": {
+        "heading": "Technician app features",
+        "save": "Save features",
+        "wallet": "Wallet",
+        "duesBanner": "Dues banner",
+        "upiQr": "UPI QR collection",
+        "incentives": "Incentives",
+        "addOnRequests": "Add-on requests"
+      }
+    }
+  },
   "auditLog": {
     "title": "Audit Log",
     "metadata": {
@@ -601,9 +883,10 @@
       "pricePlaceholder": "59900",
       "durationLabel": "Duration (minutes)",
       "durationPlaceholder": "60",
-      "commissionLabel": "Commission (basis points — 2250 = 22.5%, range 1500–3500)",
-      "commissionPlaceholder": "2250",
-      "validationError": "Price, duration, and commission must be valid numbers.",
+      "commissionLabel": "Commission override (basis points — 2250 = 22.5%, range 1500–3500)",
+      "commissionPlaceholder": "Leave blank to inherit",
+      "commissionHint": "Super-admin only. Leave blank to inherit the category or global rate — this is only sent when you enter a new value.",
+      "validationError": "Price and duration must be valid numbers.",
       "commissionRangeError": "Commission must be between 1500 and 3500 basis points.",
       "submissionError": "Submission failed.",
       "savingState": "Saving…",

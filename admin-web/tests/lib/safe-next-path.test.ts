@@ -54,4 +54,27 @@ describe('getSafeNextPath', () => {
     expect(result).not.toContain('evil.com');
     expect(result).toMatch(/^\//);
   });
+
+  // Codex round 2 (P2): '/settings/commission' is route-guarded via ADMIN_ROUTE_CAPABILITIES
+  // (settings.manage) but was missing from ALLOWED_PATHS entirely, so an unauthenticated
+  // super-admin opening a bookmarked settings URL bounced to the role default after login
+  // instead of back to the page they asked for. 'hi' is the default locale (see
+  // src/i18n/config.ts), which is the reported case.
+  it('accepts locale-prefixed /settings/commission (default locale, the reported case)', () => {
+    expect(getSafeNextPath('/hi/settings/commission', 'super-admin')).toBe('/hi/settings/commission');
+  });
+
+  it('accepts bare /settings/commission', () => {
+    expect(getSafeNextPath('/settings/commission', 'super-admin')).toBe('/settings/commission');
+  });
+
+  it('accepts /en/settings/commission', () => {
+    expect(getSafeNextPath('/en/settings/commission', 'super-admin')).toBe('/en/settings/commission');
+  });
+
+  it('strips query string from a valid /settings/commission redirect', () => {
+    const result = getSafeNextPath('/hi/settings/commission?foo=bar', 'super-admin');
+    expect(result).toBe('/hi/settings/commission');
+    expect(result).not.toContain('foo');
+  });
 });

@@ -1,6 +1,7 @@
 'use client';
 /* eslint-disable @next/next/no-img-element */
 import { useEffect, useId, useState } from 'react';
+import Link from 'next/link';
 import FocusLock from 'react-focus-lock';
 import { useTranslations, useLocale } from 'next-intl';
 import { formatINR, formatDateTime } from '@/lib/format/intl';
@@ -15,6 +16,14 @@ interface OrderSlideOverProps {
   onOrderUpdated?: (updated: Order) => void;
   canOverride?: boolean | undefined;
   canFinancialOverride?: boolean | undefined;
+  // Fix round (P2): the audit-trail deep link routes to `/audit-log`, which is guarded by the
+  // `audit.read` capability — a role that can open this drawer (e.g. `ops-manager`, which holds
+  // `orders.read`/`orders.override` but not `audit.read`) reliably lands on a forbidden page if the
+  // link is rendered unconditionally. Defaults to hidden (`false`/`undefined`) rather than shown —
+  // the safer default for a capability-gated deep link — so every caller must opt in explicitly by
+  // passing the caller's own `hasCapability(auth?.role, 'audit.read')` check, the same pattern
+  // `canOverride`/`canFinancialOverride` already use.
+  canViewAuditLog?: boolean | undefined;
 }
 
 type Toast = { message: string; type: 'success' | 'error' };
@@ -36,6 +45,7 @@ export function OrderSlideOver({
   onOrderUpdated,
   canOverride,
   canFinancialOverride,
+  canViewAuditLog,
 }: OrderSlideOverProps) {
   const t = useTranslations('orders');
   const locale = useLocale();
@@ -86,6 +96,17 @@ export function OrderSlideOver({
           <section><h3 className="text-xs text-gray-500 font-medium mb-1">{t('detail.sections.scheduled')}</h3><p>{formatDateTime(currentOrder.scheduledAt, locale)}</p></section>
           <section><h3 className="text-xs text-gray-500 font-medium mb-1">{t('detail.sections.payment')}</h3><p className="text-lg font-semibold">{formatINR(currentOrder.amount, locale)}</p></section>
           <section><h3 className="text-xs text-gray-500 font-medium mb-1">{t('detail.sections.created')}</h3><p>{formatDateTime(currentOrder.createdAt, locale)}</p></section>
+          {canViewAuditLog === true && (
+            <section>
+              <h3 className="text-xs text-gray-500 font-medium mb-1">{t('detail.sections.auditLog')}</h3>
+              <Link
+                href={`/audit-log?resourceType=booking&resourceId=${currentOrder.id}`}
+                className="text-sm text-blue-600 underline hover:text-blue-800 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+              >
+                {t('detail.auditLogLink')}
+              </Link>
+            </section>
+          )}
           {currentOrder.jobPhotoSets && currentOrder.jobPhotoSets.length > 0 && (
             <section>
               <h3 className="text-xs text-gray-500 font-medium mb-2">{t('detail.sections.evidencePhotos')}</h3>

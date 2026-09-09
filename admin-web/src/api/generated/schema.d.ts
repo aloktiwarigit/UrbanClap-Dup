@@ -424,6 +424,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/config/technician-client": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the technician app feature-flag/version-gate config (defaults applied, never 404) */
+        get: operations["getTechnicianClientConfig"];
+        /** Update the technician app feature flags and/or minimum supported version code (super-admin only) */
+        put: operations["putTechnicianClientConfig"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/finance/commission-remittances": {
         parameters: {
             query?: never;
@@ -1263,6 +1281,30 @@ export interface components {
             minSupportedVersionCode: number;
             serverTime: string;
         };
+        TechnicianClientConfigDoc: {
+            /** @enum {string} */
+            id: "technician-client-config";
+            features?: {
+                wallet?: boolean;
+                duesBanner?: boolean;
+                upiQr?: boolean;
+                incentives?: boolean;
+                addOnRequests?: boolean;
+            };
+            minSupportedVersionCode?: number;
+            updatedBy?: string;
+            updatedAt?: string;
+        };
+        UpdateTechnicianClientConfigBody: {
+            features?: {
+                wallet?: boolean;
+                duesBanner?: boolean;
+                upiQr?: boolean;
+                incentives?: boolean;
+                addOnRequests?: boolean;
+            };
+            minSupportedVersionCode?: number;
+        };
         WaitlistRequest: {
             /** @example +916000000001 */
             phone: string;
@@ -1868,7 +1910,7 @@ export interface operations {
                     heroImageUrl?: string;
                     sortOrder?: number;
                     safetyTag?: boolean;
-                    commissionBps?: number;
+                    commissionBps?: number | null;
                 };
             };
         };
@@ -2739,6 +2781,120 @@ export interface operations {
                 };
             };
             /** @description Validation error (bps out of 1500–3500 range, or warnThresholdPaise >= blockThresholdPaise) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden (requires super-admin) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getTechnicianClientConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Effective technician client config, defaults applied for any unset field */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        id: "technician-client-config";
+                        features?: {
+                            wallet?: boolean;
+                            duesBanner?: boolean;
+                            upiQr?: boolean;
+                            incentives?: boolean;
+                            addOnRequests?: boolean;
+                        };
+                        minSupportedVersionCode?: number;
+                        updatedBy?: string;
+                        updatedAt?: string;
+                    };
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    putTechnicianClientConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    features?: {
+                        wallet?: boolean;
+                        duesBanner?: boolean;
+                        upiQr?: boolean;
+                        incentives?: boolean;
+                        addOnRequests?: boolean;
+                    };
+                    minSupportedVersionCode?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated technician client config */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        id: "technician-client-config";
+                        features?: {
+                            wallet?: boolean;
+                            duesBanner?: boolean;
+                            upiQr?: boolean;
+                            incentives?: boolean;
+                            addOnRequests?: boolean;
+                        };
+                        minSupportedVersionCode?: number;
+                        updatedBy?: string;
+                        updatedAt?: string;
+                    };
+                };
+            };
+            /** @description Validation error (unknown field, or empty patch) */
             400: {
                 headers: {
                     [name: string]: unknown;

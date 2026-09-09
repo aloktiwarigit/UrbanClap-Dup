@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { components, operations } from '@/api/generated/schema';
+import { useAdminAuth } from '@/lib/auth/context';
 
 export type AdminService = components['schemas']['AdminService'];
 
@@ -23,6 +24,13 @@ export interface ServiceFormProps {
 
 export function ServiceForm({ categoryId, initial, onSubmit, onCancel }: ServiceFormProps) {
   const t = useTranslations('catalogue');
+  const { auth } = useAdminAuth();
+  // Fix round 3 (task 9): mirrors the API's own field-level guard exactly
+  // (`commissionBpsForbidden` in catalogue-admin.ts checks `admin.role !== 'super-admin'`), not a
+  // capability, so the two can never drift independently. An ops-manager should not see a control
+  // they are not permitted to use — rendering it and then 403ing on submit would be worse than
+  // not offering it.
+  const canSetCommission = auth?.role === 'super-admin';
   const [id, setId] = useState(initial?.id ?? '');
   const [name, setName] = useState(initial?.name ?? '');
   const [nameHi, setNameHi] = useState(initial?.nameHi ?? '');
@@ -31,7 +39,13 @@ export function ServiceForm({ categoryId, initial, onSubmit, onCancel }: Service
   const [heroImageUrl, setHeroImageUrl] = useState(initial?.heroImageUrl ?? '');
   const [basePrice, setBasePrice] = useState(String(initial?.basePrice ?? ''));
   const [durationMinutes, setDurationMinutes] = useState(String(initial?.durationMinutes ?? ''));
-  const [commissionBps, setCommissionBps] = useState(String(initial?.commissionBps ?? '2250'));
+  // Fix round 3: no more '2250' default. An empty field means "no change" on edit and "inherit
+  // the category/global rate" on create — both are expressed by omitting the key entirely, never
+  // by sending a value nobody typed. Seeded from `initial?.commissionBps` on edit so the
+  // "unchanged" comparison in handleSubmit has something real to compare against.
+  const [commissionBps, setCommissionBps] = useState(
+    initial?.commissionBps !== undefined ? String(initial.commissionBps) : '',
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,19 +57,46 @@ export function ServiceForm({ categoryId, initial, onSubmit, onCancel }: Service
 
     const basePriceNum = parseInt(basePrice, 10);
     const durationNum = parseInt(durationMinutes, 10);
-    const commissionNum = parseInt(commissionBps, 10);
 
-    if (isNaN(basePriceNum) || isNaN(durationNum) || isNaN(commissionNum)) {
+    if (isNaN(basePriceNum) || isNaN(durationNum)) {
       setError(t('serviceForm.validationError'));
       return;
     }
 
-    if (commissionNum < 1500 || commissionNum > 3500) {
-      setError(t('serviceForm.commissionRangeError'));
-      return;
+    // Fix round 3 (task 9, I-4 regression): `commissionBps` is validated and included only when
+    // three things are all true — the field is rendered at all (`canSetCommission`, i.e. the
+    // signed-in admin is a super-admin), the operator actually typed something into it (an empty
+    // field means "no change" on edit / "inherit" on create, never a value to send), and that
+    // value differs from what the service already has (`initial?.commissionBps`). This closes two
+    // problems at once:
+    //   1. The API's field-level guard (`commissionBpsForbidden` in catalogue-admin.ts) 403s any
+    //      non-super-admin request carrying the key at all — so an ops-manager editing a service's
+    //      name or price must never send it, whatever residual state this field happens to hold.
+    //   2. Independently of authorization: before this fix, every edit re-sent whatever number was
+    //      showing (defaulted to 2250 on create) even when the operator never looked at the
+    //      commission field, so a stale or rounded figure could be silently rewritten by an edit
+    //      that had nothing to do with rates. Sending the key only on an actual, deliberate change
+    //      removes that risk regardless of who is submitting.
+    let commissionPatch: { commissionBps: number } | Record<string, never> = {};
+    if (canSetCommission) {
+      const trimmedCommission = commissionBps.trim();
+      if (trimmedCommission !== '') {
+        const commissionNum = parseInt(trimmedCommission, 10);
+        if (isNaN(commissionNum)) {
+          setError(t('serviceForm.validationError'));
+          return;
+        }
+        if (commissionNum < 1500 || commissionNum > 3500) {
+          setError(t('serviceForm.commissionRangeError'));
+          return;
+        }
+        if (commissionNum !== initial?.commissionBps) {
+          commissionPatch = { commissionBps: commissionNum };
+        }
+      }
     }
 
-    // P0-3: this form owns exactly these six fields.
+    // P0-3: this form owns exactly these five fields plus the conditional commissionBps above.
     //
     // On EDIT it must send only them. The update body is a partial patch, so every
     // field omitted here is preserved server-side. Previously this sent `includes`,
@@ -68,8 +109,8 @@ export function ServiceForm({ categoryId, initial, onSubmit, onCancel }: Service
       shortDescription,
       heroImageUrl,
       basePrice: basePriceNum,
-      commissionBps: commissionNum,
       durationMinutes: durationNum,
+      ...commissionPatch,
       // nameHi / shortDescriptionHi are `.min(1)` server-side. An empty string is
       // omitted rather than sent, so a blank Hindi field neither wipes nor rejects.
       ...(nameHi.trim() !== '' ? { nameHi: nameHi.trim() } : {}),
@@ -225,22 +266,26 @@ export function ServiceForm({ categoryId, initial, onSubmit, onCancel }: Service
         />
       </div>
 
-      <div>
-        <label htmlFor="svc-commission" style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, marginBottom: 'var(--space-1)' }}>
-          {t('serviceForm.commissionLabel')}
-        </label>
-        <input
-          id="svc-commission"
-          className="input"
-          type="number"
-          required
-          min={1500}
-          max={3500}
-          value={commissionBps}
-          onChange={(e) => setCommissionBps(e.target.value)}
-          placeholder={t('serviceForm.commissionPlaceholder')}
-        />
-      </div>
+      {canSetCommission && (
+        <div>
+          <label htmlFor="svc-commission" style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, marginBottom: 'var(--space-1)' }}>
+            {t('serviceForm.commissionLabel')}
+          </label>
+          <input
+            id="svc-commission"
+            className="input"
+            type="number"
+            min={1500}
+            max={3500}
+            value={commissionBps}
+            onChange={(e) => setCommissionBps(e.target.value)}
+            placeholder={t('serviceForm.commissionPlaceholder')}
+          />
+          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', margin: 'var(--space-1) 0 0 0' }}>
+            {t('serviceForm.commissionHint')}
+          </p>
+        </div>
+      )}
 
       {error !== null && (
         <p style={{ color: 'var(--color-danger)', fontSize: 'var(--text-sm)', margin: 0 }}>

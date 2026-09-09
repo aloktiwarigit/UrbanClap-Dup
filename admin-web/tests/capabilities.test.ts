@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ADMIN_ROLES,
+  ADMIN_ROUTE_CAPABILITIES,
+  ALL_CAPABILITIES,
+  PRIMARY_NAV_HIDDEN,
   canAccessAdminPath,
   capabilitiesForRole,
+  capabilityForPath,
   defaultPathForRole,
   hasCapability,
   navItemsForRole,
@@ -31,10 +36,13 @@ describe('admin capability matrix', () => {
     expect(hasCapability('ops-manager', 'compliance.manage')).toBe(false);
   });
 
-  it('limits finance to finance read and not payout approval', () => {
-    expect(capabilitiesForRole('finance')).toEqual(['finance.read']);
+  it('limits finance to finance read + settle-commission, and not payout approval', () => {
+    expect(capabilitiesForRole('finance')).toEqual(['finance.read', 'finance.settleCommission']);
     expect(hasCapability('finance', 'finance.approvePayouts')).toBe(false);
-    expect(navItemsForRole('finance').map((item) => item.href)).toEqual(['/finance']);
+    expect(navItemsForRole('finance').map((item) => item.href)).toEqual([
+      '/finance',
+      '/finance/commissions',
+    ]);
   });
 
   it('routes support-agent to not authorized by default', () => {
@@ -58,5 +66,56 @@ describe('admin capability matrix', () => {
     expect(canAccessAdminPath('support-agent', unknownPath)).toBe(false);
     expect(canAccessAdminPath(null, unknownPath)).toBe(false);
     expect(canAccessAdminPath(undefined, unknownPath)).toBe(false);
+  });
+
+  it('finance can settle commissions but cannot manage settings', () => {
+    expect(hasCapability('finance', 'finance.settleCommission')).toBe(true);
+    expect(hasCapability('finance', 'settings.manage')).toBe(false);
+  });
+
+  it('ops-manager can read finance but cannot settle commissions', () => {
+    expect(hasCapability('ops-manager', 'finance.settleCommission')).toBe(false);
+  });
+
+  it('super-admin can manage settings', () => {
+    expect(hasCapability('super-admin', 'settings.manage')).toBe(true);
+  });
+
+  it('every capability in the union is granted to at least one role', () => {
+    for (const cap of ALL_CAPABILITIES) {
+      expect(ADMIN_ROLES.some((r) => hasCapability(r, cap))).toBe(true);
+    }
+  });
+
+  it('every guarded route maps to a capability that exists', () => {
+    for (const { capability } of ADMIN_ROUTE_CAPABILITIES) {
+      if (capability !== null) expect(ALL_CAPABILITIES).toContain(capability);
+    }
+  });
+
+  it('audit log is reachable from the primary rail again', () => {
+    expect(PRIMARY_NAV_HIDDEN.has('/audit-log')).toBe(false);
+    expect(navItemsForRole('super-admin').map((i) => i.href)).toContain('/audit-log');
+  });
+
+  it('commission routes are guarded', () => {
+    expect(canAccessAdminPath('finance', '/finance/commissions')).toBe(true);
+    expect(canAccessAdminPath('support-agent', '/finance/commissions')).toBe(false);
+    expect(canAccessAdminPath('finance', '/settings/commission')).toBe(false);
+    expect(canAccessAdminPath('super-admin', '/settings/commission')).toBe(true);
+  });
+
+  it('resolves /finance/commissions to finance.settleCommission, not the more general /finance prefix', () => {
+    // Regression guard for capabilityForPath's prefix-match ordering: the specific
+    // '/finance/commissions' entry must be listed before the general '/finance'
+    // entry in ADMIN_ROUTE_CAPABILITIES, or the general prefix wins and
+    // finance.read would wrongly authorize the commission console.
+    expect(capabilityForPath('/finance/commissions')).toBe('finance.settleCommission');
+    expect(capabilityForPath('/finance/commissions/settle-123')).toBe('finance.settleCommission');
+    // ops-manager has finance.read but not finance.settleCommission — this only
+    // stays false if the specific prefix is matched first.
+    expect(canAccessAdminPath('ops-manager', '/finance/commissions')).toBe(false);
+    // Plain /finance still resolves to finance.read as before.
+    expect(capabilityForPath('/finance')).toBe('finance.read');
   });
 });

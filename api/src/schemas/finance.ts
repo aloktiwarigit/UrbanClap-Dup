@@ -32,6 +32,14 @@ export const FinanceSummarySchema = z.object({
   totalGross: z.number().nonnegative(),
   totalCommission: z.number().nonnegative(),
   totalNet: z.number().nonnegative(),
+  // Additive (task 10, E21-S03). Sourced from arePayoutsEnabled() (shared/payouts-enabled.ts) —
+  // the same single source of truth the payout-approval endpoint and the prepaid-payout timers
+  // already gate on — so admin-web can hide the Payout Queue for the cash-only pilot instead of
+  // guessing from the absence of an HTTP field. Optional here only so the Cosmos-derived
+  // `getDailyPnL` return value (which knows nothing about env config) still satisfies this type
+  // without constructing it; the HTTP handler (functions/admin/finance/summary.ts) always sets
+  // it, so every real response carries it.
+  payoutsEnabled: z.boolean().optional(),
 });
 export type FinanceSummary = z.infer<typeof FinanceSummarySchema>;
 

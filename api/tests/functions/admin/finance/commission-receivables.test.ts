@@ -281,8 +281,45 @@ describe('adminCommissionReceivablesPerTechHandler', () => {
     expect(body.receivables[0]!.id).toBe('booking-2');
     expect(body.receivables.find((r) => r.id === 'booking-1')!.outstandingPaise).toBe(11000);
     expect(body.receivables.find((r) => r.id === 'booking-2')!.outstandingPaise).toBe(0);
-    expect(body.cashCollectedPaise).toBe(7000); // Σ remittances.amountPaise only
+    // Σ receivables (cashCollectedAmount ?? bookingAmount), NOT Σ remittances.amountPaise (7000) —
+    // see the dedicated pinning test below for a fixture where these two values differ starkly.
+    expect(body.cashCollectedPaise).toBe(100000);
     expect(body.creditAppliedPaise).toBe(4000); // Σ INCENTIVE allocations only, never REMITTANCE
+  });
+
+  it('derives cashCollectedPaise from receivables (cashCollectedAmount ?? bookingAmount), never from remittances', async () => {
+    // Mirrors the technician-facing sibling (commission-view.service.ts). Deliberately construct
+    // a fixture where the remittance-sum formula and the receivable-sum formula give very
+    // different answers, so a regression back to summing remittances fails this test loudly.
+    const receivableWithCashOverride = {
+      ...receivableDue,
+      id: 'booking-5', bookingId: 'booking-5', bookingAmount: 50000, cashCollectedAmount: 30000,
+      createdAt: '2026-08-01T00:00:00.000Z',
+    };
+    const receivableNoCashOverride = {
+      ...receivableDue,
+      id: 'booking-6', bookingId: 'booking-6', bookingAmount: 20000,
+      createdAt: '2026-08-02T00:00:00.000Z',
+    };
+    const unrelatedRemittance = { ...remittance, amountPaise: 999_999 };
+    vi.mocked(commissionReceivableRepo.listLedger).mockResolvedValue({
+      receivables: [receivableWithCashOverride, receivableNoCashOverride],
+      remittances: [unrelatedRemittance],
+      credits: [],
+    });
+    vi.mocked(techRepo.readCommissionHold).mockResolvedValue({ hold, exists: true });
+
+    const res = (await adminCommissionReceivablesPerTechHandler(
+      makeTechReq('tech-1'),
+      {} as never,
+      ctx,
+    )) as HttpResponseInit;
+
+    expect(res.status).toBe(200);
+    const body = res.jsonBody as { cashCollectedPaise: number };
+    // 30000 (cashCollectedAmount override) + 20000 (bookingAmount fallback) = 50000.
+    // Under the old (wrong) formula this would have been 999999 (Σ remittances.amountPaise).
+    expect(body.cashCollectedPaise).toBe(50000);
   });
 
   it('gates per-receivable outstandingPaise on remittanceStatus === DUE: WAIVED and REMITTED read 0, a partially remitted DUE row reads commissionDue - remittedAmount', async () => {
@@ -332,8 +369,10 @@ describe('adminCommissionReceivablesPerTechHandler', () => {
     expect(byId('booking-3').commissionDue).toBe(11000);
     expect(byId('booking-4').commissionDue).toBe(11000);
     expect(byId('booking-4').remittedAmount).toBe(4000);
-    // cash/credit aggregates are untouched by the outstandingPaise gate
-    expect(body.cashCollectedPaise).toBe(7000);
+    // cash/credit aggregates are untouched by the outstandingPaise gate. All four receivables
+    // fall back to bookingAmount (50000 each, no cashCollectedAmount override) -> 200000, NOT the
+    // single remittance's amountPaise (7000).
+    expect(body.cashCollectedPaise).toBe(200000);
     expect(body.creditAppliedPaise).toBe(4000);
   });
 

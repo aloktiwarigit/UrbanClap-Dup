@@ -11,6 +11,13 @@ const ALLOWED_PATHS = new Set([
   '/audit-log',
   '/admin-users',
   '/compliance',
+  // Codex round 2 (P2): `/settings/commission` is route-guarded via
+  // `ADMIN_ROUTE_CAPABILITIES` (settings.manage), but this allowlist matches on the top-level
+  // segment only (see `base` below) — same as '/finance' already covering
+  // '/finance/commissions' above — so '/settings' alone is what's needed to stop a bookmarked
+  // '/settings/commission' (or its locale-prefixed form, '/hi/settings/commission') from
+  // bouncing an unauthenticated super-admin to the role default after login.
+  '/settings',
 ]);
 
 /**

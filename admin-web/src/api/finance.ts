@@ -12,6 +12,10 @@ export interface FinanceSummary {
   totalGross: number;
   totalCommission: number;
   totalNet: number;
+  // Additive (task 10, E21-S03). Sourced server-side from arePayoutsEnabled(); a real response
+  // always sets it, but it stays optional here too so an absent value (an older cached response,
+  // a test double) fails safe as "unknown, don't hide the queue" rather than as "disabled".
+  payoutsEnabled?: boolean;
 }
 
 export interface PayoutQueueEntry {

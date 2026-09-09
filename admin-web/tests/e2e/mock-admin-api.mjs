@@ -92,6 +92,100 @@ let levies = [
   },
 ];
 
+// --- Commissions (E21-S03 task 11) ---------------------------------------
+// A single technician with a single DUE receivable is enough to exercise the
+// full record-payment flow end to end: dashboard row -> ledger detail ->
+// record a partial payment -> outstanding balance drops by exactly the
+// amount recorded, everywhere it's shown (dashboard row, ledger balance
+// stack). Money stays in integer paise throughout, per project convention.
+const commissionConfig = {
+  defaultCommissionBps: 2250,
+  warnThresholdPaise: 150000,
+  blockThresholdPaise: 400000,
+  holdEnforcementEnabled: true,
+  enforceKycInDispatch: true,
+  updatedBy: 'seed',
+  updatedAt: now,
+};
+
+let commissionLedgers = {
+  'tech-1': {
+    technicianId: 'tech-1',
+    hold: {
+      outstandingPaise: 13478,
+      dueCount: 1,
+      oldestDueAt: '2026-04-20T00:00:00.000Z',
+      state: 'CLEAR',
+      evaluatedAt: now,
+    },
+    receivables: [
+      {
+        id: 'r1',
+        bookingId: 'booking-1',
+        technicianId: 'tech-1',
+        partitionKey: 'tech-1',
+        serviceId: 'leak-fix',
+        categoryId: 'plumbing',
+        bookingAmount: 59900,
+        commissionBps: 2250,
+        commissionDue: 13478,
+        commissionResolvedFrom: 'SERVICE',
+        remittanceStatus: 'DUE',
+        createdAt: '2026-04-20T00:00:00.000Z',
+        serviceName: 'Leak Fix',
+        slotDate: '2026-04-20T00:00:00.000Z',
+        collectionMethod: 'CASH',
+        outstandingPaise: 13478,
+      },
+    ],
+    remittances: [],
+    credits: [],
+    cashCollectedPaise: 59900,
+    creditAppliedPaise: 0,
+  },
+};
+
+// idempotencyKey -> the RecordRemittanceResponse it originally produced, so a retried request
+// with the same key replays the original receipt instead of recording a second payment.
+const commissionIdempotencyResponses = new Map();
+
+function commissionDashboardRow(technicianId) {
+  const ledger = commissionLedgers[technicianId];
+  const dueReceivables = ledger.receivables.filter((r) => r.remittanceStatus === 'DUE');
+  return {
+    technicianId,
+    technicianName: technicianId === 'tech-1' ? 'Suresh Kumar' : technicianId,
+    outstandingPaise: ledger.hold.outstandingPaise,
+    dueCount: dueReceivables.length,
+    ...(ledger.hold.oldestDueAt !== undefined ? { oldestDueAt: ledger.hold.oldestDueAt } : {}),
+    state: ledger.hold.state,
+    evaluatedAt: ledger.hold.evaluatedAt,
+    staleAfter: '2026-05-05T00:00:00.000Z',
+    ...(ledger.hold.override !== undefined ? { override: ledger.hold.override } : {}),
+  };
+}
+
+function recomputeLedgerHold(ledger) {
+  const dueReceivables = ledger.receivables.filter((r) => r.remittanceStatus === 'DUE');
+  const outstandingPaise = dueReceivables.reduce((sum, r) => sum + r.outstandingPaise, 0);
+  const oldestDueAt = dueReceivables
+    .map((r) => r.createdAt)
+    .sort()[0];
+  ledger.hold = {
+    ...ledger.hold,
+    outstandingPaise,
+    dueCount: dueReceivables.length,
+    ...(oldestDueAt !== undefined ? { oldestDueAt } : {}),
+    state:
+      outstandingPaise >= commissionConfig.blockThresholdPaise
+        ? 'BLOCKED'
+        : outstandingPaise >= commissionConfig.warnThresholdPaise
+          ? 'WARN'
+          : 'CLEAR',
+    evaluatedAt: now,
+  };
+}
+
 function send(res, status, body) {
   res.writeHead(status, {
     'content-type': 'application/json; charset=utf-8',
@@ -346,6 +440,146 @@ const server = http.createServer(async (req, res) => {
       transferId: 'trf_e2e',
       status: 'TRANSFERRED',
     });
+    return;
+  }
+
+  if (path === '/api/v1/admin/finance/commission-receivables' && req.method === 'GET') {
+    const technicians = Object.keys(commissionLedgers).map(commissionDashboardRow);
+    send(res, 200, {
+      technicians,
+      totalOutstanding: technicians.reduce((sum, t) => sum + t.outstandingPaise, 0),
+      unreconciledTechnicianCount: 0,
+    });
+    return;
+  }
+
+  if (path === '/api/v1/admin/finance/commission-receivables/recompute' && req.method === 'POST') {
+    send(res, 202, {});
+    return;
+  }
+
+  const commissionLedgerMatch = /^\/api\/v1\/admin\/finance\/commission-receivables\/([^/]+)$/.exec(path);
+  if (commissionLedgerMatch && req.method === 'GET') {
+    const ledger = commissionLedgers[commissionLedgerMatch[1]];
+    send(res, ledger ? 200 : 404, ledger ?? { error: 'Technician not found' });
+    return;
+  }
+
+  if (path === '/api/v1/admin/finance/commission-remittances' && req.method === 'POST') {
+    const body = await readJson(req);
+    const { technicianId, amountPaise, method, ref, note, idempotencyKey } = body;
+
+    const replayed = commissionIdempotencyResponses.get(idempotencyKey);
+    if (replayed !== undefined) {
+      send(res, 200, { ...replayed, replayed: true });
+      return;
+    }
+
+    const ledger = commissionLedgers[technicianId];
+    if (!ledger) {
+      send(res, 404, { error: 'Technician not found' });
+      return;
+    }
+
+    // Oldest-due-first allocation, same rule the client previews with (RemittanceDrawer.tsx).
+    const dueReceivables = ledger.receivables
+      .filter((r) => r.remittanceStatus === 'DUE')
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+    let remaining = amountPaise;
+    const allocations = [];
+    for (const r of dueReceivables) {
+      if (remaining <= 0) break;
+      const alloc = Math.min(remaining, r.outstandingPaise);
+      if (alloc <= 0) continue;
+      r.remittedAmount = (r.remittedAmount ?? 0) + alloc;
+      r.outstandingPaise -= alloc;
+      if (r.outstandingPaise === 0) {
+        r.remittanceStatus = 'REMITTED';
+        r.remittedAt = now;
+        r.remittanceRef = ref;
+        r.remittanceMethod = method;
+      }
+      allocations.push({ bookingId: r.bookingId, paise: alloc });
+      remaining -= alloc;
+    }
+    const creditCreatedPaise = Math.max(0, remaining);
+
+    const remittanceRecord = {
+      id: `remit-${ledger.remittances.length + 1}`,
+      docType: 'REMITTANCE',
+      technicianId,
+      partitionKey: technicianId,
+      amountPaise,
+      method,
+      ref,
+      ...(note !== undefined ? { note } : {}),
+      allocations,
+      creditCreatedPaise,
+      recordedByAdminId: 'super-e2e',
+      idempotencyKey,
+      createdAt: now,
+    };
+    ledger.remittances = [...ledger.remittances, remittanceRecord];
+    if (creditCreatedPaise > 0) {
+      ledger.credits = [
+        ...ledger.credits,
+        {
+          id: `credit-${ledger.credits.length + 1}`,
+          docType: 'CREDIT',
+          technicianId,
+          partitionKey: technicianId,
+          source: 'OVERPAYMENT',
+          refId: remittanceRecord.id,
+          originalPaise: creditCreatedPaise,
+          remainingPaise: creditCreatedPaise,
+          consumedBy: [],
+          createdAt: now,
+        },
+      ];
+    }
+    recomputeLedgerHold(ledger);
+
+    const response = {
+      remittance: remittanceRecord,
+      allocations,
+      creditCreatedPaise,
+      hold: ledger.hold,
+      holdRecomputePending: false,
+      replayed: false,
+    };
+    commissionIdempotencyResponses.set(idempotencyKey, response);
+    send(res, 200, response);
+    return;
+  }
+
+  const holdOverrideMatch = /^\/api\/v1\/admin\/finance\/commission-hold\/([^/]+)\/override$/.exec(path);
+  if (holdOverrideMatch && req.method === 'POST') {
+    const body = await readJson(req);
+    const ledger = commissionLedgers[holdOverrideMatch[1]];
+    if (!ledger) {
+      send(res, 404, { error: 'Technician not found' });
+      return;
+    }
+    ledger.hold = { ...ledger.hold, override: { until: body.until, byAdminId: 'super-e2e', reason: body.reason } };
+    send(res, 200, { hold: ledger.hold });
+    return;
+  }
+
+  if (holdOverrideMatch && req.method === 'DELETE') {
+    const ledger = commissionLedgers[holdOverrideMatch[1]];
+    if (!ledger) {
+      send(res, 404, { error: 'Technician not found' });
+      return;
+    }
+    const { override: _override, ...holdWithoutOverride } = ledger.hold;
+    ledger.hold = holdWithoutOverride;
+    send(res, 200, { hold: ledger.hold });
+    return;
+  }
+
+  if (path === '/api/v1/admin/catalogue/commission-config' && req.method === 'GET') {
+    send(res, 200, commissionConfig);
     return;
   }
 

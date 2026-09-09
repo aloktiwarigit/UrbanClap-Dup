@@ -42,6 +42,10 @@ import {
   EffectiveCommissionConfigSchema,
 } from '../schemas/commission-config.js';
 import {
+  TechnicianClientConfigDocSchema,
+  UpdateTechnicianClientConfigBodySchema,
+} from '../schemas/technician-client-config.js';
+import {
   CommissionReceivableEntrySchema,
   MarkCommissionReceivedBodySchema,
   TechnicianCommissionDueV2Schema,
@@ -611,6 +615,33 @@ registry.registerPath({
   responses: {
     200: { description: 'Updated effective commission config', content: { 'application/json': { schema: EffectiveCommissionConfigSchema } } },
     400: { description: 'Validation error (bps out of 1500–3500 range, or warnThresholdPaise >= blockThresholdPaise)' },
+    401: { description: 'Unauthenticated' },
+    403: { description: 'Forbidden (requires super-admin)' },
+  },
+});
+
+registry.register('TechnicianClientConfigDoc', TechnicianClientConfigDocSchema.openapi('TechnicianClientConfigDoc'));
+registry.register('UpdateTechnicianClientConfigBody', UpdateTechnicianClientConfigBodySchema.openapi('UpdateTechnicianClientConfigBody'));
+
+registry.registerPath({
+  method: 'get', path: '/v1/admin/config/technician-client', operationId: 'getTechnicianClientConfig',
+  tags: ['admin-config'], summary: 'Get the technician app feature-flag/version-gate config (defaults applied, never 404)',
+  security: [{ cookieAuth: [] }],
+  responses: {
+    200: { description: 'Effective technician client config, defaults applied for any unset field', content: { 'application/json': { schema: TechnicianClientConfigDocSchema } } },
+    401: { description: 'Unauthenticated' },
+    403: { description: 'Forbidden' },
+  },
+});
+
+registry.registerPath({
+  method: 'put', path: '/v1/admin/config/technician-client', operationId: 'putTechnicianClientConfig',
+  tags: ['admin-config'], summary: 'Update the technician app feature flags and/or minimum supported version code (super-admin only)',
+  security: [{ cookieAuth: [] }],
+  request: { body: { content: { 'application/json': { schema: UpdateTechnicianClientConfigBodySchema } } } },
+  responses: {
+    200: { description: 'Updated technician client config', content: { 'application/json': { schema: TechnicianClientConfigDocSchema } } },
+    400: { description: 'Validation error (unknown field, or empty patch)' },
     401: { description: 'Unauthenticated' },
     403: { description: 'Forbidden (requires super-admin)' },
   },

@@ -11,7 +11,7 @@
 // The update body is now a partial patch, so the fix is for the form to send only
 // the fields it actually owns. These tests pin that payload shape.
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import React from 'react';
 
@@ -19,6 +19,20 @@ vi.mock('next-intl', () => ({
   useTranslations: (ns: string) => (key: string) => `[${ns}.${key}]`,
   useLocale: () => 'en',
 }));
+
+// Fix round 3 (task 9): the form now role-gates the commissionBps field on
+// `auth?.role === 'super-admin'`, mirroring the API's own field-level guard
+// (`commissionBpsForbidden` in catalogue-admin.ts) — see the top-of-file note in
+// ServiceForm.tsx for why this must never send the key at all for a non-super-admin,
+// regardless of what the (unrendered) field's local state happens to hold.
+let mockRole: 'super-admin' | 'ops-manager' = 'super-admin';
+vi.mock('@/lib/auth/context', () => ({
+  useAdminAuth: () => ({ auth: { role: mockRole } }),
+}));
+
+beforeEach(() => {
+  mockRole = 'super-admin';
+});
 
 import { ServiceForm } from '../../../src/components/catalogue/ServiceForm';
 import type { components } from '../../../src/api/generated/schema';
@@ -115,12 +129,15 @@ describe('ServiceForm — edit payload (P0-3)', () => {
     submitForm();
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    // commissionBps is deliberately absent here (fix round 3): the operator (a super-admin in
+    // this test — see the `beforeEach` default) edited price only, never touched the commission
+    // field, so its value is unchanged from `existingService.commissionBps` and must be omitted
+    // — see the dedicated commissionBps describe block below for the full set of cases.
     expect(onSubmit.mock.calls[0]?.[0]).toEqual({
       name: 'AC Deep Clean',
       shortDescription: 'Chemical wash, gas check, filter clean.',
       heroImageUrl: 'https://example.com/svc.jpg',
       basePrice: 99900,
-      commissionBps: 2250,
       durationMinutes: 90,
     });
   });
@@ -211,5 +228,133 @@ describe('ServiceForm — bilingual fields (E22-S01)', () => {
     for (const field of CONTENT_FIELDS) {
       expect(field in payload).toBe(false);
     }
+  });
+});
+
+// Fix round 3 (task 9, I-4 regression): round 2's API guard 403s any non-super-admin request
+// carrying `commissionBps` at all. `ServiceForm.tsx` unconditionally held a value for that field
+// (defaulted to '2250' on create) and sent it on every submit — so after round 2, every
+// ops-manager attempt to create a service, or edit an existing one's name/price/duration/images/
+// Hindi text, started 403ing on a field they never touched. Fixed in the form: role-gate the
+// input to super-admin, and only include the key when it is rendered AND the operator actually
+// changed it. These tests assert on the actual request body `onSubmit` receives, not on what
+// renders.
+describe('ServiceForm — commissionBps is super-admin-only (I-4 regression, fix round 3)', () => {
+  it('hides the commission field entirely from an ops-manager', () => {
+    mockRole = 'ops-manager';
+    render(<ServiceForm categoryId="ac-repair" initial={existingService} onSubmit={vi.fn()} onCancel={vi.fn()} />);
+    expect(screen.queryByLabelText(/serviceForm.commissionLabel/)).not.toBeInTheDocument();
+  });
+
+  it('shows the commission field to a super-admin', () => {
+    render(<ServiceForm categoryId="ac-repair" initial={existingService} onSubmit={vi.fn()} onCancel={vi.fn()} />);
+    expect(screen.getByLabelText(/serviceForm.commissionLabel/)).toBeInTheDocument();
+  });
+
+  it('an ops-manager editing only the name sends no commissionBps key and succeeds', async () => {
+    mockRole = 'ops-manager';
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(<ServiceForm categoryId="ac-repair" initial={existingService} onSubmit={onSubmit} onCancel={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText(/serviceForm.nameLabel/), { target: { value: 'AC Deep Clean Plus' } });
+    submitForm();
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    const payload = onSubmit.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect('commissionBps' in payload).toBe(false);
+    expect(payload.name).toBe('AC Deep Clean Plus');
+  });
+
+  it('a super-admin who does not touch the field also sends no commissionBps key', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(<ServiceForm categoryId="ac-repair" initial={existingService} onSubmit={onSubmit} onCancel={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText(/serviceForm.nameLabel/), { target: { value: 'AC Deep Clean Plus' } });
+    submitForm();
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    const payload = onSubmit.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect('commissionBps' in payload).toBe(false);
+  });
+
+  it('a super-admin who changes the commission field sends the new value', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(<ServiceForm categoryId="ac-repair" initial={existingService} onSubmit={onSubmit} onCancel={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText(/serviceForm.commissionLabel/), { target: { value: '3000' } });
+    submitForm();
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    const payload = onSubmit.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(payload.commissionBps).toBe(3000);
+  });
+
+  it('a super-admin re-typing the same value still omits the key (truly unchanged)', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(<ServiceForm categoryId="ac-repair" initial={existingService} onSubmit={onSubmit} onCancel={vi.fn()} />);
+
+    const commissionInput = screen.getByLabelText(/serviceForm.commissionLabel/);
+    fireEvent.change(commissionInput, { target: { value: '2225' } });
+    fireEvent.change(commissionInput, { target: { value: '2250' } });
+    submitForm();
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    const payload = onSubmit.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect('commissionBps' in payload).toBe(false);
+  });
+
+  it('creating a service as an ops-manager never shows or sends commissionBps', async () => {
+    mockRole = 'ops-manager';
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(<ServiceForm categoryId="ac-repair" onSubmit={onSubmit} onCancel={vi.fn()} />);
+
+    expect(screen.queryByLabelText(/serviceForm.commissionLabel/)).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/serviceForm.idLabel/), { target: { value: 'inverter-install' } });
+    fireEvent.change(screen.getByLabelText(/serviceForm.nameLabel/), { target: { value: 'Inverter Installation' } });
+    fireEvent.change(screen.getByLabelText(/serviceForm.descriptionLabel/), { target: { value: 'Install and commission an inverter.' } });
+    fireEvent.change(screen.getByLabelText(/serviceForm.heroImageLabel/), { target: { value: 'https://example.com/inv.jpg' } });
+    fireEvent.change(screen.getByLabelText(/serviceForm.priceLabel/), { target: { value: '49900' } });
+    fireEvent.change(screen.getByLabelText(/serviceForm.durationLabel/), { target: { value: '120' } });
+    submitForm();
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    const payload = onSubmit.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect('commissionBps' in payload).toBe(false);
+  });
+
+  it('creating a service as a super-admin who leaves the field blank omits the key rather than defaulting to 2250', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(<ServiceForm categoryId="ac-repair" onSubmit={onSubmit} onCancel={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText(/serviceForm.idLabel/), { target: { value: 'inverter-install' } });
+    fireEvent.change(screen.getByLabelText(/serviceForm.nameLabel/), { target: { value: 'Inverter Installation' } });
+    fireEvent.change(screen.getByLabelText(/serviceForm.descriptionLabel/), { target: { value: 'Install and commission an inverter.' } });
+    fireEvent.change(screen.getByLabelText(/serviceForm.heroImageLabel/), { target: { value: 'https://example.com/inv.jpg' } });
+    fireEvent.change(screen.getByLabelText(/serviceForm.priceLabel/), { target: { value: '49900' } });
+    fireEvent.change(screen.getByLabelText(/serviceForm.durationLabel/), { target: { value: '120' } });
+    submitForm();
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    const payload = onSubmit.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect('commissionBps' in payload).toBe(false);
+  });
+
+  it('creating a service as a super-admin who sets a rate sends the deliberate value', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(<ServiceForm categoryId="ac-repair" onSubmit={onSubmit} onCancel={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText(/serviceForm.idLabel/), { target: { value: 'inverter-install' } });
+    fireEvent.change(screen.getByLabelText(/serviceForm.nameLabel/), { target: { value: 'Inverter Installation' } });
+    fireEvent.change(screen.getByLabelText(/serviceForm.descriptionLabel/), { target: { value: 'Install and commission an inverter.' } });
+    fireEvent.change(screen.getByLabelText(/serviceForm.heroImageLabel/), { target: { value: 'https://example.com/inv.jpg' } });
+    fireEvent.change(screen.getByLabelText(/serviceForm.priceLabel/), { target: { value: '49900' } });
+    fireEvent.change(screen.getByLabelText(/serviceForm.durationLabel/), { target: { value: '120' } });
+    fireEvent.change(screen.getByLabelText(/serviceForm.commissionLabel/), { target: { value: '2000' } });
+    submitForm();
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    const payload = onSubmit.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(payload.commissionBps).toBe(2000);
   });
 });

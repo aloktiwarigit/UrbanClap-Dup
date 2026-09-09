@@ -162,21 +162,27 @@ export function FinanceClient() {
         )}
       </section>
 
-      <section aria-labelledby="payout-heading">
-        <h2 id="payout-heading" className="sr-only">Payout Queue</h2>
-        {queueLoading && (
-          <p className="text-sm text-[var(--color-text-muted)]">{t('loading.queue')}</p>
-        )}
-        {!queueLoading && queue && (
-          <PayoutQueueTable
-            entries={queue.entries}
-            totalNetPayable={queue.totalNetPayable}
-            canApproveAll={canApprovePayouts}
-            onApproveAll={() => setShowModal(true)}
-            locale={locale}
-          />
-        )}
-      </section>
+      {/* `summary === null` is "still loading", not "permitted" — treating it as permitted let the
+          queue (and its approve controls) flash briefly whenever the queue request resolved before
+          the summary request did, since `payoutsEnabled: false` hadn't arrived yet to hide it. Only
+          render once the summary has loaded and does not report payouts disabled. */}
+      {summary !== null && summary.payoutsEnabled !== false && (
+        <section aria-labelledby="payout-heading">
+          <h2 id="payout-heading" className="sr-only">Payout Queue</h2>
+          {queueLoading && (
+            <p className="text-sm text-[var(--color-text-muted)]">{t('loading.queue')}</p>
+          )}
+          {!queueLoading && queue && (
+            <PayoutQueueTable
+              entries={queue.entries}
+              totalNetPayable={queue.totalNetPayable}
+              canApproveAll={canApprovePayouts}
+              onApproveAll={() => setShowModal(true)}
+              locale={locale}
+            />
+          )}
+        </section>
+      )}
 
       {showModal && queue && (
         <ApproveAllModal

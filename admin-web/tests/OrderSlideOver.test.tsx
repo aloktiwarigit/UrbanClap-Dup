@@ -17,6 +17,8 @@ vi.mock('next-intl', () => ({
       'detail.sections.payment': 'Payment',
       'detail.sections.created': 'Created',
       'detail.sections.evidencePhotos': 'Job Photos',
+      'detail.sections.auditLog': 'Audit trail',
+      'detail.auditLogLink': 'View audit trail',
       'detail.sections.actions.heading': 'Actions',
       'detail.sections.actions.noPermission': 'Your role can review this order but cannot run operational overrides.',
       'detail.toast.success': 'Action completed successfully.',
@@ -112,5 +114,30 @@ describe('OrderSlideOver', () => {
     render(<OrderSlideOver order={order} onClose={onClose} />);
     fireEvent.click(screen.getByLabelText('Close slide-over'));
     expect(onClose).toHaveBeenCalled();
+  });
+
+  // Fix round (P2): the audit-trail link is gated on `canViewAuditLog` — a role holding
+  // `audit.read` (e.g. super-admin) sees it, and it points at the right resource.
+  it('links an order to its audit trail when the caller holds audit.read', () => {
+    render(<OrderSlideOver order={order} onClose={vi.fn()} canViewAuditLog />);
+    expect(screen.getByRole('link', { name: /audit/i })).toHaveAttribute(
+      'href',
+      expect.stringContaining(`/audit-log?resourceType=booking&resourceId=${order.id}`),
+    );
+  });
+
+  // Fix round (P2): `ops-manager` can open this drawer (`orders.read`/`orders.override`) but does
+  // not hold `audit.read` — rendering the link unconditionally sent that role to a 403 every time.
+  // The caller passes `canViewAuditLog={false}` for such a role (see `OrdersClient`'s
+  // `hasCapability(auth?.role, 'audit.read')`); the default with no prop at all must also hide it.
+  it('hides the audit-trail link for a role without audit.read', () => {
+    render(<OrderSlideOver order={order} onClose={vi.fn()} canViewAuditLog={false} />);
+    expect(screen.queryByRole('link', { name: /audit/i })).not.toBeInTheDocument();
+    expect(screen.queryByText('Audit trail')).not.toBeInTheDocument();
+  });
+
+  it('hides the audit-trail link when canViewAuditLog is not passed at all (safe default)', () => {
+    render(<OrderSlideOver order={order} onClose={vi.fn()} />);
+    expect(screen.queryByRole('link', { name: /audit/i })).not.toBeInTheDocument();
   });
 });
