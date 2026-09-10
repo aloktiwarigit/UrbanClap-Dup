@@ -12,6 +12,7 @@ vi.mock('../../src/cosmos/client.js', () => ({
   }),
 }));
 const { commissionReceivableRepo } = await import('../../src/cosmos/commission-receivable-repository.js');
+const { incentiveRepo } = await import('../../src/cosmos/incentive-repository.js');
 
 export const awardDoc = {
   id: 'inc:t1:2026-W37', docType: 'INCENTIVE_AWARD', technicianId: 't1', partitionKey: 't1',
@@ -57,5 +58,92 @@ describe('listLedger', () => {
   it('returns an empty awards array when the technician has never been awarded', async () => {
     fetchAll.mockResolvedValue({ resources: [{ id: 'b1', bookingId: 'b1' }] });
     expect((await commissionReceivableRepo.listLedger('t1')).awards).toEqual([]);
+  });
+});
+
+describe('incentiveRepo — single-partition reads', () => {
+  it('lists awards newest-first, and [] when there are none', async () => {
+    fetchAll.mockResolvedValue({ resources: [
+      { ...awardDoc, id: 'inc:t1:2026-W37', weekKey: '2026-W37', computedAt: '2026-09-14T00:30:00.000Z' },
+      { ...awardDoc, id: 'inc:t1:2026-W36', weekKey: '2026-W36', computedAt: '2026-09-07T00:30:00.000Z' },
+    ] });
+    expect((await incentiveRepo.listAwards('t1')).map((a) => a.weekKey)).toEqual(['2026-W37', '2026-W36']);
+    fetchAll.mockResolvedValue({ resources: [] });
+    expect(await incentiveRepo.listAwards('t1')).toEqual([]);
+  });
+  it('getAwardWithEtag returns the doc plus the etag the reconciler needs, or null', async () => {
+    itemRead.mockResolvedValue({ resource: awardDoc, etag: '"v7"' });
+    expect(await incentiveRepo.getAwardWithEtag('t1', 'inc:t1:2026-W37')).toEqual({ doc: awardDoc, etag: '"v7"' });
+    itemRead.mockResolvedValue({ resource: undefined });
+    expect(await incentiveRepo.getAwardWithEtag('t1', 'inc:t1:2026-W37')).toBeNull();
+  });
+});
+
+describe('incentiveRepo.listAwardsCrossPartition', () => {
+  it('returns one page and passes the continuation token through', async () => {
+    hasMoreResults.mockReturnValue(true);
+    fetchNext.mockResolvedValue({ resources: [awardDoc], continuationToken: 'ct-2' });
+    const out = await incentiveRepo.listAwardsCrossPartition({ weekKey: '2026-W37', technicianId: 't1' });
+    expect(out).toMatchObject({ continuationToken: 'ct-2' });
+    expect(out.awards).toHaveLength(1);
+  });
+  it('omits continuationToken on the last page and never calls fetchNext when already done', async () => {
+    hasMoreResults.mockReturnValue(true);
+    fetchNext.mockResolvedValue({ resources: [awardDoc], continuationToken: undefined });
+    expect(await incentiveRepo.listAwardsCrossPartition({})).not.toHaveProperty('continuationToken');
+    vi.mocked(fetchNext).mockClear();
+    hasMoreResults.mockReturnValue(false);
+    expect(await incentiveRepo.listAwardsCrossPartition({})).toEqual({ awards: [] });
+    expect(fetchNext).not.toHaveBeenCalled();
+  });
+});
+
+describe('incentiveRepo.sumAppliedByIstDay', () => {
+  it('buckets appliedPaise by the IST calendar day of computedAt', async () => {
+    fetchAll.mockResolvedValue({ resources: [
+      { appliedPaise: 30_000, computedAt: '2026-09-13T19:00:00.000Z' }, // Mon 2026-09-14 00:30 IST
+      { appliedPaise: 10_000, computedAt: '2026-09-13T19:05:00.000Z' },
+      { appliedPaise: 5_000,  computedAt: '2026-09-06T19:00:00.000Z' }, // Mon 2026-09-07 00:30 IST
+    ] });
+    const m = await incentiveRepo.sumAppliedByIstDay('2026-09-01', '2026-09-30');
+    expect([m.get('2026-09-14'), m.get('2026-09-07'), m.size]).toEqual([40_000, 5_000, 2]);
+  });
+  it('skips a malformed row rather than putting NaN on the owner P&L', async () => {
+    fetchAll.mockResolvedValue({ resources: [
+      { appliedPaise: null, computedAt: '2026-09-13T19:00:00.000Z' },
+      { appliedPaise: 100, computedAt: undefined },
+      { appliedPaise: 700, computedAt: '2026-09-13T19:00:00.000Z' },
+    ] });
+    const m = await incentiveRepo.sumAppliedByIstDay('2026-09-01', '2026-09-30');
+    expect(m.get('2026-09-14')).toBe(700);
+    expect([...m.values()].every(Number.isFinite)).toBe(true);
+  });
+});
+
+describe('commissionReceivableRepo.listTechnicianIdsWithReceivablesInWindow', () => {
+  it('drains every page of the GROUP BY aggregate', async () => {
+    hasMoreResults.mockReturnValueOnce(true).mockReturnValueOnce(true).mockReturnValue(false);
+    fetchNext
+      .mockResolvedValueOnce({ resources: [{ technicianId: 't1', receivableCount: 3 }] })
+      .mockResolvedValueOnce({ resources: [{ technicianId: 't2', receivableCount: 1 }] });
+    expect(await commissionReceivableRepo.listTechnicianIdsWithReceivablesInWindow(
+      '2026-09-06T18:30:00.000Z', '2026-09-13T18:30:00.000Z',
+    )).toEqual([{ technicianId: 't1', receivableCount: 3 }, { technicianId: 't2', receivableCount: 1 }]);
+  });
+  it('SURVIVES a page whose resources is undefined, not []', async () => {
+    // Cosmos returns `resources: undefined` on aggregate GROUP BY pages while hasMoreResults()
+    // stays true. An idealised mock returning [] hid exactly this as a production 500 behind
+    // 1,935 green tests; spreading it unguarded throws "page.resources is not iterable".
+    hasMoreResults.mockReturnValueOnce(true).mockReturnValueOnce(true).mockReturnValue(false);
+    fetchNext
+      .mockResolvedValueOnce({ resources: undefined })
+      .mockResolvedValueOnce({ resources: [{ technicianId: 't1', receivableCount: 2 }] });
+    expect(await commissionReceivableRepo.listTechnicianIdsWithReceivablesInWindow('a', 'b'))
+      .toEqual([{ technicianId: 't1', receivableCount: 2 }]);
+  });
+  it('returns [] when every page is undefined', async () => {
+    hasMoreResults.mockReturnValueOnce(true).mockReturnValue(false);
+    fetchNext.mockResolvedValueOnce({ resources: undefined });
+    expect(await commissionReceivableRepo.listTechnicianIdsWithReceivablesInWindow('a', 'b')).toEqual([]);
   });
 });

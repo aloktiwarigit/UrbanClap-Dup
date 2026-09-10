@@ -246,4 +246,36 @@ export const commissionReceivableRepo = {
     }
     return groups;
   },
+
+  /**
+   * Every technician who booked at least one receivable in `[fromIso, toIsoExclusive)` — the
+   * roster the weekly incentive run iterates. Same drain-the-iterator shape, and the same
+   * `resources ?? []` guard, as `sumDueGroupedByTechnician` above: Cosmos cannot page a
+   * cross-partition GROUP BY with continuation tokens, and its pages come back with
+   * `resources: undefined` rather than `[]` while `hasMoreResults()` stays true.
+   */
+  // SEMGREP-JUSTIFIED: cross-partition GROUP BY by design — the weekly incentive roster.
+  // Callers are the requireAdmin run handler and the app.timer; both bounds are server-derived
+  // from a regex-validated ISO week key and bound as query parameters.
+  async listTechnicianIdsWithReceivablesInWindow(
+    fromIso: string, toIsoExclusive: string,
+  ): Promise<Array<{ technicianId: string; receivableCount: number }>> {
+    const iterator = getCommissionReceivablesContainer()
+      .items.query<{ technicianId: string; receivableCount: number }>(
+        {
+          query:
+            `SELECT c.technicianId, COUNT(1) AS receivableCount FROM c ` +
+            `WHERE ${RECEIVABLE_FILTER} AND c.createdAt >= @from AND c.createdAt < @to ` +
+            `GROUP BY c.technicianId`,
+          parameters: [{ name: '@from', value: fromIso }, { name: '@to', value: toIsoExclusive }],
+        },
+        { maxItemCount: 100 },
+      );
+    const groups: Array<{ technicianId: string; receivableCount: number }> = [];
+    while (iterator.hasMoreResults()) {
+      const page = await iterator.fetchNext();
+      groups.push(...(page.resources ?? []));
+    }
+    return groups;
+  },
 };
