@@ -9,6 +9,13 @@ import {
   HOLD_RECONCILIATION_SUMMARY_DOC_ID,
   type HoldReconciliationSummaryDoc,
 } from '../schemas/hold-reconciliation-summary.js';
+import {
+  INCENTIVE_CONFIG_DOC_ID as INCENTIVE_CONFIG_ID,
+  toEffectiveIncentiveConfig,
+  type IncentiveConfigDoc as EffectiveIncentiveConfigDoc,
+  type EffectiveIncentiveConfig,
+  type UpdateIncentiveConfigBody,
+} from '../schemas/incentive.js';
 
 const HOLD_REPAIR_DOC_ID = 'hold-repair';
 const HOLD_REPAIR_MAX_IDS = 5000;
@@ -97,6 +104,37 @@ export const systemDocsRepo = {
       .item(INCENTIVE_CONFIG_DOC_ID, INCENTIVE_CONFIG_DOC_ID)
       .read<IncentiveConfigDoc>();
     return resource ?? null;
+  },
+
+  /** Defaults-applied read. Never 404s — an unwritten doc means "incentives are dark". */
+  async getEffectiveIncentiveConfig(): Promise<EffectiveIncentiveConfig> {
+    const { resource } = await getSystemContainer()
+      .item(INCENTIVE_CONFIG_ID, INCENTIVE_CONFIG_ID)
+      .read<EffectiveIncentiveConfigDoc>();
+    return toEffectiveIncentiveConfig(resource ?? null);
+  },
+
+  /**
+   * Field-scoped read-merge under IfMatch — NOT a whole-doc upsert. A PUT naming only
+   * `capFractionBps` must leave `enabled` and `milestones` exactly as they were (spec §5.3;
+   * this is the bug `upsertCommissionConfig` shipped with). `milestones` is the one exception:
+   * replaced wholesale, because the admin editor submits the whole table.
+   */
+  async patchIncentiveConfig(
+    body: UpdateIncentiveConfigBody,
+    updatedBy: string,
+  ): Promise<EffectiveIncentiveConfig> {
+    const merged = await readMergeWrite<EffectiveIncentiveConfigDoc & { id: typeof INCENTIVE_CONFIG_ID }>(
+      INCENTIVE_CONFIG_ID,
+      (resource) => ({
+        ...(resource ?? { id: INCENTIVE_CONFIG_ID }),
+        id: INCENTIVE_CONFIG_ID,
+        ...definedOnly(body),
+        updatedBy,
+        updatedAt: new Date().toISOString(),
+      }),
+    );
+    return toEffectiveIncentiveConfig(merged);
   },
 
   async enqueueHoldRepair(ids: string[] | 'ALL'): Promise<void> {
