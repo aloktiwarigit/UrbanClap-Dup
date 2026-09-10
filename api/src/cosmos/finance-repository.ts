@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { getCosmosClient, DB_NAME } from './client.js';
+import { incentiveRepo } from './incentive-repository.js';
 import type { DailyPnLEntry, FinanceSummary, PayoutQueue, PayoutQueueEntry } from '../schemas/finance.js';
 
 interface CompletedBooking {
@@ -136,17 +137,38 @@ export async function getDailyPnL(from: string, to: string): Promise<FinanceSumm
     byDate.set(date, { gross: existing.gross + gross, commission: existing.commission + commission });
   }
 
+  // Reporting endpoint: a failure in the incentive query must degrade this line to zero, never
+  // take down the owner's whole dashboard.
+  const incentiveByDay = await incentiveRepo.sumAppliedByIstDay(from, to).catch(() => new Map<string, number>());
+
+  // Union of booking days and award days. An award landing on a Monday 00:30, before anyone has
+  // completed a job, would otherwise have no row at all and its cost would silently vanish.
+  for (const day of incentiveByDay.keys()) {
+    if (!byDate.has(day)) byDate.set(day, { gross: 0, commission: 0 });
+  }
+
   const dailyPnL: DailyPnLEntry[] = [];
   let totalGross = 0;
   let totalCommission = 0;
+  let totalIncentiveCost = 0;
 
   for (const [date, { gross, commission }] of [...byDate.entries()].sort()) {
-    dailyPnL.push({ date, grossRevenue: gross, commission, netToOwner: gross - commission });
+    const incentiveCostPaise = incentiveByDay.get(date) ?? 0;
+    dailyPnL.push({
+      date, grossRevenue: gross, commission,
+      ...(incentiveCostPaise > 0 ? { incentiveCostPaise } : {}),
+      netToOwner: gross - commission - incentiveCostPaise,
+    });
     totalGross += gross;
     totalCommission += commission;
+    totalIncentiveCost += incentiveCostPaise;
   }
 
-  return { dailyPnL, totalGross, totalCommission, totalNet: totalGross - totalCommission };
+  return {
+    dailyPnL, totalGross, totalCommission,
+    ...(totalIncentiveCost > 0 ? { totalIncentiveCost } : {}),
+    totalNet: totalGross - totalCommission - totalIncentiveCost,
+  };
 }
 
 export async function getPayoutQueue(weekStart: string, weekEnd: string): Promise<PayoutQueue> {

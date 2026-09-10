@@ -9,7 +9,13 @@ export const DailyPnLEntrySchema = z.object({
     .refine(isValidCalendarDate, { message: 'must be a valid calendar date' }),
   grossRevenue: z.number().nonnegative(),
   commission: z.number().nonnegative(),
-  netToOwner: z.number().nonnegative(),
+  // WIDENED (E23-S01): an incentive applied on a day with no completed bookings makes the day's
+  // net legitimately negative. Read paths only widen (spec §3.3), so `.nonnegative()` comes off
+  // rather than the value being clamped and the owner shown a wrong zero.
+  netToOwner: z.number(),
+  /** Additive: commission offset by incentive credits that IST day. Optional so the
+   *  Cosmos-derived FinanceSummary still satisfies this type before the field is set. */
+  incentiveCostPaise: z.number().int().nonnegative().optional(),
 });
 export type DailyPnLEntry = z.infer<typeof DailyPnLEntrySchema>;
 
@@ -31,7 +37,11 @@ export const FinanceSummarySchema = z.object({
   dailyPnL: z.array(DailyPnLEntrySchema),
   totalGross: z.number().nonnegative(),
   totalCommission: z.number().nonnegative(),
-  totalNet: z.number().nonnegative(),
+  // WIDENED (E23-S01): see DailyPnLEntrySchema.netToOwner — a day's award with no bookings can
+  // push the aggregate negative too.
+  totalNet: z.number(),
+  /** Additive: sum of the day-level incentiveCostPaise entries over the range. */
+  totalIncentiveCost: z.number().nonnegative().optional(),
   // Additive (task 10, E21-S03). Sourced from arePayoutsEnabled() (shared/payouts-enabled.ts) —
   // the same single source of truth the payout-approval endpoint and the prepaid-payout timers
   // already gate on — so admin-web can hide the Payout Queue for the cash-only pilot instead of
