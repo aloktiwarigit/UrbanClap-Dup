@@ -67,6 +67,7 @@ vi.mock('next-intl', () => ({
       'settings.rates.statusInherited': 'Inherited',
       'settings.rates.setOverride': 'Save',
       'settings.rates.clearOverride': 'Inherit global',
+      'settings.rates.clearOverrideService': 'Inherit category/global',
       'settings.rates.serviceOverridesHeading': 'Service overrides',
       'settings.rates.noServiceOverrides': 'No services currently carry a commission override.',
       'settings.enforcement.heading': 'Enforcement',
@@ -601,7 +602,7 @@ describe('CommissionSettingsClient', () => {
     // appears as the (uninherited) category table's own row, so this asserts at least one match
     // rather than a single one.
     expect(screen.getAllByText('AC Repair').length).toBeGreaterThan(0);
-    await user.click(screen.getByRole('button', { name: 'Inherit global' }));
+    await user.click(screen.getByRole('button', { name: 'Inherit category/global' }));
 
     await waitFor(() => {
       expect(updateServiceCommission).toHaveBeenCalledWith('ac-deep-clean', null);

@@ -466,6 +466,11 @@ export function CommissionSettingsClient({
   // division of labor — see the `initialServices` prop doc comment).
   async function handleClearService(serviceId: string) {
     setServiceSavingId(serviceId);
+    // Codex P3: a prior failed clear left servicesError set, and nothing ever reset
+    // it, so the roster's failure banner stayed visible even after a later retry
+    // succeeded. Clear it at the start of every attempt so stale state never
+    // outlives the action that produced it.
+    setServicesError(null);
     try {
       const updated = await updateServiceCommission(serviceId, null);
       setServices((prev) => prev?.map((s) => (s.id === serviceId ? updated : s)) ?? prev);
@@ -705,7 +710,11 @@ export function CommissionSettingsClient({
                                     disabled={saving}
                                     className="px-2 py-1 rounded border border-[var(--color-border)] text-xs text-[var(--color-text-muted)] disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
                                   >
-                                    {t('settings.rates.clearOverride')}
+                                    {/* Codex P3: services fall back to their category's rate before
+                                        global, so reusing the category table's "Inherit global" label
+                                        here would mislead an operator when the category ALSO carries an
+                                        override. A dedicated key states the real chain. */}
+                                    {t('settings.rates.clearOverrideService')}
                                   </button>
                                 </td>
                               </tr>

@@ -755,6 +755,7 @@
         "statusInherited": "Inherited",
         "setOverride": "Save",
         "clearOverride": "Inherit global",
+        "clearOverrideService": "Inherit category/global",
         "serviceOverridesHeading": "Service overrides",
         "noServiceOverrides": "No services currently carry a commission override."
       },

@@ -755,6 +755,7 @@
         "statusInherited": "इनहेरिटेड",
         "setOverride": "सहेजें",
         "clearOverride": "वैश्विक दर अपनाएँ",
+        "clearOverrideService": "श्रेणी/वैश्विक दर अपनाएँ",
         "serviceOverridesHeading": "सेवा ओवरराइड",
         "noServiceOverrides": "फ़िलहाल किसी भी सेवा पर कमीशन ओवरराइड नहीं है।"
       },
