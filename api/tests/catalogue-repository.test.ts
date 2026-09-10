@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { _setCosmosClientForTest } from '../src/cosmos/client.js';
+import { _setCosmosClientForTest, getCatalogueContainers } from '../src/cosmos/client.js';
 import { CatalogueRepository } from '../src/cosmos/catalogue-repository.js';
 import type { ServiceCategory } from '../src/schemas/service-category.js';
 import type { Service } from '../src/schemas/service.js';
@@ -100,6 +100,19 @@ describe('CatalogueRepository', () => {
   it('getServiceByIdCrossPartition returns service', async () => {
     const result = await repo.getServiceByIdCrossPartition('ac-deep-clean');
     expect(result?.basePrice).toBe(59900);
+  });
+
+  // Issue #334: listAllServices backs the commission-settings override roster, which must
+  // show inactive services too -- unlike listAllActiveServices, its query carries no
+  // "isActive" filter at all.
+  it('listAllServices returns every service regardless of isActive', async () => {
+    const result = await repo.listAllServices();
+    expect(result).toHaveLength(1);
+    expect(result[0]?.id).toBe('ac-deep-clean');
+    const { services } = getCatalogueContainers();
+    const queryArg = vi.mocked(services.items.query).mock.calls[0]?.[0];
+    const queryText = typeof queryArg === 'string' ? queryArg : JSON.stringify(queryArg);
+    expect(queryText).not.toContain('isActive');
   });
 
   it('upsertCategory calls items.upsert', async () => {

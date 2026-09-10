@@ -161,9 +161,15 @@ export async function toggleCategoryHandler(req: HttpRequest, _ctx: InvocationCo
 
 export async function listAdminServicesHandler(req: HttpRequest, _ctx: InvocationContext, _admin: AdminContext): Promise<HttpResponseInit> {
   const categoryId = req.query.get('categoryId') ?? undefined;
+  // Issue #334: includeInactive is used only by the commission-settings override
+  // roster (admin-web CommissionSettingsClient) -- every other caller of this
+  // route omits the param and keeps today's active-only behavior unchanged.
+  const includeInactive = req.query.get('includeInactive') === 'true';
   const services = categoryId
     ? await catalogueRepo.listServicesByCategory(categoryId)
-    : await catalogueRepo.listAllActiveServices();
+    : includeInactive
+      ? await catalogueRepo.listAllServices()
+      : await catalogueRepo.listAllActiveServices();
   return { status: 200, headers: JSON_HEADERS, jsonBody: { services } };
 }
 

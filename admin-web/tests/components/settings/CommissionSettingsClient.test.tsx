@@ -6,8 +6,10 @@ import type {
   CommissionConfig,
   TechnicianClientConfig,
   AdminServiceCategory,
+  AdminService,
 } from '../../../src/api/commissions';
 import enMessages from '../../../messages/en.json';
+import hiMessages from '../../../messages/hi.json';
 
 // task-9 brief + design doc §6. This is the settings page where the owner changes commission
 // rates, hold thresholds, and the technician app's feature flags — three sections kept
@@ -31,6 +33,7 @@ vi.mock('next-intl', () => ({
       'settings.errors.configLoadFailed': 'Could not load the commission configuration.',
       'settings.errors.featuresLoadFailed': 'Could not load the technician app feature flags.',
       'settings.errors.categoriesLoadFailed': 'Could not load the per-category rate table.',
+      'settings.errors.servicesLoadFailed': 'Could not load the service-overrides roster.',
       'settings.errors.rowsLoadFailed': 'Threshold impact unavailable — could not load technician balances.',
       'settings.errors.rateSaveFailed': 'Could not save the commission rate. Try again.',
       'settings.errors.thresholdOrder': 'The warn threshold must be below the block threshold.',
@@ -39,11 +42,13 @@ vi.mock('next-intl', () => ({
       'settings.errors.holdEnforcementSaveFailed': 'Could not save the hold enforcement setting. Try again.',
       'settings.errors.featuresSaveFailed': 'Could not save the technician app features. Try again.',
       'settings.errors.categorySaveFailed': "Could not save this category's rate. Try again.",
+      'settings.errors.serviceClearFailed': "Could not clear the service's commission override. Try again.",
       'settings.messages.rateSaved': 'Commission rate saved.',
       'settings.messages.enforcementSaved': 'Enforcement settings saved.',
       'settings.messages.holdEnforcementSaved': 'Hold enforcement setting saved.',
       'settings.messages.featuresSaved': 'Technician app features saved.',
       'settings.messages.categorySaved': 'Category rate saved.',
+      'settings.messages.serviceCleared': 'Service commission override cleared.',
       'settings.updatedBy': 'Last changed by {actor} · {date}',
       'settings.rates.heading': 'Rates',
       'settings.rates.globalLabel': 'Global commission rate (%)',
@@ -57,10 +62,14 @@ vi.mock('next-intl', () => ({
       'settings.rates.columns.effectiveRate': 'Effective rate',
       'settings.rates.columns.status': 'Status',
       'settings.rates.columns.override': 'Override (%)',
+      'settings.rates.columns.service': 'Service',
       'settings.rates.statusOverride': 'Override',
       'settings.rates.statusInherited': 'Inherited',
       'settings.rates.setOverride': 'Save',
       'settings.rates.clearOverride': 'Inherit global',
+      'settings.rates.clearOverrideService': 'Inherit category/global',
+      'settings.rates.serviceOverridesHeading': 'Service overrides',
+      'settings.rates.noServiceOverrides': 'No services currently carry a commission override.',
       'settings.enforcement.heading': 'Enforcement',
       'settings.enforcement.warnLabel': 'Warn threshold (₹)',
       'settings.enforcement.blockLabel': 'Block threshold (₹)',
@@ -107,7 +116,9 @@ const {
   fetchTechnicianClientConfig,
   updateTechnicianClientConfig,
   fetchAdminCategories,
+  fetchAdminServices,
   updateCategoryCommission,
+  updateServiceCommission,
   fetchCommissionDashboard,
 } = vi.hoisted(() => ({
   fetchCommissionConfig: vi.fn(),
@@ -115,7 +126,9 @@ const {
   fetchTechnicianClientConfig: vi.fn(),
   updateTechnicianClientConfig: vi.fn(),
   fetchAdminCategories: vi.fn(),
+  fetchAdminServices: vi.fn(),
   updateCategoryCommission: vi.fn(),
+  updateServiceCommission: vi.fn(),
   fetchCommissionDashboard: vi.fn(),
 }));
 vi.mock('@/api/commissions', () => ({
@@ -124,7 +137,9 @@ vi.mock('@/api/commissions', () => ({
   fetchTechnicianClientConfig,
   updateTechnicianClientConfig,
   fetchAdminCategories,
+  fetchAdminServices,
   updateCategoryCommission,
+  updateServiceCommission,
   fetchCommissionDashboard,
 }));
 
@@ -181,6 +196,27 @@ function category(overrides: Partial<AdminServiceCategory> = {}): AdminServiceCa
   };
 }
 
+function service(overrides: Partial<AdminService> = {}): AdminService {
+  return {
+    id: 'ac-deep-clean',
+    categoryId: 'ac-repair',
+    name: 'AC Deep Clean',
+    shortDescription: 'Deep clean of AC unit',
+    heroImageUrl: 'https://example.com/svc.jpg',
+    basePrice: 59900,
+    durationMinutes: 90,
+    includes: [],
+    faq: [],
+    addOns: [],
+    photoStages: [],
+    isActive: true,
+    updatedBy: 'admin-1',
+    createdAt: '2026-09-01T00:00:00.000Z',
+    updatedAt: '2026-09-01T00:00:00.000Z',
+    ...overrides,
+  };
+}
+
 function enforcementRegion() {
   return screen.getByRole('region', { name: 'Enforcement' });
 }
@@ -212,7 +248,16 @@ beforeEach(() => {
   fetchTechnicianClientConfig.mockReset();
   updateTechnicianClientConfig.mockReset();
   fetchAdminCategories.mockReset();
+  fetchAdminServices.mockReset();
+  // Unlike `fetchAdminCategories` (every test below seeds `initialCategories`, so its mount-time
+  // fetch never actually runs except in the one test that deliberately exercises it),
+  // `fetchAdminServices` needs a safe default: most tests below don't seed `initialServices`, so
+  // omitting this would make `loadServices`' mount effect resolve `undefined` in every one of them
+  // and crash the roster's render. Tests that care about roster contents seed `initialServices`
+  // directly (bypassing this fetch); tests that care about the fetch path override this mock.
+  fetchAdminServices.mockResolvedValue([]);
   updateCategoryCommission.mockReset();
+  updateServiceCommission.mockReset();
   fetchCommissionDashboard.mockReset();
 });
 
@@ -505,6 +550,69 @@ describe('CommissionSettingsClient', () => {
     expect(await screen.findByText('Inherited')).toBeInTheDocument();
   });
 
+  it('renders a service overrides section listing every service with commissionBps set', () => {
+    render(
+      <CommissionSettingsClient
+        initialConfig={config()}
+        initialTechnicianConfig={techConfig()}
+        initialCategories={[]}
+        initialServices={[
+          service({ id: 'ac-deep-clean', name: 'AC Deep Clean', commissionBps: 2900 }),
+          service({ id: 'tap-repair', name: 'Tap Repair' }),
+        ]}
+        rows={[]}
+      />,
+    );
+
+    expect(screen.getByText('AC Deep Clean')).toBeInTheDocument();
+    expect(screen.queryByText('Tap Repair')).not.toBeInTheDocument();
+  });
+
+  it('shows a "no overrides" message when no service carries a commission override', () => {
+    render(
+      <CommissionSettingsClient
+        initialConfig={config()}
+        initialTechnicianConfig={techConfig()}
+        initialCategories={[]}
+        initialServices={[service()]}
+        rows={[]}
+      />,
+    );
+
+    expect(
+      screen.getByText('No services currently carry a commission override.'),
+    ).toBeInTheDocument();
+  });
+
+  it('clicking Clear on a service override calls updateServiceCommission with null', async () => {
+    const user = userEvent.setup();
+    updateServiceCommission.mockResolvedValue(service());
+    render(
+      <CommissionSettingsClient
+        initialConfig={config()}
+        initialTechnicianConfig={techConfig()}
+        initialCategories={[category()]}
+        initialServices={[service({ commissionBps: 2900 })]}
+        rows={[]}
+      />,
+    );
+
+    expect(screen.getByText('AC Deep Clean')).toBeInTheDocument();
+    // Category lookup by `categoryId` against the loaded `categories` roster. "AC Repair" also
+    // appears as the (uninherited) category table's own row, so this asserts at least one match
+    // rather than a single one.
+    expect(screen.getAllByText('AC Repair').length).toBeGreaterThan(0);
+    await user.click(screen.getByRole('button', { name: 'Inherit category/global' }));
+
+    await waitFor(() => {
+      expect(updateServiceCommission).toHaveBeenCalledWith('ac-deep-clean', null);
+    });
+    expect(await screen.findByText('Service commission override cleared.')).toBeInTheDocument();
+    expect(
+      screen.getByText('No services currently carry a commission override.'),
+    ).toBeInTheDocument();
+  });
+
   it('saves technician app features', async () => {
     const user = userEvent.setup();
     updateTechnicianClientConfig.mockResolvedValue(
@@ -543,6 +651,30 @@ describe('CommissionSettingsClient', () => {
 
     expect(
       await screen.findByText('Could not load the per-category rate table.'),
+    ).toBeInTheDocument();
+    // The rest of the page — including the global rate editor fed by the same section — must
+    // still render and work, per the "fetch independently and degrade" rule.
+    expect(screen.getByLabelText('Global commission rate (%)')).toBeInTheDocument();
+    expect(within(enforcementRegion()).getByLabelText('Warn threshold (₹)')).toBeInTheDocument();
+  });
+
+  // Mirrors the categories-fetch-failure test above, for `loadServices`'s mount-effect path
+  // (task 8): omitting `initialServices` is what makes the real mount effect call the (mocked)
+  // `fetchAdminServices` in the first place — every other services-roster test above seeds
+  // `initialServices` directly and so never exercises `loadServices` at all.
+  it('scopes a services-fetch failure to the service-overrides roster and keeps the rest of the page usable', async () => {
+    fetchAdminServices.mockRejectedValue(new Error('boom'));
+    render(
+      <CommissionSettingsClient
+        initialConfig={config()}
+        initialTechnicianConfig={techConfig()}
+        initialCategories={[]}
+        rows={[]}
+      />,
+    );
+
+    expect(
+      await screen.findByText('Could not load the service-overrides roster.'),
     ).toBeInTheDocument();
     // The rest of the page — including the global rate editor fed by the same section — must
     // still render and work, per the "fetch independently and degrade" rule.
@@ -598,15 +730,15 @@ describe('CommissionSettingsClient', () => {
 // the most expensive copy on this page (design doc §6 ruling + the brief's money-boundary
 // warning), so they are pinned here by reading the real message file directly.
 describe('the real messages/en.json copy (not the mocked dictionary above)', () => {
-  function messageAt(path: string): string {
+  function messageAt(path: string, source: unknown = enMessages, sourceName = 'messages/en.json'): string {
     const value = path.split('.').reduce<unknown>((acc, key) => {
       if (acc !== null && typeof acc === 'object' && key in (acc as Record<string, unknown>)) {
         return (acc as Record<string, unknown>)[key];
       }
       return undefined;
-    }, enMessages);
+    }, source);
     if (typeof value !== 'string') {
-      throw new Error(`messages/en.json is missing a string at "${path}"`);
+      throw new Error(`${sourceName} is missing a string at "${path}"`);
     }
     return value;
   }
@@ -638,5 +770,24 @@ describe('the real messages/en.json copy (not the mocked dictionary above)', () 
 
   it('states the threshold-order rule as warn below block, matching the client-side check', () => {
     expect(messageAt('commissions.settings.errors.thresholdOrder')).toMatch(/warn.*below.*block/i);
+  });
+
+  // Issue #334 task 7: proves the new service-overrides-roster keys exist as real, translated
+  // strings in BOTH message files — not a mock. The Hindi assertions in particular guard against
+  // the exact `nameHiLabel`-shaped gap this repo has hit before (English fallback text pasted into
+  // messages/hi.json): each key is checked against the real hi.json import, not a mocked
+  // dictionary, and (separately, in tests/i18n/commissions.i18n.test.tsx) the whole `commissions`
+  // namespace is already checked for byte-identical en/hi values.
+  it('every new settings.rates/messages/errors key for the service-overrides roster exists as a real string in both en and hi message files', () => {
+    for (const path of [
+      'commissions.settings.rates.serviceOverridesHeading',
+      'commissions.settings.rates.noServiceOverrides',
+      'commissions.settings.rates.columns.service',
+      'commissions.settings.messages.serviceCleared',
+      'commissions.settings.errors.serviceClearFailed',
+    ]) {
+      expect(messageAt(path)).toEqual(expect.any(String));
+      expect(messageAt(path, hiMessages, 'messages/hi.json')).toEqual(expect.any(String));
+    }
   });
 });

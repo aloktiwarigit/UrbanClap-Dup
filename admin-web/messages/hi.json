@@ -723,14 +723,17 @@
         "enforcementSaveFailed": "प्रवर्तन सेटिंग्स सहेजी नहीं जा सकीं। पुनः प्रयास करें।",
         "holdEnforcementSaveFailed": "होल्ड प्रवर्तन सेटिंग सहेजी नहीं जा सकी। पुनः प्रयास करें।",
         "featuresSaveFailed": "तकनीशियन ऐप फ़ीचर सहेजे नहीं जा सके। पुनः प्रयास करें।",
-        "categorySaveFailed": "इस श्रेणी की दर सहेजी नहीं जा सकी। पुनः प्रयास करें।"
+        "categorySaveFailed": "इस श्रेणी की दर सहेजी नहीं जा सकी। पुनः प्रयास करें।",
+        "servicesLoadFailed": "सेवा-ओवरराइड सूची लोड नहीं हो सकी।",
+        "serviceClearFailed": "सेवा का कमीशन ओवरराइड हटाया नहीं जा सका। पुनः प्रयास करें।"
       },
       "messages": {
         "rateSaved": "कमीशन दर सहेजी गई।",
         "enforcementSaved": "प्रवर्तन सेटिंग्स सहेजी गईं।",
         "holdEnforcementSaved": "होल्ड प्रवर्तन सेटिंग सहेजी गई।",
         "featuresSaved": "तकनीशियन ऐप फ़ीचर सहेजे गए।",
-        "categorySaved": "श्रेणी दर सहेजी गई।"
+        "categorySaved": "श्रेणी दर सहेजी गई।",
+        "serviceCleared": "सेवा कमीशन ओवरराइड हटाया गया।"
       },
       "updatedBy": "अंतिम बार {actor} द्वारा {date} को बदला गया",
       "rates": {
@@ -745,12 +748,16 @@
           "category": "श्रेणी",
           "effectiveRate": "प्रभावी दर",
           "status": "स्थिति",
-          "override": "ओवरराइड (%)"
+          "override": "ओवरराइड (%)",
+          "service": "सेवा"
         },
         "statusOverride": "ओवरराइड",
         "statusInherited": "इनहेरिटेड",
         "setOverride": "सहेजें",
-        "clearOverride": "वैश्विक दर अपनाएँ"
+        "clearOverride": "वैश्विक दर अपनाएँ",
+        "clearOverrideService": "श्रेणी/वैश्विक दर अपनाएँ",
+        "serviceOverridesHeading": "सेवा ओवरराइड",
+        "noServiceOverrides": "फ़िलहाल किसी भी सेवा पर कमीशन ओवरराइड नहीं है।"
       },
       "enforcement": {
         "heading": "प्रवर्तन",

@@ -1996,6 +1996,7 @@ export interface operations {
         parameters: {
             query?: {
                 categoryId?: string;
+                includeInactive?: boolean;
             };
             header?: never;
             path?: never;
@@ -2150,8 +2151,7 @@ export interface operations {
                     heroImageUrl?: string;
                     /** @description Price in paise (₹599 = 59900) */
                     basePrice?: number;
-                    /** @description Commission override in basis points (2250 = 22.5%). Optional (E21-S01): when absent, the booking falls through to the category override, then the global default. */
-                    commissionBps?: number;
+                    commissionBps?: number | null;
                     durationMinutes?: number;
                     includes?: string[];
                     faq?: {

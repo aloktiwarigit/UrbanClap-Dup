@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { extendZodWithOpenApi } from '@asteasolutions/zod-to-openapi';
+import { CommissionBpsSchema } from './commission-config.js';
 
 extendZodWithOpenApi(z);
 
@@ -156,6 +157,16 @@ export const CreateServiceBodySchema = rejectPriceInProse(
  * The route is still PUT for client compatibility, but the body is a partial patch.
  * Sending an explicit `[]` still clears a field: omission and clearing are distinct.
  */
+/**
+ * Issue #334: `commissionBps` is widened to `.nullable()` on this WRITE body only,
+ * mirroring `UpdateCategoryBodySchema` in service-category.ts:44-58 for the exact
+ * same reason — a service-level override outranks category and global (see the
+ * doc comment on `ServiceSchema.commissionBps` above), and until now had no way to
+ * express "clear this override and inherit again." `ServiceSchema` itself (the
+ * stored/read shape) is untouched; see `CatalogueRepository.updateService`
+ * (catalogue-repository.ts) for how `null` is interpreted as "delete this key"
+ * rather than written as a literal null.
+ */
 export const UpdateServiceBodySchema = rejectPriceInProse(
   ServiceSchema.omit({
     id: true,
@@ -164,7 +175,11 @@ export const UpdateServiceBodySchema = rejectPriceInProse(
     updatedBy: true,
     createdAt: true,
     updatedAt: true,
-  }).partial(),
+  })
+    .partial()
+    .extend({
+      commissionBps: CommissionBpsSchema.nullable().optional(),
+    }),
 );
 
 export type Service = z.infer<typeof ServiceSchema>;

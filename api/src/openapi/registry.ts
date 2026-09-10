@@ -274,7 +274,14 @@ registry.registerPath({
 registry.registerPath({
   method: 'get', path: '/v1/admin/catalogue/services', operationId: 'adminListServices',
   tags: ['admin-catalogue'], summary: 'List services (admin, includes inactive)',
-  parameters: [{ name: 'categoryId', in: 'query', required: false, schema: { type: 'string' } }],
+  // `includeInactive` (issue #334, WS-B) was added to the handler + repository in
+  // listAdminServicesHandler but never registered here — the generated admin-web client had no
+  // typed way to send it. Documented here so the OpenAPI doc (and the client generated from it)
+  // matches what the handler already accepts.
+  parameters: [
+    { name: 'categoryId', in: 'query', required: false, schema: { type: 'string' } },
+    { name: 'includeInactive', in: 'query', required: false, schema: { type: 'boolean' } },
+  ],
   responses: { 200: { description: 'Services list', content: { 'application/json': { schema: z.object({ services: z.array(AdminService) }) } } } },
 });
 

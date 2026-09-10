@@ -723,14 +723,17 @@
         "enforcementSaveFailed": "Could not save enforcement settings. Try again.",
         "holdEnforcementSaveFailed": "Could not save the hold enforcement setting. Try again.",
         "featuresSaveFailed": "Could not save the technician app features. Try again.",
-        "categorySaveFailed": "Could not save this category's rate. Try again."
+        "categorySaveFailed": "Could not save this category's rate. Try again.",
+        "servicesLoadFailed": "Could not load the service-overrides roster.",
+        "serviceClearFailed": "Could not clear the service's commission override. Try again."
       },
       "messages": {
         "rateSaved": "Commission rate saved.",
         "enforcementSaved": "Enforcement settings saved.",
         "holdEnforcementSaved": "Hold enforcement setting saved.",
         "featuresSaved": "Technician app features saved.",
-        "categorySaved": "Category rate saved."
+        "categorySaved": "Category rate saved.",
+        "serviceCleared": "Service commission override cleared."
       },
       "updatedBy": "Last changed by {actor} · {date}",
       "rates": {
@@ -745,12 +748,16 @@
           "category": "Category",
           "effectiveRate": "Effective rate",
           "status": "Status",
-          "override": "Override (%)"
+          "override": "Override (%)",
+          "service": "Service"
         },
         "statusOverride": "Override",
         "statusInherited": "Inherited",
         "setOverride": "Save",
-        "clearOverride": "Inherit global"
+        "clearOverride": "Inherit global",
+        "clearOverrideService": "Inherit category/global",
+        "serviceOverridesHeading": "Service overrides",
+        "noServiceOverrides": "No services currently carry a commission override."
       },
       "enforcement": {
         "heading": "Enforcement",

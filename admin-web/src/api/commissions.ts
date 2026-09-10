@@ -40,6 +40,10 @@ export type UpdateTechnicianClientConfigParams = NonNullable<
 // alongside the other rate-editing calls rather than in a new module for two functions.
 export type AdminServiceCategory = components['schemas']['AdminServiceCategory'];
 
+// Same rationale as `AdminServiceCategory` above: the catalogue service document, used only for
+// the one field this app edits on it (`commissionBps`) via `updateServiceCommission` below.
+export type AdminService = components['schemas']['AdminService'];
+
 export interface RecordRemittanceParams {
   technicianId: string;
   amountPaise: number;
@@ -161,6 +165,20 @@ export async function fetchAdminCategories(): Promise<AdminServiceCategory[]> {
   return data.categories;
 }
 
+// Services list, including inactive ones. Only the commission-settings service-overrides roster
+// (issue #334, WS-B/task 8) needs `includeInactive` — a service that had an override set before
+// being deactivated must still show up so the operator can see/clear it — so it's hard-coded true
+// here rather than exposed as a parameter; every other prospective caller of this endpoint would
+// want the default active-only behavior and should keep calling the handler directly with no
+// query param (or add its own fetch function) rather than reuse this one.
+export async function fetchAdminServices(): Promise<AdminService[]> {
+  const result = await getBrowserClient().GET('/v1/admin/catalogue/services', {
+    params: { query: { includeInactive: true } },
+  });
+  const data = unwrap(result, 'GET');
+  return data.services;
+}
+
 /**
  * Sets, changes, or clears a category's commission-rate override.
  *
@@ -176,6 +194,24 @@ export async function updateCategoryCommission(
 ): Promise<AdminServiceCategory> {
   const result = await getBrowserClient().PUT('/v1/admin/catalogue/categories/{id}', {
     params: { path: { id: categoryId } },
+    body: { commissionBps },
+  });
+  return unwrap(result, 'PUT');
+}
+
+/**
+ * Sets, changes, or clears a service's commission-rate override.
+ *
+ * Mirrors `updateCategoryCommission` above: `commissionBps: null` clears the override so the
+ * service goes back to inheriting its category's rate (or the global default if the category
+ * has none). A number sets/replaces the override.
+ */
+export async function updateServiceCommission(
+  serviceId: string,
+  commissionBps: number | null,
+): Promise<AdminService> {
+  const result = await getBrowserClient().PUT('/v1/admin/catalogue/services/{id}', {
+    params: { path: { id: serviceId } },
     body: { commissionBps },
   });
   return unwrap(result, 'PUT');

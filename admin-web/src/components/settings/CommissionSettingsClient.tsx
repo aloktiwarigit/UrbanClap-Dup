@@ -9,11 +9,14 @@ import {
   fetchTechnicianClientConfig,
   updateTechnicianClientConfig,
   fetchAdminCategories,
+  fetchAdminServices,
   updateCategoryCommission,
+  updateServiceCommission,
   fetchCommissionDashboard,
   type CommissionConfig,
   type TechnicianClientConfig,
   type AdminServiceCategory,
+  type AdminService,
   type CommissionDashboardRow,
 } from '@/api/commissions';
 import { thresholdImpact } from '@/lib/commissions/derive';
@@ -35,6 +38,11 @@ export interface CommissionSettingsClientProps {
   initialConfig?: CommissionConfig;
   initialTechnicianConfig?: TechnicianClientConfig;
   initialCategories?: AdminServiceCategory[];
+  // Service-overrides roster (issue #334 read-surface + wiring tasks). Same seed/mount-fetch split
+  // as `initialCategories` above: omitting this fetches on mount via `loadServices`, which calls
+  // `fetchAdminServices` (includeInactive: true, so an override on a since-deactivated service
+  // stays visible here even though it would not show up in the active-only lists elsewhere).
+  initialServices?: AdminService[];
   // Threshold-impact source rows (design doc §6 ruling, task-9 brief): `/settings/commission` is
   // a separate route from `/finance/commissions` with its own client and no shared state, so this
   // component fetches the dashboard itself (one extra GET) rather than receiving rows from a
@@ -132,6 +140,7 @@ export function CommissionSettingsClient({
   initialConfig,
   initialTechnicianConfig,
   initialCategories,
+  initialServices,
   rows: initialRows,
   rowsPartial: initialRowsPartial = false,
 }: CommissionSettingsClientProps) {
@@ -183,6 +192,13 @@ export function CommissionSettingsClient({
   const categoryDraftsInitialized = useRef(false);
   const [categoryDrafts, setCategoryDrafts] = useState<Record<string, string>>({});
   const [categorySavingId, setCategorySavingId] = useState<string | null>(null);
+
+  // Service-overrides roster: read + clear only (no draft input — setting a service's rate is
+  // ServiceForm's job, not this roster's). See `loadServices` below and the `initialServices` prop
+  // doc comment above for how this gets populated.
+  const [services, setServices] = useState<AdminService[] | null>(initialServices ?? null);
+  const [servicesError, setServicesError] = useState<string | null>(null);
+  const [serviceSavingId, setServiceSavingId] = useState<string | null>(null);
 
   const [dashboardRows, setDashboardRows] = useState<ThresholdImpactRow[] | undefined>(initialRows);
   const [rowsError, setRowsError] = useState<string | null>(null);
@@ -239,6 +255,16 @@ export function CommissionSettingsClient({
     }
   }, [t]);
 
+  const loadServices = useCallback(async () => {
+    setServicesError(null);
+    try {
+      const list = await fetchAdminServices();
+      setServices(list);
+    } catch {
+      setServicesError(t('settings.errors.servicesLoadFailed'));
+    }
+  }, [t]);
+
   const loadRows = useCallback(async () => {
     setRowsError(null);
     try {
@@ -255,6 +281,7 @@ export function CommissionSettingsClient({
     if (initialConfig === undefined) void loadConfig();
     if (initialTechnicianConfig === undefined) void loadFeatures();
     if (initialCategories === undefined) void loadCategories();
+    if (initialServices === undefined) void loadServices();
     if (initialRows === undefined) void loadRows();
     // Mount-only, and only when authorized — see the load* functions' own doc note.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -434,6 +461,28 @@ export function CommissionSettingsClient({
     }
   }
 
+  // Mirrors `handleClearCategory` above, minus the draft-input bookkeeping: the roster has no
+  // settable draft, only clear (setting a service's rate happens in ServiceForm, per the existing
+  // division of labor — see the `initialServices` prop doc comment).
+  async function handleClearService(serviceId: string) {
+    setServiceSavingId(serviceId);
+    // Codex P3: a prior failed clear left servicesError set, and nothing ever reset
+    // it, so the roster's failure banner stayed visible even after a later retry
+    // succeeded. Clear it at the start of every attempt so stale state never
+    // outlives the action that produced it.
+    setServicesError(null);
+    try {
+      const updated = await updateServiceCommission(serviceId, null);
+      setServices((prev) => prev?.map((s) => (s.id === serviceId ? updated : s)) ?? prev);
+      show(t('settings.messages.serviceCleared'), 'success');
+    } catch {
+      setServicesError(t('settings.errors.serviceClearFailed'));
+      show(t('settings.errors.serviceClearFailed'), 'error');
+    } finally {
+      setServiceSavingId(null);
+    }
+  }
+
   if (!canManage) {
     return (
       <div className="p-[var(--space-6)]">
@@ -607,6 +656,75 @@ export function CommissionSettingsClient({
                   </table>
                 </div>
               )}
+            </div>
+
+            <div className="mt-[var(--space-6)]">
+              <h2 className="text-[length:var(--text-base)] font-semibold text-[var(--color-text)]">
+                {t('settings.rates.serviceOverridesHeading')}
+              </h2>
+              {servicesError !== null && (
+                <p className="text-xs text-[var(--color-warn)]">{servicesError}</p>
+              )}
+              {services !== null &&
+                (() => {
+                  const overridden = services.filter((s) => s.commissionBps !== undefined);
+                  if (overridden.length === 0) {
+                    return (
+                      <p className="text-[length:var(--text-sm)] text-[var(--color-text-muted)]">
+                        {t('settings.rates.noServiceOverrides')}
+                      </p>
+                    );
+                  }
+                  return (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-[length:var(--text-sm)]">
+                        <thead>
+                          <tr className="text-left text-xs text-[var(--color-text-muted)]">
+                            <th scope="col">{t('settings.rates.columns.service')}</th>
+                            <th scope="col">{t('settings.rates.columns.category')}</th>
+                            <th scope="col" className="text-right">
+                              {t('settings.rates.columns.effectiveRate')}
+                            </th>
+                            <th scope="col">{t('settings.rates.columns.override')}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {overridden.map((service) => {
+                            const saving = serviceSavingId === service.id;
+                            const categoryName =
+                              categories?.find((c) => c.id === service.categoryId)?.name ??
+                              service.categoryId;
+                            return (
+                              <tr key={service.id} className="border-t border-[var(--color-border)]">
+                                <td className="py-[var(--space-2)] text-[var(--color-text)]">
+                                  {service.name}
+                                </td>
+                                <td className="text-[var(--color-text-muted)]">{categoryName}</td>
+                                <td className="text-right font-mono tabular-nums text-[var(--color-text)]">
+                                  {formatBpsAsPercent(service.commissionBps!)}%
+                                </td>
+                                <td>
+                                  <button
+                                    type="button"
+                                    onClick={() => void handleClearService(service.id)}
+                                    disabled={saving}
+                                    className="px-2 py-1 rounded border border-[var(--color-border)] text-xs text-[var(--color-text-muted)] disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+                                  >
+                                    {/* Codex P3: services fall back to their category's rate before
+                                        global, so reusing the category table's "Inherit global" label
+                                        here would mislead an operator when the category ALSO carries an
+                                        override. A dedicated key states the real chain. */}
+                                    {t('settings.rates.clearOverrideService')}
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                })()}
             </div>
           </>
         )}
