@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import { getCosmosClient, DB_NAME } from './client.js';
-import { incentiveRepo } from './incentive-repository.js';
 import type { DailyPnLEntry, FinanceSummary, PayoutQueue, PayoutQueueEntry } from '../schemas/finance.js';
 
 interface CompletedBooking {
@@ -124,6 +123,59 @@ async function queryCompletedBookings(from: string, to: string): Promise<Complet
   return (resources ?? []) as CompletedBooking[];
 }
 
+interface IncentiveAwardCostRow {
+  appliedPaise: number;
+  computedAt: string;
+}
+
+/**
+ * Sums `appliedPaise` per RAW UTC calendar day of `computedAt` — one day-bucketing
+ * convention shared with every other row in this P&L.
+ *
+ * Deliberately NOT `incentiveRepo.sumAppliedByIstDay` (Task 6), which buckets by IST
+ * calendar day. That is a real mismatch, not a rounding nit: for any award computed between
+ * 18:30 and 23:59:59.999 UTC, the IST calendar day is already the next day, while bookings in
+ * this same function are bucketed by raw UTC day (`completedAt.slice(0, 10)`, below). Merging
+ * an IST-keyed sum into a UTC-keyed map by treating the two date strings as interchangeable
+ * silently moves that window's incentive cost onto the wrong day-row.
+ *
+ * `sumAppliedByIstDay`'s IST bucketing is baked into its query-window math (it always shifts
+ * by exactly `IST_OFFSET_MS`), so no choice of input range can make it emit UTC-aligned
+ * buckets, and it only returns pre-aggregated per-day sums — not raw award timestamps — so a
+ * UTC-day figure cannot be recovered from its output after the fact either. Rather than change
+ * that function's IST semantics (a reasonable aggregate a future IST-facing caller may still
+ * want), this P&L-specific lookup re-derives the UTC day per award itself, exactly the way
+ * `queryCompletedBookings` below does for bookings. The `docType = 'INCENTIVE_AWARD'` filter
+ * duplicates incentive-repository.ts's private `AWARD_FILTER` rather than importing it, to keep
+ * this fix scoped to this file.
+ */
+async function queryIncentiveCostByUtcDay(from: string, to: string): Promise<Map<string, number>> {
+  const { resources } = await getCosmosClient()
+    .database(DB_NAME)
+    .container('commission_receivables')
+    .items.query<IncentiveAwardCostRow>({
+      query: `SELECT c.appliedPaise, c.computedAt
+              FROM c
+              WHERE c.docType = 'INCENTIVE_AWARD'
+                AND c.computedAt >= @from
+                AND c.computedAt <= @toEnd`,
+      parameters: [
+        { name: '@from', value: `${from}T00:00:00.000Z` },
+        { name: '@toEnd', value: `${to}T23:59:59.999Z` },
+      ],
+    })
+    .fetchAll();
+
+  const byDay = new Map<string, number>();
+  for (const r of resources ?? []) {
+    // A malformed row must never turn the owner's netToOwner into NaN.
+    if (typeof r?.appliedPaise !== 'number' || typeof r?.computedAt !== 'string') continue;
+    const day = r.computedAt.slice(0, 10);
+    byDay.set(day, (byDay.get(day) ?? 0) + r.appliedPaise);
+  }
+  return byDay;
+}
+
 export async function getDailyPnL(from: string, to: string): Promise<FinanceSummary> {
   const bookings = await queryCompletedBookings(from, to);
   const recorded = await queryRecordedCommission(bookings.map((b) => b.id));
@@ -139,7 +191,7 @@ export async function getDailyPnL(from: string, to: string): Promise<FinanceSumm
 
   // Reporting endpoint: a failure in the incentive query must degrade this line to zero, never
   // take down the owner's whole dashboard.
-  const incentiveByDay = await incentiveRepo.sumAppliedByIstDay(from, to).catch(() => new Map<string, number>());
+  const incentiveByDay = await queryIncentiveCostByUtcDay(from, to).catch(() => new Map<string, number>());
 
   // Union of booking days and award days. An award landing on a Monday 00:30, before anyone has
   // completed a job, would otherwise have no row at all and its cost would silently vanish.
