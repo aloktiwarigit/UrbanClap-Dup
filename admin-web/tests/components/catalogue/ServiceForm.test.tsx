@@ -357,4 +357,36 @@ describe('ServiceForm — commissionBps is super-admin-only (I-4 regression, fix
     const payload = onSubmit.mock.calls[0]?.[0] as Record<string, unknown>;
     expect(payload.commissionBps).toBe(2000);
   });
+
+  // Issue #334: an emptied field means two different things depending on history --
+  // "never had an override, still don't" (no-op, omit the key, pinned above) vs.
+  // "had one, now clear it" (must send an explicit null so the API deletes the
+  // stored key -- omission cannot express this under PATCH semantics).
+  it('emptying a previously-set commission field sends commissionBps: null', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(<ServiceForm categoryId="ac-repair" initial={existingService} onSubmit={onSubmit} onCancel={vi.fn()} />);
+
+    const commissionInput = screen.getByLabelText(/serviceForm.commissionLabel/);
+    fireEvent.change(commissionInput, { target: { value: '' } });
+    submitForm();
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    const payload = onSubmit.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(payload.commissionBps).toBeNull();
+  });
+
+  it('leaving an already-empty commission field empty still sends nothing (no regression)', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const serviceWithoutCommission = {
+      ...existingService,
+      commissionBps: undefined,
+    } as unknown as AdminService;
+    render(<ServiceForm categoryId="ac-repair" initial={serviceWithoutCommission} onSubmit={onSubmit} onCancel={vi.fn()} />);
+
+    submitForm();
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    const payload = onSubmit.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect('commissionBps' in payload).toBe(false);
+  });
 });

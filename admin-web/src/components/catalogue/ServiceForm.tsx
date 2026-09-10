@@ -77,10 +77,19 @@ export function ServiceForm({ categoryId, initial, onSubmit, onCancel }: Service
     //      commission field, so a stale or rounded figure could be silently rewritten by an edit
     //      that had nothing to do with rates. Sending the key only on an actual, deliberate change
     //      removes that risk regardless of who is submitting.
-    let commissionPatch: { commissionBps: number } | Record<string, never> = {};
+    // Issue #334: an emptied field means two different things depending on history --
+    // "never had an override, still don't" (no-op, omit the key) vs. "had one, now
+    // clear it" (send an explicit null so the API deletes the stored key -- see
+    // UpdateServiceBodySchema's doc comment in service.ts and CatalogueRepository
+    // .updateService for why omission cannot express this under PATCH semantics).
+    let commissionPatch: { commissionBps: number | null } | Record<string, never> = {};
     if (canSetCommission) {
       const trimmedCommission = commissionBps.trim();
-      if (trimmedCommission !== '') {
+      if (trimmedCommission === '') {
+        if (initial?.commissionBps !== undefined) {
+          commissionPatch = { commissionBps: null };
+        }
+      } else {
         const commissionNum = parseInt(trimmedCommission, 10);
         if (isNaN(commissionNum)) {
           setError(t('serviceForm.validationError'));
