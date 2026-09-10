@@ -6,6 +6,7 @@ import {
   type CommissionReceivableCreateInput,
 } from '../schemas/commission-receivable.js';
 import type { RemittanceDoc, CreditDoc } from '../schemas/commission-ledger.js';
+import type { IncentiveAwardDoc } from '../schemas/incentive.js';
 import { mergeAllocation, type OutstandingRow } from '../services/commission-allocator.service.js';
 
 const RECEIVABLE_FILTER = `(NOT IS_DEFINED(c.docType) OR c.docType = 'RECEIVABLE')`;
@@ -117,6 +118,7 @@ export const commissionReceivableRepo = {
     receivables: CommissionReceivableEntry[];
     remittances: RemittanceDoc[];
     credits: CreditDoc[];
+    awards: IncentiveAwardDoc[];
   }> {
     const { resources } = await getCommissionReceivablesContainer()
       .items.query<Record<string, unknown>>(
@@ -127,13 +129,15 @@ export const commissionReceivableRepo = {
     const receivables: CommissionReceivableEntry[] = [];
     const remittances: RemittanceDoc[] = [];
     const credits: CreditDoc[] = [];
+    const awards: IncentiveAwardDoc[] = [];
     for (const d of resources) {
       const t = (d['docType'] as string | undefined) ?? 'RECEIVABLE';
       if (t === 'RECEIVABLE') receivables.push(d as unknown as CommissionReceivableEntry);
       else if (t === 'REMITTANCE') remittances.push(d as unknown as RemittanceDoc);
       else if (t === 'CREDIT') credits.push(d as unknown as CreditDoc);
+      else if (t === 'INCENTIVE_AWARD') awards.push(d as unknown as IncentiveAwardDoc);
     }
-    return { receivables, remittances, credits };
+    return { receivables, remittances, credits, awards };
   },
 
   async getRemittance(technicianId: string, id: string): Promise<RemittanceDoc | null> {

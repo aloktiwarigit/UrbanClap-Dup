@@ -262,6 +262,7 @@ describe('adminCommissionReceivablesPerTechHandler', () => {
       receivables: [receivableDue, receivableWithIncentive],
       remittances: [remittance],
       credits: [],
+      awards: [],
     });
     vi.mocked(techRepo.readCommissionHold).mockResolvedValue({ hold, exists: true });
 
@@ -313,6 +314,7 @@ describe('adminCommissionReceivablesPerTechHandler', () => {
       receivables: [receivableWithCashOverride, receivableNoCashOverride],
       remittances: [unrelatedRemittance],
       credits: [],
+      awards: [],
     });
     vi.mocked(techRepo.readCommissionHold).mockResolvedValue({ hold, exists: true });
 
@@ -352,6 +354,7 @@ describe('adminCommissionReceivablesPerTechHandler', () => {
       receivables: [receivableDue, receivableWithIncentive, receivableWaived, receivablePartial],
       remittances: [remittance],
       credits: [],
+      awards: [],
     });
     vi.mocked(techRepo.readCommissionHold).mockResolvedValue({ hold, exists: true });
 
