@@ -64,18 +64,25 @@ const categoryWithOverride: ServiceCategory = {
   commissionBps: 2500,
 };
 
+// Issue #334: mirrors categoryWithOverride above -- a service that already carries
+// an explicit commission override, used by the clear-the-override tests below.
+const serviceWithOverride: Service = {
+  ...richService,
+  commissionBps: 2900,
+};
+
 const replaceSpy = vi.fn();
 const catUpsertSpy = vi.fn();
 
-function makeMockClient(category: ServiceCategory = richCategory) {
+function makeMockClient(category: ServiceCategory = richCategory, service: Service = richService) {
   const svcContainer = {
     item: vi.fn().mockReturnValue({
-      read: vi.fn().mockResolvedValue({ resource: richService }),
-      replace: replaceSpy.mockResolvedValue({ resource: richService }),
+      read: vi.fn().mockResolvedValue({ resource: service }),
+      replace: replaceSpy.mockResolvedValue({ resource: service }),
     }),
     items: {
       query: vi.fn().mockReturnValue({
-        fetchAll: vi.fn().mockResolvedValue({ resources: [richService] }),
+        fetchAll: vi.fn().mockResolvedValue({ resources: [service] }),
       }),
       create: vi.fn(),
       upsert: vi.fn(),
@@ -291,6 +298,46 @@ describe('P0-3 — repository merge preserves untouched content', () => {
       const written = catUpsertSpy.mock.calls[0]?.[0] as ServiceCategory;
       expect('commissionBps' in written).toBe(false);
       expect(written.name).toBe('AC Service');
+    });
+  });
+
+  // Issue #334: service-side mirror of the category commissionBps three-way contract above --
+  // a number SETS the override, an omitted field LEAVES it unchanged, and an explicit `null`
+  // REMOVES the stored key so the service inherits category/global commission again.
+  describe('commissionBps: set / leave-unchanged / clear (service)', () => {
+    it('a numeric commissionBps sets the override', async () => {
+      await repo.updateService('ac-deep-clean', { commissionBps: 2750 }, 'admin-1');
+
+      const written = replaceSpy.mock.calls[0]?.[0] as Service;
+      expect(written.commissionBps).toBe(2750);
+    });
+
+    it('an omitted commissionBps leaves an existing override unchanged', async () => {
+      _setCosmosClientForTest(makeMockClient(richCategory, serviceWithOverride));
+
+      await repo.updateService('ac-deep-clean', { name: 'AC Deep Clean Plus' }, 'admin-1');
+
+      const written = replaceSpy.mock.calls[0]?.[0] as Service;
+      expect(written.commissionBps).toBe(serviceWithOverride.commissionBps);
+    });
+
+    it('an explicit null commissionBps removes the key so the service inherits category/global again', async () => {
+      _setCosmosClientForTest(makeMockClient(richCategory, serviceWithOverride));
+
+      await repo.updateService('ac-deep-clean', { commissionBps: null }, 'admin-1');
+
+      const written = replaceSpy.mock.calls[0]?.[0] as Service;
+      expect('commissionBps' in written).toBe(false);
+    });
+
+    it('null does not disturb the service name-only fields already covered above', async () => {
+      _setCosmosClientForTest(makeMockClient(richCategory, serviceWithOverride));
+
+      await repo.updateService('ac-deep-clean', { commissionBps: null, name: 'AC Deep Clean Plus' }, 'admin-1');
+
+      const written = replaceSpy.mock.calls[0]?.[0] as Service;
+      expect('commissionBps' in written).toBe(false);
+      expect(written.name).toBe('AC Deep Clean Plus');
     });
   });
 });

@@ -125,7 +125,16 @@ export class CatalogueRepository {
   async updateService(id: string, body: UpdateServiceBody, uid: string): Promise<Service | null> {
     const existing = await this.getServiceByIdCrossPartition(id);
     if (!existing) return null;
-    const updated: Service = { ...existing, ...definedOnly(body), id, categoryId: existing.categoryId, updatedBy: uid, updatedAt: now() };
+    // Issue #334: same commissionBps null-means-clear handling as updateCategory above
+    // (see that method's doc comment for the full rationale) -- definedOnly only ever
+    // strips undefined, never null, so it's pulled out and applied separately.
+    const { commissionBps, ...rest } = body;
+    const updated: Service = { ...existing, ...definedOnly(rest), id, categoryId: existing.categoryId, updatedBy: uid, updatedAt: now() };
+    if (commissionBps === null) {
+      delete updated.commissionBps;
+    } else if (commissionBps !== undefined) {
+      updated.commissionBps = commissionBps;
+    }
     const { resource } = await this.svcs.item(id, existing.categoryId).replace<Service>(updated);
     return resource!;
   }
