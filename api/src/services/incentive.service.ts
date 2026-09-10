@@ -9,6 +9,16 @@ import { incentiveRepo } from '../cosmos/incentive-repository.js';
 import { commissionReceivableRepo } from '../cosmos/commission-receivable-repository.js';
 import { creditDocId } from '../schemas/commission-ledger.js';
 import { istWeekBounds } from '../lib/ist-time.js';
+import { systemAudit } from './auditLog.service.js';
+// Self-import: gives `_internal.applyAward` below a handle on this module's OWN namespace object
+// rather than the closure-scoped local binding. A lexical reference to `applyAward` inside this
+// file always resolves to the local function — no getter or object-literal wrapper around it
+// changes that, because TS/esbuild output keeps same-module calls as plain variable reads, not
+// property reads. Routing through the self-imported namespace instead makes the call a genuine
+// property access on the object `vi.spyOn(incentive, 'applyAward')` mutates in tests, so the spy
+// is actually observed. Safe because it is only dereferenced inside function bodies invoked after
+// the module has fully evaluated, never at module top level.
+import * as incentiveService from './incentive.service.js';
 
 /**
  * The subset of a commission receivable the weekly rule reads.
@@ -241,4 +251,72 @@ export async function reconcileAwardApplied(
   // Derived state. Losing the conditional write means a concurrent recompute already landed a
   // figure at least as fresh as ours — a correct outcome, not an error.
   return res.ok ? next : stored.doc;
+}
+
+export type IncentiveRunSummary = {
+  weekKey: string; enabled: boolean; technicianCount: number;
+  awarded: number; replayed: number; noAward: number; failed: number; totalAwardedPaise: number;
+};
+
+/**
+ * Indirection so the run's own call to applyAward is interceptable by a module-namespace spy.
+ *
+ * Routes through the self-imported namespace (`incentiveService`, above), not the bare local
+ * `applyAward` binding: a lexical reference to a same-module function is a plain variable read at
+ * the JS level, immune to `vi.spyOn(incentive, 'applyAward')`, which mutates only the module's
+ * exported *property*. Reading `incentiveService.applyAward` is a property access on that same
+ * exports object every time this is called, so it observes the mock.
+ */
+export const _internal = {
+  applyAward: (input: ApplyAwardInput): Promise<ApplyAwardResult> => incentiveService.applyAward(input),
+};
+
+/**
+ * Awards one IST week to every technician who booked at least one receivable in it.
+ *
+ * SEQUENTIAL on purpose. These are money writes at pilot scale (tens of technicians); a parallel
+ * fan-out would multiply RU pressure on one container and buy nothing, and it would make a
+ * partial failure much harder to reason about. Each technician is isolated: one failure is
+ * captured and counted, never allowed to abort the run, so a single stuck ledger cannot deny
+ * everyone else their bonus. The next run replays cleanly for whoever succeeded (deterministic
+ * award id) and retries whoever did not.
+ */
+export async function runIncentiveWeek(weekKey: string, byId: string): Promise<IncentiveRunSummary> {
+  // Validate before any I/O: a bad key must not cost a Cosmos read.
+  const { startUtc, endUtc } = istWeekBounds(weekKey);
+
+  const cfg = await systemDocsRepo.getEffectiveIncentiveConfig();
+  const summary: IncentiveRunSummary = {
+    weekKey, enabled: cfg.enabled, technicianCount: 0,
+    awarded: 0, replayed: 0, noAward: 0, failed: 0, totalAwardedPaise: 0,
+  };
+  // Dark-launch gate. Disabled means disabled — not even the cross-partition roster query runs.
+  if (!cfg.enabled) return summary;
+
+  const roster = await commissionReceivableRepo.listTechnicianIdsWithReceivablesInWindow(
+    startUtc.toISOString(), endUtc.toISOString(),
+  );
+  summary.technicianCount = roster.length;
+
+  for (const { technicianId } of roster) {
+    try {
+      const receivables = await commissionReceivableRepo.getAllByTechnician(technicianId);
+      const res = await _internal.applyAward({ technicianId, weekKey, cfg, receivables, byId });
+      if (res.outcome === 'AWARDED') {
+        summary.awarded += 1;
+        summary.totalAwardedPaise += res.awardedPaise;
+        // One audit entry per GENUINE award. A replay must never produce a second — the owner's
+        // trail would otherwise read as the same bonus granted twice.
+        await systemAudit('INCENTIVE_AWARDED', 'incentive_award', res.awardId, {
+          technicianId, weekKey, awardedPaise: res.awardedPaise, allocations: res.allocations,
+          creditCreatedPaise: res.creditCreatedPaise, holdRecomputePending: res.holdRecomputePending, byId,
+        });
+      } else if (res.outcome === 'REPLAYED') summary.replayed += 1;
+      else summary.noAward += 1;
+    } catch (err: unknown) {
+      summary.failed += 1;
+      Sentry.captureException(err);
+    }
+  }
+  return summary;
 }
