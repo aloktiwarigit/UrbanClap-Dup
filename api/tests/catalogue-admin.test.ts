@@ -41,6 +41,7 @@ vi.mock('../src/cosmos/catalogue-repository.js', () => {
       toggleCategory: vi.fn().mockResolvedValue({ ...cat, isActive: false }),
       listServicesByCategory: vi.fn().mockResolvedValue([svc]),
       listAllActiveServices: vi.fn().mockResolvedValue([svc]),
+      listAllServices: vi.fn().mockResolvedValue([svc]),
       createService: vi.fn().mockResolvedValue(svc),
       updateService: vi.fn().mockResolvedValue(svc),
       toggleService: vi.fn().mockResolvedValue({ ...svc, isActive: false }),
@@ -260,6 +261,31 @@ describe('GET /v1/admin/catalogue/services', () => {
     expect(res.status).toBe(200);
     const body = res.jsonBody as { services: { id: string }[] };
     expect(body.services[0]?.id).toBe('leak-fix');
+  });
+
+  // Issue #334: includeInactive backs the commission-settings override roster (WS-B, Task 5),
+  // which needs an inactive service's override to stay visible. Every other caller of this
+  // route omits the param and keeps today's active-only behavior unchanged.
+  it('GET /v1/admin/catalogue/services?includeInactive=true calls listAllServices', async () => {
+    const res = await listAdminServicesHandler(
+      makeReq('http://localhost/api/v1/admin/catalogue/services?includeInactive=true', undefined, {}, 'GET'),
+      {} as never,
+      mockAdmin,
+    );
+    expect(res.status).toBe(200);
+    expect(vi.mocked(catalogueRepo.listAllServices)).toHaveBeenCalled();
+    expect(vi.mocked(catalogueRepo.listAllActiveServices)).not.toHaveBeenCalled();
+  });
+
+  it('GET /v1/admin/catalogue/services with no includeInactive param is unchanged', async () => {
+    const res = await listAdminServicesHandler(
+      makeReq('http://localhost/api/v1/admin/catalogue/services', undefined, {}, 'GET'),
+      {} as never,
+      mockAdmin,
+    );
+    expect(res.status).toBe(200);
+    expect(vi.mocked(catalogueRepo.listAllActiveServices)).toHaveBeenCalled();
+    expect(vi.mocked(catalogueRepo.listAllServices)).not.toHaveBeenCalled();
   });
 });
 

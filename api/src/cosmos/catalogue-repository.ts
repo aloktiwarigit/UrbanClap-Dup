@@ -101,6 +101,20 @@ export class CatalogueRepository {
     return resources;
   }
 
+  /**
+   * Issue #334: mirrors listAllCategories() above -- no isActive filter. Backs the
+   * commission-settings service-override roster, which must show an override even
+   * on a now-inactive service (the same invisibility bug this issue exists to fix,
+   * one state over). Deliberately NOT used by the default GET /v1/admin/catalogue/services
+   * path -- see listAdminServicesHandler's includeInactive param.
+   */
+  async listAllServices(): Promise<Service[]> {
+    const { resources } = await this.svcs.items
+      .query<Service>('SELECT * FROM c')
+      .fetchAll();
+    return resources;
+  }
+
   async listServicesByCategory(categoryId: string, activeOnly = false): Promise<Service[]> {
     const q = activeOnly
       ? { query: 'SELECT * FROM c WHERE c.categoryId = @cid AND c.isActive = true', parameters: [{ name: '@cid', value: categoryId }] }
