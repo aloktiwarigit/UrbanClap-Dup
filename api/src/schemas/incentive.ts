@@ -117,3 +117,26 @@ export const IncentiveAwardWriteSchema = z.object(awardShape).strict();
 
 export const incentiveAwardId = (technicianId: string, weekKey: string): string =>
   `inc:${technicianId}:${weekKey}`;
+
+/** Spec §6: "current-week progress (live, single partition) + last 8 awards". */
+export const RECENT_AWARD_LIMIT = 8;
+
+export const TechnicianIncentivesResponseSchema = z.object({
+  enabled: z.boolean(),
+  milestones: z.array(MilestoneSchema),
+  capFractionBps: z.number().int(),
+  minCountableBookingPaise: z.number().int(),
+  currentWeek: z.object({
+    weekKey: z.string(), weekStart: z.string(), weekEnd: z.string(),
+    countedJobs: z.number().int().nonnegative(),
+    countedCommissionPaise: z.number().int().nonnegative(),
+    nextMilestone: MilestoneSchema.optional(),
+    jobsToNextMilestone: z.number().int().nonnegative().optional(),
+    /** What the week would pay if it ended now — already capped, so it is never a promise the
+     *  cap will later break. */
+    projectedBonusPaise: z.number().int().nonnegative(),
+    projectedCapPaise: z.number().int().nonnegative(),
+  }),
+  awards: z.array(IncentiveAwardDocSchema),
+});
+export type TechnicianIncentivesResponse = z.infer<typeof TechnicianIncentivesResponseSchema>;
