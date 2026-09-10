@@ -15,7 +15,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { _setCosmosClientForTest } from '../src/cosmos/client.js';
 import { CatalogueRepository } from '../src/cosmos/catalogue-repository.js';
-import { UpdateServiceBodySchema } from '../src/schemas/service.js';
+import { UpdateServiceBodySchema, ServiceSchema } from '../src/schemas/service.js';
 import { UpdateCategoryBodySchema, ServiceCategorySchema } from '../src/schemas/service-category.js';
 import type { ServiceCategory } from '../src/schemas/service-category.js';
 import type { Service } from '../src/schemas/service.js';
@@ -151,6 +151,26 @@ describe('P0-3 — update body accepts a partial patch', () => {
   it('the stored ServiceCategorySchema does NOT accept null — only the write body was widened', () => {
     expect(() =>
       ServiceCategorySchema.parse({ ...richCategory, commissionBps: null }),
+    ).toThrow();
+  });
+
+  // Issue #334: UpdateServiceBodySchema.commissionBps is the service-side mirror of
+  // UpdateCategoryBodySchema.commissionBps above — same nullable-write-body pattern,
+  // same reason (PATCH semantics: absent = unchanged, null = clear). The stored
+  // ServiceSchema is untouched and still rejects null for this field (last assertion
+  // pins that so a future edit cannot silently widen the READ shape too).
+  it('UpdateServiceBodySchema accepts a numeric commissionBps (sets an override)', () => {
+    expect(UpdateServiceBodySchema.parse({ commissionBps: 2500 })).toEqual({ commissionBps: 2500 });
+  });
+
+  it('UpdateServiceBodySchema accepts an explicit null commissionBps (clears the override)', () => {
+    expect(UpdateServiceBodySchema.parse({ commissionBps: null })).toEqual({ commissionBps: null });
+  });
+
+  it('ServiceSchema (the stored/read shape) still rejects null commissionBps', () => {
+    expect(() => richService.commissionBps).not.toThrow(); // sanity: richService has a numeric value
+    expect(() =>
+      ServiceSchema.parse({ ...richService, commissionBps: null }),
     ).toThrow();
   });
 
