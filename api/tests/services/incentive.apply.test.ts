@@ -9,7 +9,8 @@ import { applyCredit, consumePendingCredits } from '../../src/services/commissio
 import { recomputeCommissionHold } from '../../src/services/commission-hold.service.js';
 import { systemDocsRepo } from '../../src/cosmos/system-docs-repository.js';
 import { incentiveRepo } from '../../src/cosmos/incentive-repository.js';
-import { applyAward } from '../../src/services/incentive.service.js';
+import { commissionReceivableRepo } from '../../src/cosmos/commission-receivable-repository.js';
+import { applyAward, reconcileAwardApplied } from '../../src/services/incentive.service.js';
 
 const cfg = {
   enabled: true, milestones: [{ jobs: 5, bonusPaise: 10_000 }, { jobs: 10, bonusPaise: 30_000 }],
@@ -125,5 +126,91 @@ describe('applyAward — after the batch commits', () => {
   it('propagates a PRECONDITION from the allocator — a genuinely failed batch is not an award', async () => {
     vi.mocked(applyCredit).mockRejectedValue(Object.assign(new Error('PRECONDITION'), { code: 'PRECONDITION' }));
     await expect(applyAward({ ...base, receivables: jobs(10) })).rejects.toMatchObject({ code: 'PRECONDITION' });
+  });
+});
+
+describe('reconcileAwardApplied', () => {
+  const award = {
+    id: 'inc:t1:2026-W37', docType: 'INCENTIVE_AWARD', technicianId: 't1', partitionKey: 't1',
+    weekKey: '2026-W37', weekStart: '2026-09-07', weekEnd: '2026-09-13',
+    countedJobs: 10, countedCommissionPaise: 220_000,
+    milestoneSnapshot: [{ jobs: 10, bonusPaise: 30_000 }],
+    capFractionBpsSnapshot: 6000, minCountableBookingPaiseSnapshot: 24_900,
+    grossBonusPaise: 30_000, capPaise: 132_000, awardedPaise: 30_000,
+    appliedPaise: 0, status: 'AWARDED', computedAt: '2026-09-14T00:30:00.000Z',
+  } as const;
+  const receivable = (id: string, allocs: Array<{ refId: string; paise: number }>) => ({
+    id, bookingId: id, technicianId: 't1', partitionKey: 't1', serviceId: 's', categoryId: 'c',
+    bookingAmount: 100_000, commissionBps: 2200, commissionDue: 22_000,
+    commissionResolvedFrom: 'GLOBAL' as const, remittanceStatus: 'DUE' as const,
+    createdAt: '2026-09-09T10:00:00.000Z',
+    allocations: allocs.map((a, i) => ({ id: `${a.refId}:${id}`, source: 'INCENTIVE' as const,
+      refId: a.refId, paise: a.paise, appliedAt: '2026-09-14T00:30:00.000Z', byId: `x${i}` })),
+  });
+  const arrange = (doc: Record<string, unknown>, rows: unknown[], etag = '"v1"') => {
+    vi.mocked(incentiveRepo.getAwardWithEtag).mockResolvedValue({ doc, etag } as never);
+    vi.mocked(commissionReceivableRepo.getAllByTechnician).mockResolvedValue(rows as never);
+    vi.mocked(commissionReceivableRepo.runLedgerBatch).mockResolvedValue({ ok: true });
+  };
+
+  it('PROOF: counts allocations from the leftover CREDIT as well as from the award itself', async () => {
+    // The award applied 22_000 directly; its 8_000 remainder became CREDIT `cr:inc:t1:2026-W37`,
+    // which consumePendingCredits later spent — stamping THAT allocation with refId
+    // `cr:inc:t1:2026-W37`, not `inc:t1:2026-W37`. Summing only the award id (what §5.5 literally
+    // says) reports 22_000 and leaves the award reading PARTIAL forever despite full delivery.
+    arrange({ ...award }, [
+      receivable('b0', [{ refId: 'inc:t1:2026-W37', paise: 22_000 }]),
+      receivable('b9', [{ refId: 'cr:inc:t1:2026-W37', paise: 8_000 }]),
+    ]);
+    expect(await reconcileAwardApplied('t1', 'inc:t1:2026-W37'))
+      .toMatchObject({ appliedPaise: 30_000, status: 'APPLIED' });
+  });
+
+  it('ignores allocations belonging to a remittance or another week', async () => {
+    arrange({ ...award }, [receivable('b0', [
+      { refId: 'inc:t1:2026-W37', paise: 12_000 },
+      { refId: 'rem:key-1', paise: 5_000 },
+      { refId: 'inc:t1:2026-W36', paise: 9_000 },
+      { refId: 'cr:rem:key-1', paise: 3_000 },
+    ])]);
+    expect((await reconcileAwardApplied('t1', 'inc:t1:2026-W37'))!.appliedPaise).toBe(12_000);
+  });
+
+  it('is a no-op write when the stored figure is already correct', async () => {
+    arrange({ ...award, appliedPaise: 22_000, status: 'PARTIAL' },
+      [receivable('b0', [{ refId: 'inc:t1:2026-W37', paise: 22_000 }])]);
+    await reconcileAwardApplied('t1', 'inc:t1:2026-W37');
+    expect(commissionReceivableRepo.runLedgerBatch).not.toHaveBeenCalled();
+  });
+
+  it('recomputes ABSOLUTELY — a figure that is too HIGH is corrected downward', async () => {
+    // Increment-based code can only grow. Absolute recomputation is the only thing that repairs
+    // a doubled write from a crash-replay (spec §3.2).
+    arrange({ ...award, appliedPaise: 60_000, status: 'APPLIED' },
+      [receivable('b0', [{ refId: 'inc:t1:2026-W37', paise: 22_000 }])]);
+    expect(await reconcileAwardApplied('t1', 'inc:t1:2026-W37'))
+      .toMatchObject({ appliedPaise: 22_000, status: 'PARTIAL' });
+  });
+
+  it('writes through the batch helper under the award etag, never a bare replace', async () => {
+    arrange({ ...award }, [receivable('b0', [{ refId: 'inc:t1:2026-W37', paise: 30_000 }])], '"v9"');
+    await reconcileAwardApplied('t1', 'inc:t1:2026-W37');
+    const [pk, ops] = vi.mocked(commissionReceivableRepo.runLedgerBatch).mock.calls[0]!;
+    expect(pk).toBe('t1');
+    expect(ops).toHaveLength(1);
+    expect(ops[0]).toMatchObject({ operationType: 'Replace', id: 'inc:t1:2026-W37', ifMatch: '"v9"' });
+  });
+
+  it('returns null when the award does not exist, without reading receivables', async () => {
+    vi.mocked(incentiveRepo.getAwardWithEtag).mockResolvedValue(null);
+    expect(await reconcileAwardApplied('t1', 'inc:t1:2026-W37')).toBeNull();
+    expect(commissionReceivableRepo.getAllByTechnician).not.toHaveBeenCalled();
+  });
+
+  it('returns the stale doc rather than throwing when the conditional write loses a race', async () => {
+    // Derived state: losing means a concurrent recompute landed something at least as fresh.
+    arrange({ ...award }, [receivable('b0', [{ refId: 'inc:t1:2026-W37', paise: 30_000 }])]);
+    vi.mocked(commissionReceivableRepo.runLedgerBatch).mockResolvedValue({ ok: false, reason: 'PRECONDITION' });
+    expect((await reconcileAwardApplied('t1', 'inc:t1:2026-W37'))!.appliedPaise).toBe(0);
   });
 });

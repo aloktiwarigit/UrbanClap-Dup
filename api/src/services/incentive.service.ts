@@ -6,6 +6,8 @@ import { applyCredit, consumePendingCredits, type AllocationPlan } from './commi
 import { recomputeCommissionHold } from './commission-hold.service.js';
 import { systemDocsRepo } from '../cosmos/system-docs-repository.js';
 import { incentiveRepo } from '../cosmos/incentive-repository.js';
+import { commissionReceivableRepo } from '../cosmos/commission-receivable-repository.js';
+import { creditDocId } from '../schemas/commission-ledger.js';
 import { istWeekBounds } from '../lib/ist-time.js';
 
 /**
@@ -200,16 +202,43 @@ export async function applyAward(input: ApplyAwardInput): Promise<ApplyAwardResu
 }
 
 /**
- * Recomputes the award's `appliedPaise` absolutely from the ledger and writes it back under
- * IfMatch (spec §3.2) — `build()` above only knows the allocations from `applyCredit`'s own
- * batch, not any further allocations `consumePendingCredits` makes afterwards against the
- * leftover CREDIT. STUB for this task: the absolute-recompute-and-write body lands in Task 8.
- * For now this only proves the award still exists — a genuine no-op when it does not — which is
- * exactly the behaviour `applyAward` above depends on today.
+ * Recomputes `appliedPaise` ABSOLUTELY from the receivable allocations and repairs the stored
+ * award if it drifted. Never increments (spec §3.2), so it corrects a figure that is too high —
+ * the crash-replay case — as readily as one that is too low.
+ *
+ * TWO refIds, not one. Spec §5.5 says "allocations with refId = awardId"; that undercounts.
+ * When an award cannot be fully allocated the remainder becomes a CREDIT whose id is
+ * `cr:<awardId>` (creditDocId), and `consumePendingCredits` stamps the allocations it later
+ * writes with `refId: <that credit's id>` — commission-allocator.service.ts, around line 194.
+ * Counting only the award id leaves a fully-delivered bonus reading PARTIAL forever.
+ *
+ * Idempotent and safe to call repeatedly: it is a pure function of the ledger's current state.
+ * That is exactly what makes it the crash-replay repair — the weekly run and the admin rerun
+ * both call it, and any future sweep may too.
  */
-async function reconcileAwardApplied(technicianId: string, awardId: string): Promise<void> {
-  const found = await incentiveRepo.getAwardWithEtag(technicianId, awardId);
-  if (!found) return;
-  // Task 8: recompute appliedPaise absolutely from ledger allocations for this award (and any
-  // credit consumption against it) and write it back under IfMatch. No-op until then.
+export async function reconcileAwardApplied(
+  technicianId: string, awardId: string,
+): Promise<IncentiveAwardDoc | null> {
+  const stored = await incentiveRepo.getAwardWithEtag(technicianId, awardId);
+  if (!stored) return null;
+
+  const receivables = await commissionReceivableRepo.getAllByTechnician(technicianId);
+  const creditId = creditDocId(awardId); // `cr:${awardId}`
+  const appliedPaise = receivables.reduce(
+    (sum, r) => sum + (r.allocations ?? [])
+      .filter((a) => a.refId === awardId || a.refId === creditId)
+      .reduce((s, a) => s + a.paise, 0),
+    0,
+  );
+
+  const status = deriveAwardStatus(stored.doc.awardedPaise, appliedPaise);
+  if (appliedPaise === stored.doc.appliedPaise && status === stored.doc.status) return stored.doc;
+
+  const next: IncentiveAwardDoc = { ...stored.doc, appliedPaise, status, updatedAt: new Date().toISOString() };
+  const res = await commissionReceivableRepo.runLedgerBatch(technicianId, [
+    { operationType: 'Replace', id: awardId, ifMatch: stored.etag, resourceBody: next as never },
+  ]);
+  // Derived state. Losing the conditional write means a concurrent recompute already landed a
+  // figure at least as fresh as ours — a correct outcome, not an error.
+  return res.ok ? next : stored.doc;
 }
