@@ -1996,6 +1996,7 @@ export interface operations {
         parameters: {
             query?: {
                 categoryId?: string;
+                includeInactive?: boolean;
             };
             header?: never;
             path?: never;

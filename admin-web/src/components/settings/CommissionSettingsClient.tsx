@@ -9,6 +9,7 @@ import {
   fetchTechnicianClientConfig,
   updateTechnicianClientConfig,
   fetchAdminCategories,
+  fetchAdminServices,
   updateCategoryCommission,
   updateServiceCommission,
   fetchCommissionDashboard,
@@ -37,11 +38,10 @@ export interface CommissionSettingsClientProps {
   initialConfig?: CommissionConfig;
   initialTechnicianConfig?: TechnicianClientConfig;
   initialCategories?: AdminServiceCategory[];
-  // Service-overrides roster (issue #334 read-surface task). Unlike the other four seeds, there is
-  // no `loadServices` mount-time fetch yet: the fetch layer for services (with `includeInactive`
-  // support) doesn't exist in `@/api/commissions` yet — that is a separate, later task. Until then
-  // this prop is the only way `services` state gets populated; omitting it leaves the roster
-  // showing just its heading, same as any other unfetched section would before its data arrives.
+  // Service-overrides roster (issue #334 read-surface + wiring tasks). Same seed/mount-fetch split
+  // as `initialCategories` above: omitting this fetches on mount via `loadServices`, which calls
+  // `fetchAdminServices` (includeInactive: true, so an override on a since-deactivated service
+  // stays visible here even though it would not show up in the active-only lists elsewhere).
   initialServices?: AdminService[];
   // Threshold-impact source rows (design doc §6 ruling, task-9 brief): `/settings/commission` is
   // a separate route from `/finance/commissions` with its own client and no shared state, so this
@@ -194,8 +194,8 @@ export function CommissionSettingsClient({
   const [categorySavingId, setCategorySavingId] = useState<string | null>(null);
 
   // Service-overrides roster: read + clear only (no draft input — setting a service's rate is
-  // ServiceForm's job, not this roster's). No mount-time fetch/effect pairs with this state yet;
-  // see the `initialServices` prop doc comment above.
+  // ServiceForm's job, not this roster's). See `loadServices` below and the `initialServices` prop
+  // doc comment above for how this gets populated.
   const [services, setServices] = useState<AdminService[] | null>(initialServices ?? null);
   const [servicesError, setServicesError] = useState<string | null>(null);
   const [serviceSavingId, setServiceSavingId] = useState<string | null>(null);
@@ -255,6 +255,16 @@ export function CommissionSettingsClient({
     }
   }, [t]);
 
+  const loadServices = useCallback(async () => {
+    setServicesError(null);
+    try {
+      const list = await fetchAdminServices();
+      setServices(list);
+    } catch {
+      setServicesError(t('settings.errors.servicesLoadFailed'));
+    }
+  }, [t]);
+
   const loadRows = useCallback(async () => {
     setRowsError(null);
     try {
@@ -271,6 +281,7 @@ export function CommissionSettingsClient({
     if (initialConfig === undefined) void loadConfig();
     if (initialTechnicianConfig === undefined) void loadFeatures();
     if (initialCategories === undefined) void loadCategories();
+    if (initialServices === undefined) void loadServices();
     if (initialRows === undefined) void loadRows();
     // Mount-only, and only when authorized — see the load* functions' own doc note.
     // eslint-disable-next-line react-hooks/exhaustive-deps

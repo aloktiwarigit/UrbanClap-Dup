@@ -3990,6 +3990,14 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "includeInactive",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {

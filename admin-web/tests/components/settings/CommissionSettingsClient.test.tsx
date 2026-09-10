@@ -33,6 +33,7 @@ vi.mock('next-intl', () => ({
       'settings.errors.configLoadFailed': 'Could not load the commission configuration.',
       'settings.errors.featuresLoadFailed': 'Could not load the technician app feature flags.',
       'settings.errors.categoriesLoadFailed': 'Could not load the per-category rate table.',
+      'settings.errors.servicesLoadFailed': 'Could not load the service-overrides roster.',
       'settings.errors.rowsLoadFailed': 'Threshold impact unavailable — could not load technician balances.',
       'settings.errors.rateSaveFailed': 'Could not save the commission rate. Try again.',
       'settings.errors.thresholdOrder': 'The warn threshold must be below the block threshold.',
@@ -114,6 +115,7 @@ const {
   fetchTechnicianClientConfig,
   updateTechnicianClientConfig,
   fetchAdminCategories,
+  fetchAdminServices,
   updateCategoryCommission,
   updateServiceCommission,
   fetchCommissionDashboard,
@@ -123,6 +125,7 @@ const {
   fetchTechnicianClientConfig: vi.fn(),
   updateTechnicianClientConfig: vi.fn(),
   fetchAdminCategories: vi.fn(),
+  fetchAdminServices: vi.fn(),
   updateCategoryCommission: vi.fn(),
   updateServiceCommission: vi.fn(),
   fetchCommissionDashboard: vi.fn(),
@@ -133,6 +136,7 @@ vi.mock('@/api/commissions', () => ({
   fetchTechnicianClientConfig,
   updateTechnicianClientConfig,
   fetchAdminCategories,
+  fetchAdminServices,
   updateCategoryCommission,
   updateServiceCommission,
   fetchCommissionDashboard,
@@ -243,6 +247,14 @@ beforeEach(() => {
   fetchTechnicianClientConfig.mockReset();
   updateTechnicianClientConfig.mockReset();
   fetchAdminCategories.mockReset();
+  fetchAdminServices.mockReset();
+  // Unlike `fetchAdminCategories` (every test below seeds `initialCategories`, so its mount-time
+  // fetch never actually runs except in the one test that deliberately exercises it),
+  // `fetchAdminServices` needs a safe default: most tests below don't seed `initialServices`, so
+  // omitting this would make `loadServices`' mount effect resolve `undefined` in every one of them
+  // and crash the roster's render. Tests that care about roster contents seed `initialServices`
+  // directly (bypassing this fetch); tests that care about the fetch path override this mock.
+  fetchAdminServices.mockResolvedValue([]);
   updateCategoryCommission.mockReset();
   updateServiceCommission.mockReset();
   fetchCommissionDashboard.mockReset();

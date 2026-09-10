@@ -724,6 +724,7 @@
         "holdEnforcementSaveFailed": "Could not save the hold enforcement setting. Try again.",
         "featuresSaveFailed": "Could not save the technician app features. Try again.",
         "categorySaveFailed": "Could not save this category's rate. Try again.",
+        "servicesLoadFailed": "Could not load the service-overrides roster.",
         "serviceClearFailed": "Could not clear the service's commission override. Try again."
       },
       "messages": {
