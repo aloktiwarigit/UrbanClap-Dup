@@ -392,6 +392,30 @@ describe('PUT /v1/admin/catalogue/services/{id}', () => {
       expect(res.jsonBody).toMatchObject({ code: 'FORBIDDEN', field: 'commissionBps' });
       expect(vi.mocked(catalogueRepo.updateService)).not.toHaveBeenCalled();
     });
+
+    it('super-admin can clear a service commission override', async () => {
+      const res = await updateServiceHandler(
+        makeReq('http://localhost/...', { commissionBps: null }, { id: 'leak-fix' }, 'PUT'),
+        {} as never,
+        mockAdmin,
+      );
+      expect(res.status).toBe(200);
+      expect(vi.mocked(catalogueRepo.updateService)).toHaveBeenCalledWith(
+        'leak-fix', { commissionBps: null }, 'dev-user',
+      );
+    });
+
+    it('ops-manager clearing a service commissionBps also gets 403 and the stored document is unchanged', async () => {
+      vi.mocked(catalogueRepo.updateService).mockClear();
+      const res = await updateServiceHandler(
+        makeReq('http://localhost/...', { commissionBps: null }, { id: 'leak-fix' }, 'PUT'),
+        {} as never,
+        opsManager,
+      );
+      expect(res.status).toBe(403);
+      expect(res.jsonBody).toMatchObject({ code: 'FORBIDDEN', field: 'commissionBps' });
+      expect(vi.mocked(catalogueRepo.updateService)).not.toHaveBeenCalled();
+    });
   });
 });
 
