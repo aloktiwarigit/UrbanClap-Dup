@@ -34,12 +34,19 @@ describe('IncentiveAwardWriteSchema — credit-only is structural', () => {
   it('parses the same well-formed award', () => {
     expect(() => IncentiveAwardWriteSchema.parse(award)).not.toThrow();
   });
-  it('REJECTS an award carrying any payout-shaped field', () => {
+  it('REJECTS an award carrying any payout-shaped field at the top level', () => {
     // The structural half of "credit-only, not by convention": a future edit that adds a payout
     // amount to the award cannot reach Cosmos, because the write parse throws here.
     for (const extra of [{ payoutPaise: 1 }, { netPayable: 1 }, { razorpayTransferId: 'trf_1' }]) {
       expect(() => IncentiveAwardWriteSchema.parse({ ...award, ...extra })).toThrow();
     }
+  });
+  it('REJECTS payout-shaped fields nested inside milestones', () => {
+    // With MilestoneSchema.strict(), extra fields on nested milestones throw too, not just top-level.
+    const badMilestone = { ...award, milestoneSnapshot: [{ jobs: 1, bonusPaise: 1, payoutPaise: 999 }] };
+    expect(() => IncentiveAwardWriteSchema.parse(badMilestone)).toThrow();
+    const badReached = { ...award, reachedMilestone: { jobs: 1, bonusPaise: 1, netPayable: 1 } };
+    expect(() => IncentiveAwardWriteSchema.parse(badReached)).toThrow();
   });
 });
 

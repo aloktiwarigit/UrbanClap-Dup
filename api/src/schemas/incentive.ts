@@ -13,7 +13,7 @@ export const DEFAULT_MIN_COUNTABLE_BOOKING_PAISE = 24_900;
 export const MilestoneSchema = z.object({
   jobs: z.number().int().positive(),
   bonusPaise: z.number().int().positive(),
-});
+}).strict();
 export type Milestone = z.infer<typeof MilestoneSchema>;
 
 /** Strictly ascending in BOTH dimensions: more jobs must never pay less, and two milestones
@@ -107,10 +107,11 @@ export const IncentiveAwardDocSchema = z.object(awardShape);
 export type IncentiveAwardDoc = z.infer<typeof IncentiveAwardDocSchema>;
 
 /**
- * Write path. `.strict()` is the STRUCTURAL half of credit-only (spec §7.8, ADR-0035): a
- * `payoutPaise`/`netPayable`/`razorpayTransferId` field added in a future edit throws here and
- * can never be persisted. The Semgrep rules and the static test are the other two halves.
- * Only `incentive.service.ts` may call this.
+ * Write path. `.strict()` at all levels (including nested milestones) is the STRUCTURAL half of
+ * credit-only (spec §7.8, ADR-0035): any `payoutPaise`/`netPayable`/`razorpayTransferId` field
+ * added in a future edit throws here at parse time and can never be persisted — whether at the
+ * top level or nested inside `milestoneSnapshot`/`reachedMilestone`. The Semgrep rules and
+ * the static test are the other two halves. Only `incentive.service.ts` may call this.
  */
 export const IncentiveAwardWriteSchema = z.object(awardShape).strict();
 
