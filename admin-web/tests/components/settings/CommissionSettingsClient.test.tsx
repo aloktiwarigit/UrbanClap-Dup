@@ -657,6 +657,30 @@ describe('CommissionSettingsClient', () => {
     expect(within(enforcementRegion()).getByLabelText('Warn threshold (₹)')).toBeInTheDocument();
   });
 
+  // Mirrors the categories-fetch-failure test above, for `loadServices`'s mount-effect path
+  // (task 8): omitting `initialServices` is what makes the real mount effect call the (mocked)
+  // `fetchAdminServices` in the first place — every other services-roster test above seeds
+  // `initialServices` directly and so never exercises `loadServices` at all.
+  it('scopes a services-fetch failure to the service-overrides roster and keeps the rest of the page usable', async () => {
+    fetchAdminServices.mockRejectedValue(new Error('boom'));
+    render(
+      <CommissionSettingsClient
+        initialConfig={config()}
+        initialTechnicianConfig={techConfig()}
+        initialCategories={[]}
+        rows={[]}
+      />,
+    );
+
+    expect(
+      await screen.findByText('Could not load the service-overrides roster.'),
+    ).toBeInTheDocument();
+    // The rest of the page — including the global rate editor fed by the same section — must
+    // still render and work, per the "fetch independently and degrade" rule.
+    expect(screen.getByLabelText('Global commission rate (%)')).toBeInTheDocument();
+    expect(within(enforcementRegion()).getByLabelText('Warn threshold (₹)')).toBeInTheDocument();
+  });
+
   // Fix round 1 (I-2): `rupeesToPaise` alone accepts a leading "-" (→ a negative paise value that
   // would still pass a naive `warn < block` comparison) and silently rounds more than 2 decimal
   // places. Both must be rejected before the API ever sees them, with the same
