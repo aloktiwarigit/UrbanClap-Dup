@@ -39,6 +39,7 @@ import {
   updateCommissionConfig,
   fetchAdminCategories,
   updateCategoryCommission,
+  updateServiceCommission,
   fetchTechnicianClientConfig,
   updateTechnicianClientConfig,
 } from '../../src/api/commissions';
@@ -105,6 +106,24 @@ const sampleCategory = {
   name: 'AC Repair',
   heroImageUrl: 'https://example.com/cat.jpg',
   sortOrder: 1,
+  isActive: true,
+  updatedBy: 'admin1',
+  createdAt: '2026-09-01T00:00:00.000Z',
+  updatedAt: '2026-09-01T00:00:00.000Z',
+};
+
+const sampleService = {
+  id: 'ac-deep-clean',
+  categoryId: 'ac-repair',
+  name: 'AC Deep Clean',
+  shortDescription: 'Deep clean for split and window ACs',
+  heroImageUrl: 'https://example.com/service.jpg',
+  basePrice: 59900,
+  durationMinutes: 90,
+  includes: [],
+  faq: [],
+  addOns: [],
+  photoStages: [],
   isActive: true,
   updatedBy: 'admin1',
   createdAt: '2026-09-01T00:00:00.000Z',
@@ -320,6 +339,37 @@ describe('updateCategoryCommission', () => {
   it('surfaces a validation error as a typed ApiError', async () => {
     PUT.mockResolvedValue({ error: { error: 'ValidationError' }, response: { status: 400 } });
     await expect(updateCategoryCommission('ac-repair', 9000)).rejects.toMatchObject({
+      status: 400,
+      body: { error: 'ValidationError' },
+    });
+  });
+});
+
+describe('updateServiceCommission', () => {
+  it('calls PUT with the service id path param and a numeric override', async () => {
+    PUT.mockResolvedValue({ data: { ...sampleService, commissionBps: 2500 } });
+    await updateServiceCommission('ac-deep-clean', 2500);
+    expect(PUT).toHaveBeenCalledWith('/v1/admin/catalogue/services/{id}', {
+      params: { path: { id: 'ac-deep-clean' } },
+      body: { commissionBps: 2500 },
+    });
+  });
+
+  // Same invariant as updateCategoryCommission: an explicit `null` — not an omitted field — is
+  // the wire value that clears a service's override back to inheriting its category's rate (or
+  // the global default). Forwarding it unchanged is the entire fix for #334.
+  it('calls PUT with an explicit null to clear the override', async () => {
+    PUT.mockResolvedValue({ data: sampleService });
+    await updateServiceCommission('ac-deep-clean', null);
+    expect(PUT).toHaveBeenCalledWith('/v1/admin/catalogue/services/{id}', {
+      params: { path: { id: 'ac-deep-clean' } },
+      body: { commissionBps: null },
+    });
+  });
+
+  it('surfaces a validation error as a typed ApiError', async () => {
+    PUT.mockResolvedValue({ error: { error: 'ValidationError' }, response: { status: 400 } });
+    await expect(updateServiceCommission('ac-deep-clean', 9000)).rejects.toMatchObject({
       status: 400,
       body: { error: 'ValidationError' },
     });
