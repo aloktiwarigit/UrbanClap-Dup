@@ -96,6 +96,14 @@ describe('incentiveRepo.listAwardsCrossPartition', () => {
     expect(await incentiveRepo.listAwardsCrossPartition({})).toEqual({ awards: [] });
     expect(fetchNext).not.toHaveBeenCalled();
   });
+  it('SURVIVES a page whose resources is undefined, not []', async () => {
+    // Same Cosmos aggregate-page shape as the GROUP BY guard below: a page can resolve with
+    // `resources: undefined` while hasMoreResults() stayed true. Spreading it unguarded throws
+    // "page.resources is not iterable" — the `page.resources ?? []` guard must survive this.
+    hasMoreResults.mockReturnValue(true);
+    fetchNext.mockResolvedValue({ resources: undefined, continuationToken: undefined });
+    expect(await incentiveRepo.listAwardsCrossPartition({})).toEqual({ awards: [] });
+  });
 });
 
 describe('incentiveRepo.sumAppliedByIstDay', () => {
@@ -117,6 +125,14 @@ describe('incentiveRepo.sumAppliedByIstDay', () => {
     const m = await incentiveRepo.sumAppliedByIstDay('2026-09-01', '2026-09-30');
     expect(m.get('2026-09-14')).toBe(700);
     expect([...m.values()].every(Number.isFinite)).toBe(true);
+  });
+  it('SURVIVES a page whose resources is undefined, not [], and returns an empty Map', async () => {
+    // This feeds getDailyPnL's incentive cost line — an unguarded spread here would throw
+    // "page.resources is not iterable" straight into the owner's P&L request, exactly the
+    // production incident this Global Constraint exists to prevent.
+    fetchAll.mockResolvedValue({ resources: undefined });
+    const m = await incentiveRepo.sumAppliedByIstDay('2026-09-01', '2026-09-30');
+    expect(m).toEqual(new Map());
   });
 });
 
