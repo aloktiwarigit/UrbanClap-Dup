@@ -9,18 +9,41 @@ import { incentiveRepo } from '../../cosmos/incentive-repository.js';
 import { computeWeek } from '../../services/incentive.service.js';
 import { istWeekKey, istWeekBounds } from '../../lib/ist-time.js';
 import {
-  RECENT_AWARD_LIMIT, TechnicianIncentivesResponseSchema, type TechnicianIncentivesResponse,
+  RECENT_AWARD_LIMIT, TechnicianIncentivesResponseSchema, IncentiveAwardDocSchema,
+  type TechnicianIncentivesResponse, type IncentiveAwardDoc,
 } from '../../schemas/incentive.js';
 
 /**
- * Envelope-only validator: everything except `awards`. `awards` comes straight from
- * `incentiveRepo.listAwards`, which reads documents this same API already wrote through
- * `IncentiveAwardWriteSchema` — re-validating them here would just be re-checking our own write
- * path on every poll. This mirrors `admin/incentives/awards.ts`, which returns Cosmos-read award
- * docs unvalidated for the same reason. The envelope fields ARE freshly computed on every
- * request (cfg + computeWeek), so those keep the runtime check.
+ * Envelope-only validator: everything except `awards`. The envelope fields are freshly computed
+ * on every request (cfg + computeWeek), so a runtime check here catches a real shape drift.
+ * `awards` is validated separately, per-item, below — see `parseAwards`.
  */
 const EnvelopeSchema = TechnicianIncentivesResponseSchema.omit({ awards: true });
+
+/**
+ * Validates each award doc individually rather than the array as a whole, and returns the
+ * PARSED (not raw) docs — matching `commission-due.ts`'s "a schema regression is distinguishable
+ * from Cosmos flakiness" convention (same `Sentry.captureException`), but scoped per-award so one
+ * malformed award (a future `awardShape` change, or a hypothetical second write path bypassing
+ * `incentive.service.ts`) never takes down the whole response for a technician who has other
+ * perfectly good awards. Returning the parsed value, not the raw one, means a future
+ * `.transform()`/default on `IncentiveAwardDocSchema` benefits technician responses too.
+ */
+function parseAwards(raw: readonly unknown[], technicianId: string): IncentiveAwardDoc[] {
+  const parsed: IncentiveAwardDoc[] = [];
+  for (const entry of raw) {
+    const result = IncentiveAwardDocSchema.safeParse(entry);
+    if (result.success) {
+      parsed.push(result.data);
+    } else {
+      const awardId = (entry as { id?: unknown } | null)?.id;
+      // Same capture as commission-due.ts's schema-drift comment: captured to Sentry separately
+      // so a shape regression is distinguishable from Cosmos flakiness, scoped to just this award.
+      Sentry.captureException(result.error, { extra: { technicianId, awardId } });
+    }
+  }
+  return parsed;
+}
 
 /**
  * Live current-week progress plus the technician's recent awards. Everything here is
@@ -67,7 +90,10 @@ export const getTechnicianIncentivesHandler = async (
         projectedCapPaise: c.capPaise,
       },
     });
-    const body: TechnicianIncentivesResponse = { ...envelope, awards: awards.slice(0, RECENT_AWARD_LIMIT) };
+    const body: TechnicianIncentivesResponse = {
+      ...envelope,
+      awards: parseAwards(awards.slice(0, RECENT_AWARD_LIMIT), uid),
+    };
     return { status: 200, jsonBody: body, headers: { 'Cache-Control': 'private, max-age=60' } };
   } catch (err: unknown) {
     Sentry.captureException(err);

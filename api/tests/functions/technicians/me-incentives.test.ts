@@ -3,6 +3,8 @@ vi.mock('../../../src/middleware/verifyTechnicianToken.js');
 vi.mock('../../../src/cosmos/system-docs-repository.js');
 vi.mock('../../../src/cosmos/commission-receivable-repository.js');
 vi.mock('../../../src/cosmos/incentive-repository.js');
+vi.mock('@sentry/node', () => ({ captureException: vi.fn() }));
+import * as Sentry from '@sentry/node';
 import { verifyTechnicianToken } from '../../../src/middleware/verifyTechnicianToken.js';
 import { systemDocsRepo } from '../../../src/cosmos/system-docs-repository.js';
 import { commissionReceivableRepo } from '../../../src/cosmos/commission-receivable-repository.js';
@@ -15,6 +17,18 @@ const now = new Date('2026-09-09T10:00:00.000Z'); // Wed of 2026-W37
 const receivable = (i: number) => ({ id: `b${i}`, bookingId: `b${i}`, technicianId: 't1', partitionKey: 't1',
   serviceId: 's', categoryId: 'c', bookingAmount: 100_000, commissionBps: 2200, commissionDue: 22_000,
   commissionResolvedFrom: 'GLOBAL' as const, remittanceStatus: 'DUE' as const, createdAt: '2026-09-08T10:00:00.000Z' });
+// A well-formed award doc — satisfies IncentiveAwardDocSchema's ~15 required fields, so
+// per-award validation in the handler passes it through.
+const validAward = (i: number) => ({
+  id: `a${i}`, docType: 'INCENTIVE_AWARD' as const, technicianId: 't1', partitionKey: 't1',
+  weekKey: '2026-W37', weekStart: '2026-09-07', weekEnd: '2026-09-13',
+  countedJobs: 10, countedCommissionPaise: 220_000,
+  milestoneSnapshot: [{ jobs: 10, bonusPaise: 30_000 }],
+  capFractionBpsSnapshot: 6000, minCountableBookingPaiseSnapshot: 24_900,
+  reachedMilestone: { jobs: 10, bonusPaise: 30_000 },
+  grossBonusPaise: 30_000, capPaise: 132_000, awardedPaise: 30_000,
+  appliedPaise: 0, status: 'AWARDED' as const, computedAt: `2026-09-${String(14 - i).padStart(2, '0')}T00:30:00.000Z`,
+});
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -61,9 +75,26 @@ describe('GET /v1/technicians/me/incentives', () => {
   it('returns at most the last 8 awards, newest first', async () => {
     vi.mocked(commissionReceivableRepo.getAllByTechnician).mockResolvedValue([]);
     vi.mocked(incentiveRepo.listAwards).mockResolvedValue(
-      Array.from({ length: 12 }, (_, i) => ({ id: `a${i}` })) as never);
+      Array.from({ length: 12 }, (_, i) => validAward(i)) as never);
     const res = await getTechnicianIncentivesHandler({} as never, {} as never) as { jsonBody: { awards: unknown[] } };
     expect(res.jsonBody.awards).toHaveLength(8);
+  });
+
+  it('drops a malformed award and reports it to Sentry, but keeps a valid sibling', async () => {
+    vi.mocked(commissionReceivableRepo.getAllByTechnician).mockResolvedValue([]);
+    const malformed = { id: 'a-bad' }; // missing ~15 required IncentiveAwardDocSchema fields
+    vi.mocked(incentiveRepo.listAwards).mockResolvedValue([validAward(0), malformed] as never);
+
+    const res = await getTechnicianIncentivesHandler({} as never, {} as never) as
+      { jsonBody: { awards: Array<{ id: string }> } };
+
+    expect(res.jsonBody.awards).toHaveLength(1);
+    expect(res.jsonBody.awards[0]?.id).toBe('a0');
+    expect(Sentry.captureException).toHaveBeenCalledTimes(1);
+    expect(Sentry.captureException).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ extra: expect.objectContaining({ technicianId: 't1', awardId: 'a-bad' }) }),
+    );
   });
 
   it('reports enabled:false with zeroed progress when the programme is dark', async () => {
