@@ -111,7 +111,8 @@ describe('CatalogueRepository', () => {
     expect(result[0]?.id).toBe('ac-deep-clean');
     const { services } = getCatalogueContainers();
     const queryArg = vi.mocked(services.items.query).mock.calls[0]?.[0];
-    expect(String(queryArg)).not.toContain('isActive');
+    const queryText = typeof queryArg === 'string' ? queryArg : JSON.stringify(queryArg);
+    expect(queryText).not.toContain('isActive');
   });
 
   it('upsertCategory calls items.upsert', async () => {
