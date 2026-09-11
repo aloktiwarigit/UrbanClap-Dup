@@ -41,10 +41,25 @@ test.describe('complaints route a11y', () => {
     // @hello-pangea/dnd sets draggable=false on the container; target the card by its complaint ID attribute.
     const card = page.locator('[data-rfd-draggable-id="a11y-complaint-001"]');
     await expect(card).toBeVisible({ timeout: 10_000 });
-    await card.click();
 
     const dialog = page.getByRole('dialog');
-    await expect(dialog).toBeVisible();
+    // The complaint card is present in the server-rendered HTML the instant
+    // `waitUntil: 'domcontentloaded'` resolves, so it can become "visible" to
+    // Playwright before React finishes hydrating and attaches the card's
+    // onClick handler. Under CPU contention (parallel workers, a loaded CI
+    // runner) hydration can lag far enough that a single click lands on a
+    // still-inert DOM node and is silently dropped — confirmed by instrumenting
+    // this click under 8-way parallel load: ~40% of attempts left
+    // document.activeElement on the un-hydrated card with zero dialogs open,
+    // no console/page errors. Retrying the click (not just waiting longer
+    // before the first one) is what actually clears this: each retry runs
+    // after strictly more time has passed, so it succeeds as soon as
+    // hydration has caught up, whereas a single click that lands too early is
+    // gone for good no matter how long we wait afterwards.
+    await expect(async () => {
+      await card.click();
+      await expect(dialog).toBeVisible({ timeout: 1_000 });
+    }).toPass({ timeout: 10_000 });
 
     // Tab — focus should stay inside the dialog (FocusLock)
     await page.keyboard.press('Tab');
