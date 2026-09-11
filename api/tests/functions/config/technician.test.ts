@@ -8,7 +8,7 @@ vi.mock('../../../src/middleware/verifyTechnicianToken.js', () => ({
 vi.mock('../../../src/cosmos/system-docs-repository.js', () => ({
   systemDocsRepo: {
     getTechnicianClientConfig: vi.fn(),
-    getIncentiveConfig: vi.fn(),
+    getEffectiveIncentiveConfig: vi.fn(),
   },
 }));
 vi.mock('../../../src/services/commission-config.service.js', () => ({
@@ -47,7 +47,11 @@ beforeEach(() => {
   vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-1' } as never);
   vi.mocked(getCommissionConfig).mockResolvedValue(cfg);
   vi.mocked(systemDocsRepo.getTechnicianClientConfig).mockResolvedValue(null);
-  vi.mocked(systemDocsRepo.getIncentiveConfig).mockResolvedValue(null);
+  // getEffectiveIncentiveConfig never 404s and never returns a partial shape (E23-S01) --
+  // this is the dark-launch default it always applies when nothing has been configured yet.
+  vi.mocked(systemDocsRepo.getEffectiveIncentiveConfig).mockResolvedValue({
+    enabled: false, milestones: [], capFractionBps: 6000, minCountableBookingPaise: 24_900,
+  });
 });
 
 afterEach(() => {
@@ -96,20 +100,44 @@ describe('getTechnicianConfigHandler', () => {
   });
 
   it('returns the incentive doc fields when present', async () => {
-    vi.mocked(systemDocsRepo.getIncentiveConfig).mockResolvedValue({
+    vi.mocked(systemDocsRepo.getEffectiveIncentiveConfig).mockResolvedValue({
       enabled: true,
       milestones: [{ jobs: 20, bonusPaise: 10_000 }],
       capFractionBps: 5000,
+      minCountableBookingPaise: 24_900,
     });
 
     const res = (await getTechnicianConfigHandler(req, {} as never)) as HttpResponseInit;
 
     const body = res.jsonBody as TechnicianConfigResponse;
+    // TechnicianConfigResponseSchema's `incentive` object is not `.strict()` -- it validates
+    // and keeps only enabled/milestones/capFractionBps, stripping minCountableBookingPaise
+    // (and updatedBy/updatedAt, when present) harmlessly.
     expect(body.incentive).toEqual({
       enabled: true,
       milestones: [{ jobs: 20, bonusPaise: 10_000 }],
       capFractionBps: 5000,
     });
+  });
+
+  it('Codex regression: a partial admin write does not 502 every technician', async () => {
+    // Before the fix, a PUT naming only `enabled` produced a stored Cosmos doc missing
+    // `milestones`/`capFractionBps`, and the raw reader passed that partial shape straight
+    // into a schema requiring all three -- every technician's config fetch 502'd.
+    // getEffectiveIncentiveConfig() defaults every field itself, so even a "just enabled,
+    // nothing else configured yet" state is always a complete, valid shape by the time it
+    // reaches this handler -- this test pins that the response is 200, not 502, in exactly
+    // that state.
+    vi.mocked(systemDocsRepo.getEffectiveIncentiveConfig).mockResolvedValue({
+      enabled: true, milestones: [], capFractionBps: 6000, minCountableBookingPaise: 24_900,
+      updatedBy: 'admin-1', updatedAt: '2026-09-10T00:00:00.000Z',
+    });
+
+    const res = (await getTechnicianConfigHandler(req, {} as never)) as HttpResponseInit;
+
+    expect(res.status).toBe(200);
+    const body = res.jsonBody as TechnicianConfigResponse;
+    expect(body.incentive).toEqual({ enabled: true, milestones: [], capFractionBps: 6000 });
   });
 
   it('serves a cached response within the 60s TTL without re-querying', async () => {

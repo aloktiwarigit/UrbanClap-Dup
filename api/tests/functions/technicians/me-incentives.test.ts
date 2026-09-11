@@ -97,11 +97,34 @@ describe('GET /v1/technicians/me/incentives', () => {
     );
   });
 
-  it('reports enabled:false with zeroed progress when the programme is dark', async () => {
+  it('reports enabled:false with zeroed progress when the programme is dark and milestones are empty', async () => {
     vi.mocked(systemDocsRepo.getEffectiveIncentiveConfig).mockResolvedValue({ ...cfg, enabled: false, milestones: [] });
     vi.mocked(commissionReceivableRepo.getAllByTechnician).mockResolvedValue([receivable(0)] as never);
     const res = await getTechnicianIncentivesHandler({} as never, {} as never) as { jsonBody: Record<string, unknown> };
     expect(res.jsonBody['enabled']).toBe(false);
     expect(res.jsonBody['currentWeek']).toMatchObject({ projectedBonusPaise: 0 });
+  });
+
+  it('Codex regression: does NOT project a bonus/milestone once disabled, even with a real milestone table and enough jobs to qualify', async () => {
+    // The case above (milestones: []) would pass identically whether or not `enabled` were
+    // ever checked -- computeWeek finds nothing to award against an empty table regardless.
+    // This is the actual bug shape Codex flagged: an admin disables the programme AFTER
+    // configuring real milestones, so `cfg.milestones` still has entries. Same receivable
+    // fixture as "reports live current-week progress..." above (6 jobs, on track for the
+    // 5-job/10_000-paise milestone) -- if this handler still computed against the stale
+    // table, it would report the same nextMilestone/projectedBonusPaise as that test.
+    vi.mocked(systemDocsRepo.getEffectiveIncentiveConfig).mockResolvedValue({ ...cfg, enabled: false });
+    vi.mocked(commissionReceivableRepo.getAllByTechnician).mockResolvedValue(
+      Array.from({ length: 6 }, (_, i) => receivable(i)) as never);
+
+    const res = await getTechnicianIncentivesHandler({} as never, {} as never) as { jsonBody: Record<string, unknown> };
+
+    expect(res.jsonBody['enabled']).toBe(false);
+    // countedJobs/countedCommissionPaise are still factual counts of what happened this
+    // week -- only the bonus PROJECTION (which the weekly run will never actually pay) is
+    // suppressed.
+    expect(res.jsonBody['currentWeek']).toMatchObject({ countedJobs: 6, countedCommissionPaise: 132_000 });
+    expect(res.jsonBody['currentWeek']).not.toHaveProperty('nextMilestone');
+    expect(res.jsonBody['currentWeek']).toMatchObject({ projectedBonusPaise: 0, projectedCapPaise: 0 });
   });
 });

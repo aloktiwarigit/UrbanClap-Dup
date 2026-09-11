@@ -71,8 +71,14 @@ export const getTechnicianIncentivesHandler = async (
     ]);
 
     const c = computeWeek({ receivables, startUtc, endUtc, cfg });
-    const nextMilestone = [...cfg.milestones].sort((a, b) => a.jobs - b.jobs)
-      .find((m) => m.jobs > c.countedJobs);
+    // Codex P2: if an admin disables the programme after configuring milestones,
+    // `cfg.milestones`/`cfg.capFractionBps` still describe the old, now-inert table --
+    // `runIncentiveWeek` (the orchestrator) skips every technician when `!cfg.enabled`,
+    // so a bonus projected here would never actually be paid. Zero the projection when
+    // disabled rather than reporting a milestone/bonus the weekly run will never award.
+    const nextMilestone = cfg.enabled
+      ? [...cfg.milestones].sort((a, b) => a.jobs - b.jobs).find((m) => m.jobs > c.countedJobs)
+      : undefined;
 
     const envelope = EnvelopeSchema.parse({
       enabled: cfg.enabled,
@@ -86,8 +92,8 @@ export const getTechnicianIncentivesHandler = async (
         ...(nextMilestone
           ? { nextMilestone, jobsToNextMilestone: nextMilestone.jobs - c.countedJobs }
           : {}),
-        projectedBonusPaise: c.awardedPaise,
-        projectedCapPaise: c.capPaise,
+        projectedBonusPaise: cfg.enabled ? c.awardedPaise : 0,
+        projectedCapPaise: cfg.enabled ? c.capPaise : 0,
       },
     });
     const body: TechnicianIncentivesResponse = {
