@@ -3,6 +3,7 @@
 import {
   BarChart,
   Bar,
+  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -40,7 +41,17 @@ export function PnLChart({ data, locale }: Props) {
         <Legend />
         <Bar dataKey="grossRevenue" name={t('chart.legend.grossRevenue')} fill="var(--color-brand)" />
         <Bar dataKey="commission" name={t('chart.legend.commission')} fill="var(--color-warn)" />
-        <Bar dataKey="netToOwner" name={t('chart.legend.netToOwner')} fill="var(--color-success)" />
+        {/* Issue #340: netToOwner can go negative (E23-S01 — an incentive-only day with no
+            completed bookings). A single series-level fill can't reflect that; colour each
+            day's own bar by its own sign via a Cell override instead of a fixed constant. */}
+        <Bar dataKey="netToOwner" name={t('chart.legend.netToOwner')}>
+          {data.map((entry) => (
+            <Cell
+              key={entry.date}
+              fill={entry.netToOwner >= 0 ? 'var(--color-success)' : 'var(--color-danger)'}
+            />
+          ))}
+        </Bar>
       </BarChart>
     </ResponsiveContainer>
   );

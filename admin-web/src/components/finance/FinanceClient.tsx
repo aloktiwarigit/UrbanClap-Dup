@@ -154,7 +154,17 @@ export function FinanceClient() {
               </div>
               <div className="rounded p-[var(--space-4)] bg-[var(--color-surface-alt)]">
                 <p className="text-xs text-[var(--color-text-muted)]">{t('summary.netToOwner')}</p>
-                <p className="text-[length:var(--text-xl)] font-bold text-[var(--color-success)]">{formatINR(summary.totalNet, locale)}</p>
+                {/* Issue #340: totalNet can go negative (E23-S01 — an incentive-only day with no
+                    completed bookings). Key the colour off the value's own sign, not a fixed
+                    constant, so a loss day no longer renders identically to a profit day. */}
+                <p
+                  data-testid="net-to-owner-value"
+                  className={`text-[length:var(--text-xl)] font-bold ${
+                    summary.totalNet >= 0 ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'
+                  }`}
+                >
+                  {formatINR(summary.totalNet, locale)}
+                </p>
               </div>
             </div>
             <PnLChart data={summary.dailyPnL} locale={locale} />
