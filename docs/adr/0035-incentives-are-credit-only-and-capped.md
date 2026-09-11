@@ -92,17 +92,24 @@ achieves, not an aspirational description of it:
    `floor(170434 × 0.60)` = 102,260 paise — far above the 30,000-paise gross bonus, so the cap
    never bites and the technician receives the full 30,000-paise bonus. Net to the technician
    after "spending" 16,434 paise of real commission on the 3 padding jobs: **+13,566 paise of pure
-   profit from gaming the count.** The shipped cap does close the cheaper, all-fake variant of the
-   same attack (10 fake ₹249 jobs nets a bonus of only 16,434 paise against a 30,000-paise gross
-   bonus — the cap bites there). **A lower cap, 1500 bps (15%), closes the 7-real-plus-3-cheap
-   case with no false positive on ten genuine ₹1,000 jobs** (Task 5 `PROOF`: at 1500 bps the mixed
-   attack's `capPaise` = 25,565, below the 30,000 gross bonus, so the technician is capped below
-   their padding cost and gains nothing; ten genuine jobs still clear the cap comfortably at
-   33,000 vs. a 30,000 gross bonus, so an honest week is untouched). **The lever is one admin
-   config value** (`capFractionBps`, `PUT /v1/admin/incentives/config`) — no code change is needed
-   to close the gap, but at the setting this story ships with, it is open. Do not claim, here or
-   anywhere else, that the cap makes gaming the milestone count impossible; it demonstrably does
-   not, at the default, for a technician willing to mix in a minority of cheap jobs.
+   profit from gaming the count.** **The cheaper, all-fake variant of the same attack is ALSO not
+   closed at the shipped default** — 10 fake ₹249 jobs generate `countedCommissionPaise` = 54,780
+   paise, and at the shipped 6000 bps, `capPaise = floor(54780 × 0.60)` = 32,868 paise, still above
+   the 30,000-paise gross bonus, so this variant pays the full bonus too, same as the mixed case.
+   (A separate `PROOF` test does show the cap mechanism working — at `capFractionBps: 3000`, an
+   illustrative, *not shipped*, value, the same all-fake attack's `capPaise` drops to 16,434 paise
+   and the award is genuinely capped below the gross bonus — but 3000 bps is not the default this
+   story ships with, and must not be read as describing production behaviour.) **A lower cap, 1500
+   bps (15%), closes the 7-real-plus-3-cheap case with no false positive on ten genuine ₹1,000
+   jobs** (Task 5 `PROOF`: at 1500 bps the mixed attack's `capPaise` = 25,565, below the 30,000
+   gross bonus, so the technician is capped below their padding cost and gains nothing; ten
+   genuine jobs still clear the cap comfortably at 33,000 vs. a 30,000 gross bonus, so an honest
+   week is untouched). **The lever is one admin config value** (`capFractionBps`, `PUT
+   /v1/admin/incentives/config`) — no code change is needed to close the gap, but at the setting
+   this story ships with, it is open for both the mixed and the all-fake variant. Do not claim,
+   here or anywhere else, that the cap makes gaming the milestone count impossible at the shipped
+   default; it demonstrably does not, for a technician willing to pad the count with cheap jobs,
+   whether mixed with real jobs or not.
 2. **`appliedPaise` is reconciled from allocations carrying TWO different `refId` values, not
    one.** Spec §5.5 describes "allocations with `refId = awardId`"; that undercounts. When an
    award cannot be fully allocated against outstanding receivables in the same batch, the
