@@ -58,9 +58,6 @@ export const incentiveRepo = {
     };
   },
 
-  // SEMGREP-JUSTIFIED: cross-partition by design — the platform-wide incentive cost line on the
-  // owner P&L. Sole caller is getDailyPnL, behind requireAdmin; both bounds are server-derived
-  // from a validated YYYY-MM-DD range and bound as query parameters.
   /**
    * `appliedPaise` per IST calendar day, keyed on the award's `computedAt`.
    *
@@ -69,6 +66,9 @@ export const incentiveRepo = {
    * bookings to match is out of scope — it would silently move every historical number on the
    * owner's P&L. Recorded in ADR-0035 as an accepted seam.
    */
+  // SEMGREP-JUSTIFIED: cross-partition by design — the platform-wide incentive cost line on the
+  // owner P&L. Sole caller is getDailyPnL, behind requireAdmin; both bounds are server-derived
+  // from a validated YYYY-MM-DD range and bound as query parameters.
   async sumAppliedByIstDay(fromIstDate: string, toIstDate: string): Promise<Map<string, number>> {
     const fromUtc = new Date(new Date(`${fromIstDate}T00:00:00.000Z`).getTime() - IST_OFFSET_MS).toISOString();
     const toUtc = new Date(new Date(`${toIstDate}T23:59:59.999Z`).getTime() - IST_OFFSET_MS).toISOString();

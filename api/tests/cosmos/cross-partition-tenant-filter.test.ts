@@ -71,6 +71,11 @@ const CROSS_PARTITION_IMPORT_TOKENS: ReadonlyArray<{ helper: string; importPatte
   { helper: 'listAllTechniciansWithHold',        importPattern: /\blistAllTechniciansWithHold\b/ },
   { helper: 'listTechniciansWithExpiredOverride', importPattern: /\blistTechniciansWithExpiredOverride\b/ },
   { helper: 'commissionReceivableRepo.sumDueGroupedByTechnician', importPattern: /commissionReceivableRepo\.sumDueGroupedByTechnician\b/ },
+  // E23-S01: the three cross-partition helpers the incentive engine added.
+  { helper: 'commissionReceivableRepo.listTechnicianIdsWithReceivablesInWindow',
+    importPattern: /commissionReceivableRepo\.listTechnicianIdsWithReceivablesInWindow\b/ },
+  { helper: 'incentiveRepo.listAwardsCrossPartition', importPattern: /incentiveRepo\.listAwardsCrossPartition\b/ },
+  { helper: 'incentiveRepo.sumAppliedByIstDay',       importPattern: /incentiveRepo\.sumAppliedByIstDay\b/ },
 ];
 
 // Approved authentication / scoping mechanisms:
@@ -124,6 +129,16 @@ describe('Semgrep rule presence (E19-S03)', () => {
     const nextRule = semgrepSrc.indexOf('\n  - id:', ruleStart + 1);
     const block = nextRule === -1 ? semgrepSrc.slice(ruleStart) : semgrepSrc.slice(ruleStart, nextRule);
     expect(block).toMatch(/severity:\s+ERROR/);
+  });
+
+  it('api/.semgrep.yml contains the incentives-credit-only rule id at ERROR severity (E23-S01)', () => {
+    expect(semgrepSrc).toMatch(/^\s*-\s+id:\s+incentives-credit-only\s*$/m);
+    const start = semgrepSrc.indexOf('id: incentives-credit-only');
+    const next = semgrepSrc.indexOf('\n  - id:', start + 1);
+    expect(next === -1 ? semgrepSrc.slice(start) : semgrepSrc.slice(start, next)).toMatch(/severity:\s+ERROR/);
+  });
+  it('api/.semgrep.yml contains the incentives-not-in-payout-path rule id (E23-S01)', () => {
+    expect(semgrepSrc).toMatch(/^\s*-\s+id:\s+incentives-not-in-payout-path\s*$/m);
   });
 });
 
@@ -197,7 +212,11 @@ describe('SEMGREP-JUSTIFIED comments present on cross-partition helpers', () => 
     },
     {
       file: resolve(COSMOS_ROOT, 'commission-receivable-repository.ts'),
-      helpers: ['sumDueGroupedByTechnician'],
+      helpers: ['sumDueGroupedByTechnician', 'listTechnicianIdsWithReceivablesInWindow'],
+    },
+    {
+      file: resolve(COSMOS_ROOT, 'incentive-repository.ts'),
+      helpers: ['listAwardsCrossPartition', 'sumAppliedByIstDay'],
     },
   ];
 
