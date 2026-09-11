@@ -406,6 +406,45 @@ describe('adminCommissionReceivablesPerTechHandler', () => {
 
     expect(res.status).toBe(502);
   });
+
+  it('passes awards through and keeps credit applied separate from cash collected', async () => {
+    // Arrange listLedger (mocked as the sibling cases in this file already do) to return one
+    // award plus a receivable carrying a 30_000 INCENTIVE allocation.
+    const awardDoc = {
+      id: 'award-1', docType: 'INCENTIVE_AWARD' as const, technicianId: 'tech-1', partitionKey: 'tech-1',
+      awardPaise: 5000, appliedAt: '2026-09-01T00:00:00.000Z', periodStart: '2026-08-25T00:00:00.000Z',
+      periodEnd: '2026-09-01T00:00:00.000Z', createdAt: '2026-09-01T00:00:00.000Z',
+    };
+    const receivableWithIncentive = {
+      ...receivableDue,
+      id: 'booking-2', bookingId: 'booking-2', bookingAmount: 50000,
+      createdAt: '2026-06-01T00:00:00.000Z',
+      allocations: [
+        { id: 'incentive-1:booking-2', source: 'INCENTIVE' as const, refId: 'incentive-1', paise: 30000, appliedAt: '2026-06-01T00:00:00.000Z', byId: 'system:credit' },
+      ],
+    };
+    vi.mocked(commissionReceivableRepo.listLedger).mockResolvedValue({
+      receivables: [receivableWithIncentive],
+      remittances: [],
+      credits: [],
+      awards: [awardDoc],
+    });
+    vi.mocked(techRepo.readCommissionHold).mockResolvedValue({ hold, exists: true });
+
+    const res = (await adminCommissionReceivablesPerTechHandler(
+      makeTechReq('tech-1'),
+      {} as never,
+      ctx,
+    )) as HttpResponseInit;
+
+    const body = res.jsonBody as { awards: unknown[]; creditAppliedPaise: number; cashCollectedPaise: number };
+    expect(res.status).toBe(200);
+    expect(body.awards).toHaveLength(1);
+    expect(body.creditAppliedPaise).toBe(30000);
+    // Never summed with cash: cash changed hands at the door, credit is commission offset.
+    expect(body.cashCollectedPaise).toBe(50000);
+    expect(body.cashCollectedPaise).not.toBe(body.creditAppliedPaise);
+  });
 });
 
 describe('adminCommissionReceivablesRecomputeHandler', () => {
