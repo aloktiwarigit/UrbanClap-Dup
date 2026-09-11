@@ -178,7 +178,16 @@ export async function applyAward(input: ApplyAwardInput): Promise<ApplyAwardResu
     },
   });
 
-  if (res.replayed) return { technicianId, weekKey, outcome: 'REPLAYED', awardId };
+  if (res.replayed) {
+    // Codex P2: a replay is exactly when appliedPaise/status are most likely to be stale --
+    // the original batch may have committed while a later reconcileAwardApplied call failed
+    // (best-effort, above), or a later credit-consumption run added allocations since. A
+    // manual rerun (the runbook's own documented recovery for a partial failure) must not
+    // skip the one step that would actually repair those figures.
+    try { await reconcileAwardApplied(technicianId, awardId); }
+    catch (e: unknown) { Sentry.captureException(e); }
+    return { technicianId, weekKey, outcome: 'REPLAYED', awardId };
+  }
 
   // Best-effort from here. The batch has committed; nothing below may undo or fail the award.
   if (res.creditCreatedPaise > 0) {

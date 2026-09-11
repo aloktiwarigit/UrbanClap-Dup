@@ -5,7 +5,7 @@ import * as Sentry from '@sentry/node';
 import { requireAdmin, type AdminHttpHandler } from '../../../middleware/requireAdmin.js';
 import type { AdminContext } from '../../../types/admin.js';
 import { runIncentiveWeek } from '../../../services/incentive.service.js';
-import { IST_WEEK_KEY_RE, previousIstWeekKey } from '../../../lib/ist-time.js';
+import { IST_WEEK_KEY_RE, istWeekBounds, previousIstWeekKey } from '../../../lib/ist-time.js';
 
 /**
  * Manual incentive run. Super-admin only — it moves money.
@@ -21,6 +21,15 @@ export const runIncentivesHandler: AdminHttpHandler = async (
   // be awarded by an argument-less call.
   const weekKey = req.query.get('week') ?? previousIstWeekKey(new Date());
   if (!IST_WEEK_KEY_RE.test(weekKey)) {
+    return { status: 400, jsonBody: { code: 'VALIDATION_ERROR', message: 'week must be YYYY-Www' } };
+  }
+  try {
+    // Codex P3: the regex alone accepts a syntactically valid but nonexistent ISO week (e.g.
+    // 2027-W53 -- not every year has 53 weeks). istWeekBounds throws for that case; catching
+    // it here keeps a client's malformed-week mistake a 400, not a 502/Sentry-captured
+    // upstream error indistinguishable from a real Cosmos failure.
+    istWeekBounds(weekKey);
+  } catch {
     return { status: 400, jsonBody: { code: 'VALIDATION_ERROR', message: 'week must be YYYY-Www' } };
   }
   try {

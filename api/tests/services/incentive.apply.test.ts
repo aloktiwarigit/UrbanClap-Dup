@@ -96,6 +96,23 @@ describe('applyAward — anchor.matches', () => {
     expect(consumePendingCredits).not.toHaveBeenCalled();
     expect(recomputeCommissionHold).not.toHaveBeenCalled();
   });
+  it('Codex regression: reconciles appliedPaise/status on a replay too, not just on a fresh award', async () => {
+    // A manual rerun (the runbook's documented recovery for a partial failure) hits this exact
+    // branch. If the original batch committed but the FIRST reconcileAwardApplied call later
+    // failed, or a late credit-consumption added allocations since, appliedPaise/status would
+    // stay stale forever unless a replay reconciles too. reconcileAwardApplied's own first call
+    // is incentiveRepo.getAwardWithEtag -- asserting it fires proves reconciliation actually ran
+    // on this path, not just on the fresh-award path already covered above.
+    vi.mocked(applyCredit).mockResolvedValue({ replayed: true, anchorId: 'inc:t1:2026-W37' });
+    await applyAward({ ...base, receivables: jobs(10) });
+    expect(incentiveRepo.getAwardWithEtag).toHaveBeenCalledWith('t1', 'inc:t1:2026-W37');
+  });
+  it('a reconciliation failure on replay is captured, not thrown -- REPLAYED still returns', async () => {
+    vi.mocked(applyCredit).mockResolvedValue({ replayed: true, anchorId: 'inc:t1:2026-W37' });
+    vi.mocked(incentiveRepo.getAwardWithEtag).mockRejectedValue(new Error('cosmos timeout'));
+    const r = await applyAward({ ...base, receivables: jobs(10) });
+    expect(r.outcome).toBe('REPLAYED');
+  });
 });
 
 describe('applyAward — after the batch commits', () => {

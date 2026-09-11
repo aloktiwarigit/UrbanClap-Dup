@@ -29,6 +29,14 @@ describe('POST run', () => {
     expect(await runIncentivesHandler(req({ week: 'nope' }), {} as never, admin)).toMatchObject({ status: 400 });
     expect(runIncentiveWeek).not.toHaveBeenCalled();
   });
+  it('Codex regression: 400s a syntactically-valid but nonexistent ISO week, not a 502', async () => {
+    // 2027-W53 matches IST_WEEK_KEY_RE (\d{4}-W(0[1-9]|[1-4]\d|5[0-3])) but 2027 has no week 53 --
+    // istWeekBounds throws for it. Before this fix that fell through into the try/runIncentiveWeek
+    // block and surfaced as a 502/Sentry-captured upstream error, indistinguishable from a real
+    // Cosmos failure, for what is genuinely a client input mistake.
+    expect(await runIncentivesHandler(req({ week: '2027-W53' }), {} as never, admin)).toMatchObject({ status: 400 });
+    expect(runIncentiveWeek).not.toHaveBeenCalled();
+  });
   it('surfaces a disabled programme as 200 with enabled:false, not as an error', async () => {
     vi.mocked(runIncentiveWeek).mockResolvedValue({ ...summary, enabled: false, technicianCount: 0, awarded: 0, replayed: 0, noAward: 0, totalAwardedPaise: 0 });
     expect(await runIncentivesHandler(req({ week: '2026-W37' }), {} as never, admin))
