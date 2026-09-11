@@ -1758,3 +1758,108 @@ Two consequences for whoever operates this:
 | Timer | Schedule | Does |
 |---|---|---|
 | `triggerReconcileCommissionHolds` | every 15 minutes | Drains `system/hold-repair` (repairs queued technician holds, or triggers a `FULL` sweep on an `all` flag); sweeps `EXPIRED_OVERRIDES` unconditionally on every run; runs a `FULL` sweep on roughly every 6th invocation (~90 minutes, clock-derived — see ADR-0032); writes `system/hold-reconciliation-summary` for the admin dashboard every run. |
+
+---
+
+## Incentives (E23-S01)
+
+Weekly milestone bonus, paid as credit against commission owed, never as cash. See
+`docs/adr/0035-incentives-are-credit-only-and-capped.md` for the design and, importantly, for the
+honest statement of what the anti-gaming cap does and does not close at its shipped default — read
+that before treating this feature as gaming-proof.
+
+### Enabling the programme
+
+The config document (`system/incentive-config`) has independent `enabled` and `milestones` fields.
+**Set the milestone table before flipping `enabled: true`, not after.** An enabled programme with
+an empty milestone table awards nothing to anyone — every technician's `computeWeek` reaches
+`grossBonusPaise = 0` — but it still runs the full cross-partition roster query every week (or on
+every manual run), which is pure wasted RU/compute for zero business effect. Set the table first:
+
+```
+PUT /v1/admin/incentives/config
+{ "milestones": [ { "jobs": 10, "bonusPaise": 30000 }, { "jobs": 20, "bonusPaise": 70000 } ] }
+```
+
+Then enable:
+
+```
+PUT /v1/admin/incentives/config
+{ "enabled": true }
+```
+
+Both calls require `super-admin`. `GET /v1/admin/incentives/config` (also open to `finance`) shows
+the live effective config at any time, including the two guard values described below.
+
+### Re-running a week after a failed timer
+
+The Monday 00:30 IST timer (`trigger-incentive-weekly.ts`) calls the same orchestrator
+(`runIncentiveWeek`) the manual route calls. If the timer fails, misfires, or you need to re-check
+a week's numbers after a config change was made mid-week:
+
+```
+POST /v1/admin/incentives/run?week=2026-W37
+```
+
+(`super-admin` only; week key format `YYYY-Www`, ISO week, Monday-start IST.) This is **safe to
+call repeatedly for the same week** — the award id is deterministic
+(`inc:${technicianId}:${weekKey}`), so a technician who already has an award for that week comes
+back `replayed`, not re-awarded, and re-running never re-prices a week using a config edited after
+the fact (the config actually used at award time is snapshotted onto the award document — see
+ADR-0035 Consequence 3). Re-running is the correct response to a partial failure (below), not a
+last resort.
+
+### Reading a partial failure
+
+The run response is a summary, not a list of exceptions:
+
+```json
+{ "weekKey": "2026-W37", "enabled": true, "technicianCount": 42,
+  "awarded": 39, "replayed": 0, "noAward": 2, "failed": 1, "totalAwardedPaise": 1170000 }
+```
+
+- `failed > 0` means at least one technician's award attempt threw (Cosmos hiccup, malformed
+  receivable, etc.) — the run does **not** abort on a single technician's failure (`runIncentiveWeek`
+  is deliberately sequential and isolates each technician in its own `try/catch`), so everyone else
+  in the roster still gets processed.
+- Each failure is sent to Sentry (`Sentry.captureException`) with the technician id in scope —
+  check there for the specific error, not the run summary itself.
+- **Re-running the same week is the fix.** The technicians who already succeeded come back
+  `replayed` (no-op, no double-award); only the ones who previously failed get a genuine award
+  attempt this time. There is no separate "retry failed only" endpoint — it isn't needed.
+
+### What a technician sees when an award lands on a week with no dues
+
+If a technician's outstanding commission is fully settled (or lower than the award) at the moment
+the award batch runs, the allocator cannot apply the whole `awardedPaise` amount against DUE
+receivables. The leftover becomes a `CREDIT` document (id `cr:<awardId>`) in that technician's own
+ledger partition, and the award's `status` reads `PARTIAL` (or, if nothing could be applied at all,
+still shows the credit created with `appliedPaise: 0`). That `CREDIT` is not lost or separately
+tracked — `applyAward` calls `consumePendingCredits` immediately after the award batch commits, so
+if there happens to be a DUE receivable elsewhere in the same run it is spent right away; if not, it
+sits as an ordinary credit and is automatically consumed by that technician's **next** completed,
+non-waived job that generates commission. `GET /v1/technicians/me/incentives` surfaces the award in
+the technician's `awards` list with its true status the whole time — there is nothing hidden from
+the technician between "awarded" and "actually reduces what I owe."
+
+### Turning the cap down if gaming is observed
+
+`capFractionBps` (default `6000` = 60%) is the single lever. If a technician (or a pattern across
+several) is suspected of padding job counts with minimum-price bookings to reach a milestone while
+doing a minority of real work, per ADR-0035's Consequence 1:
+
+```
+PUT /v1/admin/incentives/config
+{ "capFractionBps": 1500 }
+```
+
+1500 bps (15%) is the value Task 5's `PROOF` tests confirmed closes the specific "7 real jobs + 3
+cheap jobs" attack with **no false positive against an honest ten-job week** — an honest technician
+doing genuine average-priced jobs still clears the cap comfortably at 1500 bps. This takes effect
+on the **next** run (manual or timer); it never retroactively re-prices an already-awarded week
+(the snapshot on each award document is immutable). There is no code change or deploy involved —
+this is deliberately an operational lever, not an engineering escalation. Do not reach for
+`minCountableBookingPaise` as an alternative fix for this specific attack: it is already set to the
+cheapest real service price by default, so the padding bookings in the priced attack sit exactly at
+the floor, not below it — raising the floor further would start excluding genuinely cheap real jobs
+too, not just padding attempts. `capFractionBps` is the correct lever for this class of gaming.
