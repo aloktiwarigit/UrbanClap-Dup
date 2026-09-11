@@ -2534,6 +2534,499 @@
         },
         "additionalProperties": false
       },
+      "Milestone": {
+        "type": "object",
+        "properties": {
+          "jobs": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "bonusPaise": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          }
+        },
+        "required": [
+          "jobs",
+          "bonusPaise"
+        ],
+        "additionalProperties": false
+      },
+      "EffectiveIncentiveConfig": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "milestones": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "jobs": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "bonusPaise": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                }
+              },
+              "required": [
+                "jobs",
+                "bonusPaise"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "capFractionBps": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "minCountableBookingPaise": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "updatedBy": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "enabled",
+          "milestones",
+          "capFractionBps",
+          "minCountableBookingPaise"
+        ]
+      },
+      "UpdateIncentiveConfigBody": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "milestones": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "jobs": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "bonusPaise": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                }
+              },
+              "required": [
+                "jobs",
+                "bonusPaise"
+              ],
+              "additionalProperties": false
+            },
+            "maxItems": 20
+          },
+          "capFractionBps": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "minCountableBookingPaise": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "IncentiveAwardDoc": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "docType": {
+            "type": "string",
+            "enum": [
+              "INCENTIVE_AWARD"
+            ]
+          },
+          "technicianId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "partitionKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "weekKey": {
+            "type": "string",
+            "pattern": "^\\d{4}-W(0[1-9]|[1-4]\\d|5[0-3])$"
+          },
+          "weekStart": {
+            "type": "string"
+          },
+          "weekEnd": {
+            "type": "string"
+          },
+          "countedJobs": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "countedCommissionPaise": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "milestoneSnapshot": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "jobs": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "bonusPaise": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                }
+              },
+              "required": [
+                "jobs",
+                "bonusPaise"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "capFractionBpsSnapshot": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "minCountableBookingPaiseSnapshot": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "reachedMilestone": {
+            "type": "object",
+            "properties": {
+              "jobs": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "bonusPaise": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              }
+            },
+            "required": [
+              "jobs",
+              "bonusPaise"
+            ],
+            "additionalProperties": false
+          },
+          "grossBonusPaise": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "capPaise": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "awardedPaise": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "appliedPaise": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "AWARDED",
+              "PARTIAL",
+              "APPLIED"
+            ]
+          },
+          "computedAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "docType",
+          "technicianId",
+          "partitionKey",
+          "weekKey",
+          "weekStart",
+          "weekEnd",
+          "countedJobs",
+          "countedCommissionPaise",
+          "milestoneSnapshot",
+          "capFractionBpsSnapshot",
+          "minCountableBookingPaiseSnapshot",
+          "grossBonusPaise",
+          "capPaise",
+          "awardedPaise",
+          "appliedPaise",
+          "status",
+          "computedAt"
+        ]
+      },
+      "TechnicianIncentivesResponse": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "milestones": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "jobs": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "bonusPaise": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                }
+              },
+              "required": [
+                "jobs",
+                "bonusPaise"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "capFractionBps": {
+            "type": "integer"
+          },
+          "minCountableBookingPaise": {
+            "type": "integer"
+          },
+          "currentWeek": {
+            "type": "object",
+            "properties": {
+              "weekKey": {
+                "type": "string"
+              },
+              "weekStart": {
+                "type": "string"
+              },
+              "weekEnd": {
+                "type": "string"
+              },
+              "countedJobs": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "countedCommissionPaise": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "nextMilestone": {
+                "type": "object",
+                "properties": {
+                  "jobs": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "bonusPaise": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  }
+                },
+                "required": [
+                  "jobs",
+                  "bonusPaise"
+                ],
+                "additionalProperties": false
+              },
+              "jobsToNextMilestone": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "projectedBonusPaise": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "projectedCapPaise": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "weekKey",
+              "weekStart",
+              "weekEnd",
+              "countedJobs",
+              "countedCommissionPaise",
+              "projectedBonusPaise",
+              "projectedCapPaise"
+            ]
+          },
+          "awards": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "docType": {
+                  "type": "string",
+                  "enum": [
+                    "INCENTIVE_AWARD"
+                  ]
+                },
+                "technicianId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "partitionKey": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "weekKey": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-W(0[1-9]|[1-4]\\d|5[0-3])$"
+                },
+                "weekStart": {
+                  "type": "string"
+                },
+                "weekEnd": {
+                  "type": "string"
+                },
+                "countedJobs": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "countedCommissionPaise": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "milestoneSnapshot": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "jobs": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      },
+                      "bonusPaise": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      }
+                    },
+                    "required": [
+                      "jobs",
+                      "bonusPaise"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "capFractionBpsSnapshot": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10000
+                },
+                "minCountableBookingPaiseSnapshot": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "reachedMilestone": {
+                  "type": "object",
+                  "properties": {
+                    "jobs": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    },
+                    "bonusPaise": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    }
+                  },
+                  "required": [
+                    "jobs",
+                    "bonusPaise"
+                  ],
+                  "additionalProperties": false
+                },
+                "grossBonusPaise": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "capPaise": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "awardedPaise": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "appliedPaise": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "AWARDED",
+                    "PARTIAL",
+                    "APPLIED"
+                  ]
+                },
+                "computedAt": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "docType",
+                "technicianId",
+                "partitionKey",
+                "weekKey",
+                "weekStart",
+                "weekEnd",
+                "countedJobs",
+                "countedCommissionPaise",
+                "milestoneSnapshot",
+                "capFractionBpsSnapshot",
+                "minCountableBookingPaiseSnapshot",
+                "grossBonusPaise",
+                "capPaise",
+                "awardedPaise",
+                "appliedPaise",
+                "status",
+                "computedAt"
+              ]
+            }
+          }
+        },
+        "required": [
+          "enabled",
+          "milestones",
+          "capFractionBps",
+          "minCountableBookingPaise",
+          "currentWeek",
+          "awards"
+        ]
+      },
       "WaitlistRequest": {
         "type": "object",
         "properties": {
@@ -3401,6 +3894,204 @@
           "reason"
         ],
         "additionalProperties": false
+      },
+      "IncentiveAwardsPage": {
+        "type": "object",
+        "properties": {
+          "awards": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "docType": {
+                  "type": "string",
+                  "enum": [
+                    "INCENTIVE_AWARD"
+                  ]
+                },
+                "technicianId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "partitionKey": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "weekKey": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-W(0[1-9]|[1-4]\\d|5[0-3])$"
+                },
+                "weekStart": {
+                  "type": "string"
+                },
+                "weekEnd": {
+                  "type": "string"
+                },
+                "countedJobs": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "countedCommissionPaise": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "milestoneSnapshot": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "jobs": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      },
+                      "bonusPaise": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      }
+                    },
+                    "required": [
+                      "jobs",
+                      "bonusPaise"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "capFractionBpsSnapshot": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10000
+                },
+                "minCountableBookingPaiseSnapshot": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "reachedMilestone": {
+                  "type": "object",
+                  "properties": {
+                    "jobs": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    },
+                    "bonusPaise": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    }
+                  },
+                  "required": [
+                    "jobs",
+                    "bonusPaise"
+                  ],
+                  "additionalProperties": false
+                },
+                "grossBonusPaise": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "capPaise": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "awardedPaise": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "appliedPaise": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "AWARDED",
+                    "PARTIAL",
+                    "APPLIED"
+                  ]
+                },
+                "computedAt": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "docType",
+                "technicianId",
+                "partitionKey",
+                "weekKey",
+                "weekStart",
+                "weekEnd",
+                "countedJobs",
+                "countedCommissionPaise",
+                "milestoneSnapshot",
+                "capFractionBpsSnapshot",
+                "minCountableBookingPaiseSnapshot",
+                "grossBonusPaise",
+                "capPaise",
+                "awardedPaise",
+                "appliedPaise",
+                "status",
+                "computedAt"
+              ]
+            }
+          },
+          "continuationToken": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "awards"
+        ]
+      },
+      "IncentiveRunSummary": {
+        "type": "object",
+        "properties": {
+          "weekKey": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "technicianCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "awarded": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "replayed": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "noAward": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "failed": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "totalAwardedPaise": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "weekKey",
+          "enabled",
+          "technicianCount",
+          "awarded",
+          "replayed",
+          "noAward",
+          "failed",
+          "totalAwardedPaise"
+        ]
       },
       "AdminLoginRequest": {
         "anyOf": [
@@ -6588,6 +7279,592 @@
                     "incentive",
                     "minSupportedVersionCode",
                     "serverTime"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          }
+        }
+      }
+    },
+    "/v1/admin/incentives/config": {
+      "get": {
+        "operationId": "getIncentiveConfig",
+        "tags": [
+          "admin-incentives"
+        ],
+        "summary": "Get the effective weekly incentive config (defaults applied, never 404)",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Effective incentive config",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "milestones": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "jobs": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "bonusPaise": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          }
+                        },
+                        "required": [
+                          "jobs",
+                          "bonusPaise"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "capFractionBps": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 10000
+                    },
+                    "minCountableBookingPaise": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "updatedBy": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "enabled",
+                    "milestones",
+                    "capFractionBps",
+                    "minCountableBookingPaise"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      },
+      "put": {
+        "operationId": "putIncentiveConfig",
+        "tags": [
+          "admin-incentives"
+        ],
+        "summary": "Update the incentive milestones, cap and minimum countable booking (super-admin only)",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "milestones": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "jobs": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "bonusPaise": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        }
+                      },
+                      "required": [
+                        "jobs",
+                        "bonusPaise"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "maxItems": 20
+                  },
+                  "capFractionBps": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10000
+                  },
+                  "minCountableBookingPaise": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated config",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "milestones": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "jobs": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "bonusPaise": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          }
+                        },
+                        "required": [
+                          "jobs",
+                          "bonusPaise"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "capFractionBps": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 10000
+                    },
+                    "minCountableBookingPaise": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "updatedBy": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "enabled",
+                    "milestones",
+                    "capFractionBps",
+                    "minCountableBookingPaise"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error (empty patch, unknown field, cap outside 0–10000, or non-ascending milestones)"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Forbidden (requires super-admin)"
+          }
+        }
+      }
+    },
+    "/v1/admin/incentives/awards": {
+      "get": {
+        "operationId": "listIncentiveAwards",
+        "tags": [
+          "admin-incentives"
+        ],
+        "summary": "List incentive awards, optionally filtered by IST week and technician",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "2026-W37"
+            },
+            "required": false,
+            "name": "week",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "technicianId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "continuationToken",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of awards",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncentiveAwardsPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error (week must be YYYY-Www)"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/v1/admin/incentives/run": {
+      "post": {
+        "operationId": "runIncentives",
+        "tags": [
+          "admin-incentives"
+        ],
+        "summary": "Run the weekly incentive award for one IST week (super-admin only)",
+        "description": "Idempotent. Award ids are deterministic (`inc:<technicianId>:<weekKey>`), so re-running a week that already awarded replays per technician and grants nothing twice — the response `replayed` count reports how much was already done. Defaults to the previous IST week, so an argument-less call can never award a week still in progress. Returns `enabled: false` with zeroed counts when the programme is dark; that is a 200, not an error.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "2026-W37"
+            },
+            "required": false,
+            "name": "week",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Run summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncentiveRunSummary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error (week must be YYYY-Www)"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Forbidden (requires super-admin)"
+          }
+        }
+      }
+    },
+    "/v1/technicians/me/incentives": {
+      "get": {
+        "operationId": "getTechnicianIncentives",
+        "tags": [
+          "technicians"
+        ],
+        "summary": "Live current-week milestone progress plus the technician's last 8 awards",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Progress and recent awards",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "milestones": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "jobs": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "bonusPaise": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          }
+                        },
+                        "required": [
+                          "jobs",
+                          "bonusPaise"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "capFractionBps": {
+                      "type": "integer"
+                    },
+                    "minCountableBookingPaise": {
+                      "type": "integer"
+                    },
+                    "currentWeek": {
+                      "type": "object",
+                      "properties": {
+                        "weekKey": {
+                          "type": "string"
+                        },
+                        "weekStart": {
+                          "type": "string"
+                        },
+                        "weekEnd": {
+                          "type": "string"
+                        },
+                        "countedJobs": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "countedCommissionPaise": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "nextMilestone": {
+                          "type": "object",
+                          "properties": {
+                            "jobs": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0
+                            },
+                            "bonusPaise": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0
+                            }
+                          },
+                          "required": [
+                            "jobs",
+                            "bonusPaise"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "jobsToNextMilestone": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "projectedBonusPaise": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "projectedCapPaise": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "weekKey",
+                        "weekStart",
+                        "weekEnd",
+                        "countedJobs",
+                        "countedCommissionPaise",
+                        "projectedBonusPaise",
+                        "projectedCapPaise"
+                      ]
+                    },
+                    "awards": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "docType": {
+                            "type": "string",
+                            "enum": [
+                              "INCENTIVE_AWARD"
+                            ]
+                          },
+                          "technicianId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "partitionKey": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "weekKey": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-W(0[1-9]|[1-4]\\d|5[0-3])$"
+                          },
+                          "weekStart": {
+                            "type": "string"
+                          },
+                          "weekEnd": {
+                            "type": "string"
+                          },
+                          "countedJobs": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "countedCommissionPaise": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "milestoneSnapshot": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "jobs": {
+                                  "type": "integer",
+                                  "exclusiveMinimum": 0
+                                },
+                                "bonusPaise": {
+                                  "type": "integer",
+                                  "exclusiveMinimum": 0
+                                }
+                              },
+                              "required": [
+                                "jobs",
+                                "bonusPaise"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "capFractionBpsSnapshot": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 10000
+                          },
+                          "minCountableBookingPaiseSnapshot": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "reachedMilestone": {
+                            "type": "object",
+                            "properties": {
+                              "jobs": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0
+                              },
+                              "bonusPaise": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0
+                              }
+                            },
+                            "required": [
+                              "jobs",
+                              "bonusPaise"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "grossBonusPaise": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "capPaise": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "awardedPaise": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "appliedPaise": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "AWARDED",
+                              "PARTIAL",
+                              "APPLIED"
+                            ]
+                          },
+                          "computedAt": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "docType",
+                          "technicianId",
+                          "partitionKey",
+                          "weekKey",
+                          "weekStart",
+                          "weekEnd",
+                          "countedJobs",
+                          "countedCommissionPaise",
+                          "milestoneSnapshot",
+                          "capFractionBpsSnapshot",
+                          "minCountableBookingPaiseSnapshot",
+                          "grossBonusPaise",
+                          "capPaise",
+                          "awardedPaise",
+                          "appliedPaise",
+                          "status",
+                          "computedAt"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "enabled",
+                    "milestones",
+                    "capFractionBps",
+                    "minCountableBookingPaise",
+                    "currentWeek",
+                    "awards"
                   ]
                 }
               }
