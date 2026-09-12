@@ -9,5 +9,5 @@ export function isValidVpaFormat(vpa: string): boolean {
   const parts = vpa.split('@');
   if (parts.length !== 2) return false;
   const [local, handle] = parts;
-  return local.length > 0 && handle.length > 0;
+  return (local?.length ?? 0) > 0 && (handle?.length ?? 0) > 0;
 }
