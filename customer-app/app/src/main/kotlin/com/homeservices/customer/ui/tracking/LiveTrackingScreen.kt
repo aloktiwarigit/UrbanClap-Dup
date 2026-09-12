@@ -261,7 +261,10 @@ private fun TrackingBody(
  * PSP webhook backing this, only the technician's own declaration.
  */
 @Composable
-private fun PaymentDeclarationCard(technicianUpiMasked: String, modifier: Modifier = Modifier) {
+private fun PaymentDeclarationCard(
+    technicianUpiMasked: String,
+    modifier: Modifier = Modifier,
+) {
     Surface(
         modifier = modifier,
         shape = MaterialTheme.shapes.medium,

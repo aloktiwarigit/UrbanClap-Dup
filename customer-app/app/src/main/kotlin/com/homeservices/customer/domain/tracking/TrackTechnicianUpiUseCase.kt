@@ -9,6 +9,5 @@ public class TrackTechnicianUpiUseCase
     constructor(
         private val repository: TrackingRepository,
     ) {
-        public fun execute(bookingId: String): Flow<String?> =
-            repository.trackBooking(bookingId).map { it.technicianUpiMasked }
+        public fun execute(bookingId: String): Flow<String?> = repository.trackBooking(bookingId).map { it.technicianUpiMasked }
     }
