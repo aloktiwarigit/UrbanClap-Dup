@@ -16,11 +16,11 @@ async function signInAs(context: BrowserContext, baseURL: string | undefined, ro
 }
 
 test.describe('admin completion role matrix', () => {
-  test('super-admin sees enterprise navigation, with audit log available by direct route', async ({ page, context, baseURL }) => {
+  test('super-admin sees enterprise navigation, including audit log in the primary rail', async ({ page, context, baseURL }) => {
     await signInAs(context, baseURL, 'super-admin');
     await page.goto('/en/dashboard');
 
-    await expect(page.getByRole('link', { name: /audit log/i })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: /audit log/i }).first()).toBeVisible();
     await expect(page.getByRole('link', { name: /admin users/i }).first()).toBeVisible();
     await expect(page.getByRole('link', { name: /compliance/i }).first()).toBeVisible();
 

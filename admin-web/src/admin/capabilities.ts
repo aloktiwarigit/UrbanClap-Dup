@@ -85,8 +85,12 @@ export const ADMIN_NAV_ITEMS = [
 
 /**
  * hrefs that are hidden from the primary rail but remain directly linkable
- * (capability + route guard intact). Use this to declutter without losing
- * access — e.g., audit log is reached via deep links from other surfaces.
+ * (capability + route guard intact). Use this to declutter the rail without
+ * losing access to a route reachable by deep link from elsewhere.
+ *
+ * Currently empty: audit log was un-hidden in E21-S03 and is a permanent
+ * primary-nav item as of #343 — see Rail.test.tsx and capabilities.test.ts
+ * for the tests that pin this.
  */
 export const PRIMARY_NAV_HIDDEN = new Set<string>();
 
