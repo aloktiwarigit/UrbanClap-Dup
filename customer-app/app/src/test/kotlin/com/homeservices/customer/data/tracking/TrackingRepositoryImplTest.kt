@@ -24,6 +24,8 @@ import org.junit.Test
 public class TrackingRepositoryImplTest {
     private class FakeBookingApiService(
         var status: String = "ASSIGNED",
+        var technicianUpiMasked: String? = null,
+        var shouldFailGetBooking: Boolean = false,
     ) : BookingApiService {
         override suspend fun createBooking(
             body: CreateBookingRequestDto,
@@ -36,14 +38,17 @@ public class TrackingRepositoryImplTest {
             integrityToken: String?,
         ): ConfirmBookingResponseDto = error("not used")
 
-        override suspend fun getBooking(bookingId: String): GetBookingResponseDto =
-            GetBookingResponseDto(
+        override suspend fun getBooking(bookingId: String): GetBookingResponseDto {
+            if (shouldFailGetBooking) error("technicians container throttled")
+            return GetBookingResponseDto(
                 bookingId = bookingId,
                 status = status,
                 amount = 59900,
                 finalAmount = null,
                 pendingAddOns = emptyList(),
+                technicianUpiMasked = technicianUpiMasked,
             )
+        }
 
         override suspend fun getMyBookings(): CustomerBookingsResponseDto = error("not used")
 
@@ -202,5 +207,101 @@ public class TrackingRepositoryImplTest {
             job.cancel()
             assertThat(results).hasSize(1)
             assertThat(results[0].status).isEqualTo(BookingStatus.Unknown)
+        }
+
+    @Test
+    public fun `trackBooking's initial state carries technicianUpiMasked from the booking response`(): Unit =
+        runTest {
+            api.technicianUpiMasked = "al••••••@okhdfcbank"
+            val results = mutableListOf<TrackingState>()
+            val job = launch { repo.trackBooking("b6").collect { results.add(it) } }
+            yield()
+            job.cancel()
+            assertThat(results).hasSize(1)
+            assertThat(results[0].technicianUpiMasked).isEqualTo("al••••••@okhdfcbank")
+        }
+
+    @Test
+    public fun `trackBooking's initial state has null technicianUpiMasked when the API omits it`(): Unit =
+        runTest {
+            val results = mutableListOf<TrackingState>()
+            val job = launch { repo.trackBooking("b7").collect { results.add(it) } }
+            yield()
+            job.cancel()
+            assertThat(results).hasSize(1)
+            assertThat(results[0].technicianUpiMasked).isNull()
+        }
+
+    @Test
+    public fun `a status update re-fetches technicianUpiMasked (technician assigned mid-tracking)`(): Unit =
+        runTest {
+            // Customer opened tracking before a technician was assigned — initial seed has no VPA.
+            val results = mutableListOf<TrackingState>()
+            val job = launch { repo.trackBooking("b9").collect { results.add(it) } }
+            yield()
+
+            // Technician gets assigned + sets a VPA between the initial fetch and completion.
+            api.technicianUpiMasked = "al••••••@okhdfcbank"
+            bus.post(TrackingEvent.StatusUpdate(bookingId = "b9", status = "COMPLETED"))
+            advanceUntilIdle()
+            job.cancel()
+
+            assertThat(results).hasSize(2)
+            assertThat(results[0].technicianUpiMasked).isNull()
+            assertThat(results[1].status).isEqualTo(BookingStatus.Completed)
+            assertThat(results[1].technicianUpiMasked).isEqualTo("al••••••@okhdfcbank")
+        }
+
+    @Test
+    public fun `a status update keeps the last known technicianUpiMasked when the re-fetch fails`(): Unit =
+        runTest {
+            api.technicianUpiMasked = "al••••••@okhdfcbank"
+            val results = mutableListOf<TrackingState>()
+            val job = launch { repo.trackBooking("b10").collect { results.add(it) } }
+            yield()
+
+            api.shouldFailGetBooking = true
+            bus.post(TrackingEvent.StatusUpdate(bookingId = "b10", status = "COMPLETED"))
+            advanceUntilIdle()
+            job.cancel()
+
+            assertThat(results).hasSize(2)
+            assertThat(results[0].technicianUpiMasked).isEqualTo("al••••••@okhdfcbank")
+            // Re-fetch on this transition failed — must not regress a previously-shown value to null.
+            assertThat(results[1].technicianUpiMasked).isEqualTo("al••••••@okhdfcbank")
+        }
+
+    @Test
+    public fun `a status update clears a stale technicianUpiMasked when the re-fetch succeeds with null`(): Unit =
+        runTest {
+            // Technician reassigned mid-tracking to one with no VPA on file — the re-fetch
+            // succeeds but now legitimately reports null. Showing the OLD technician's masked
+            // VPA here would be worse than showing none, so it must NOT be retained.
+            api.technicianUpiMasked = "al••••••@okhdfcbank"
+            val results = mutableListOf<TrackingState>()
+            val job = launch { repo.trackBooking("b11").collect { results.add(it) } }
+            yield()
+
+            api.technicianUpiMasked = null
+            bus.post(TrackingEvent.StatusUpdate(bookingId = "b11", status = "REACHED"))
+            advanceUntilIdle()
+            job.cancel()
+
+            assertThat(results).hasSize(2)
+            assertThat(results[0].technicianUpiMasked).isEqualTo("al••••••@okhdfcbank")
+            assertThat(results[1].technicianUpiMasked).isNull()
+        }
+
+    @Test
+    public fun `trackBooking falls back to Unknown status and null technicianUpiMasked when the lookup throws`(): Unit =
+        runTest {
+            api.shouldFailGetBooking = true
+            val results = mutableListOf<TrackingState>()
+            val job = launch { repo.trackBooking("b8").collect { results.add(it) } }
+            yield()
+            job.cancel()
+            assertThat(results).hasSize(1)
+            assertThat(results[0].status).isEqualTo(BookingStatus.Unknown)
+            assertThat(results[0].technicianUpiMasked).isNull()
         }
 }
