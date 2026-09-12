@@ -103,6 +103,14 @@ internal class KycViewModel
         /**
          * Called when the DigiLocker deep-link redirect delivers the auth code back to the app.
          * Exchanges the code for a verified Aadhaar result.
+         *
+         * On [DigiLockerResult.AadhaarVerified] — a result that may have changed the technician's
+         * verification facts — resolves the UI state via [terminalStateForOrError] rather than
+         * hardcoding [KycUiState.AadhaarDone]: a technician who already has a `panHash` on file
+         * (PAN-first legacy or admin-written data) is COMPLETE server-side the moment Aadhaar
+         * lands, and must not be shown step 2 asking for a PAN they already submitted. The other
+         * [DigiLockerResult] branches are unaffected — they carry no new server-side fact and stay
+         * exactly as before.
          */
         public fun handleDeepLink(authCode: String): Unit {
             _uiState.value = KycUiState.Loading
@@ -110,7 +118,7 @@ internal class KycViewModel
                 orchestrator.startAadhaarConsent(authCode, DIGILOCKER_REDIRECT_URI).collect { result ->
                     _uiState.value =
                         when (result) {
-                            is DigiLockerResult.AadhaarVerified -> KycUiState.AadhaarDone
+                            is DigiLockerResult.AadhaarVerified -> terminalStateForOrError()
                             is DigiLockerResult.UserCancelled ->
                                 KycUiState.Error("Aadhaar verification was cancelled. Please try again.")
                             is DigiLockerResult.NetworkError ->

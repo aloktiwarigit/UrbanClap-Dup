@@ -134,20 +134,45 @@ public class KycViewModelTest {
         }
 
     @Test
-    public fun `handleDeepLink emits AadhaarDone on DigiLockerResult AadhaarVerified`(): Unit =
+    public fun `handleDeepLink emits AadhaarDone on DigiLockerResult AadhaarVerified when panVerified is false`(): Unit =
         runTest {
+            // [E21-S05a] AadhaarVerified is now resolved via terminalStateForOrError(), so the
+            // resulting state depends on both facts — stub the re-fetch to assert the non-Complete
+            // branch: aadhaarVerified true, panVerified false -> AadhaarDone.
+            val vm = createViewModel(aadhaarVerified = true, panVerified = false)
             every {
                 orchestrator.startAadhaarConsent(any(), any())
             } returns flowOf(DigiLockerResult.AadhaarVerified("XXXX-XXXX-1234"))
 
-            viewModel.handleDeepLink("auth-code-123")
+            vm.handleDeepLink("auth-code-123")
 
-            assertThat(viewModel.uiState.value).isEqualTo(KycUiState.AadhaarDone)
+            assertThat(vm.uiState.value).isEqualTo(KycUiState.AadhaarDone)
+        }
+
+    @Test
+    public fun `handleDeepLink Aadhaar verified while panVerified already true renders Complete`(): Unit =
+        runTest {
+            // [E21-S05a / Codex P2] A technician who completes Aadhaar last (PAN-first legacy or
+            // admin-written data) is COMPLETE server-side the moment Aadhaar lands. The old
+            // hardcoded `KycUiState.AadhaarDone` mapping left such a technician stuck asking for a
+            // PAN they already submitted. Assert on the resulting state, not a mock call.
+            val vm = createViewModel(aadhaarVerified = true, panVerified = true)
+            every {
+                orchestrator.startAadhaarConsent(any(), any())
+            } returns flowOf(DigiLockerResult.AadhaarVerified("XXXX-XXXX-1234"))
+
+            vm.handleDeepLink("auth-code-123")
+
+            assertThat(vm.uiState.value).isInstanceOf(KycUiState.Complete::class.java)
         }
 
     @Test
     public fun `callback bus auth code emits AadhaarDone`(): Unit =
         runTest {
+            // DigiLockerCallbackBus is Channel-backed (point-to-point, not broadcast) — stub the
+            // shared orchestrator directly and drive the pre-existing `viewModel` from setUp
+            // rather than constructing a second subscriber that would steal the channel value.
+            coEvery { orchestrator.fetchCurrentStatus() } returns aKycState(aadhaarVerified = true, panVerified = false)
             every {
                 orchestrator.startAadhaarConsent("auth-code-bus", any())
             } returns flowOf(DigiLockerResult.AadhaarVerified("XXXX-XXXX-1234"))
