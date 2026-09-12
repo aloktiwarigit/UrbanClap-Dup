@@ -110,8 +110,10 @@ public class KycRepositoryImpl
             val code =
                 if (response.code() == HTTP_CONFLICT) {
                     runCatching {
-                        moshi.adapter(ApiErrorDto::class.java)
-                            .fromJson(response.errorBody()?.string() ?: "")?.code
+                        moshi
+                            .adapter(ApiErrorDto::class.java)
+                            .fromJson(response.errorBody()?.string() ?: "")
+                            ?.code
                     }.getOrNull()
                 } else {
                     null
