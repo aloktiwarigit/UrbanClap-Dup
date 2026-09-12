@@ -77,4 +77,129 @@ public class KycScreenPaparazziTest {
             }
         }
     }
+
+    // KycUiState.PanDone: PAN verified, Aadhaar still outstanding ("one step left").
+
+    @Test
+    public fun snapshot_pan_done_light(): Unit {
+        paparazzi.snapshot {
+            HomeservicesTheme(darkTheme = false) {
+                KycStepPanDone(onVerifyAadhaar = {})
+            }
+        }
+    }
+
+    @Test
+    public fun snapshot_pan_done_dark(): Unit {
+        paparazzi.snapshot {
+            HomeservicesTheme(darkTheme = true) {
+                KycStepPanDone(onVerifyAadhaar = {})
+            }
+        }
+    }
+
+    // KycUiState.AadhaarRequired: a PAN attempt was made before Aadhaar verified; bounced back
+    // to the Aadhaar step with an action-needed notice.
+
+    @Test
+    public fun snapshot_aadhaar_required_light(): Unit {
+        paparazzi.snapshot {
+            HomeservicesTheme(darkTheme = false) {
+                KycStepAadhaar(
+                    onStartKyc = {},
+                    onSkip = {},
+                    noticeTitle = "Complete Aadhaar first",
+                    noticeBody = "Verify your Aadhaar before uploading your PAN card.",
+                )
+            }
+        }
+    }
+
+    @Test
+    public fun snapshot_aadhaar_required_dark(): Unit {
+        paparazzi.snapshot {
+            HomeservicesTheme(darkTheme = true) {
+                KycStepAadhaar(
+                    onStartKyc = {},
+                    onSkip = {},
+                    noticeTitle = "Complete Aadhaar first",
+                    noticeBody = "Verify your Aadhaar before uploading your PAN card.",
+                )
+            }
+        }
+    }
+
+    // KycUiState.Complete: both Aadhaar and PAN verified.
+
+    @Test
+    public fun snapshot_kyc_complete_light(): Unit {
+        paparazzi.snapshot {
+            HomeservicesTheme(darkTheme = false) {
+                KycStepComplete()
+            }
+        }
+    }
+
+    @Test
+    public fun snapshot_kyc_complete_dark(): Unit {
+        paparazzi.snapshot {
+            HomeservicesTheme(darkTheme = true) {
+                KycStepComplete()
+            }
+        }
+    }
+
+    // KycUiState.ManualReview: a submitted document was flagged and a human is reviewing it.
+
+    @Test
+    public fun snapshot_manual_review_light(): Unit {
+        paparazzi.snapshot {
+            HomeservicesTheme(darkTheme = false) {
+                KycStepManualReview()
+            }
+        }
+    }
+
+    @Test
+    public fun snapshot_manual_review_dark(): Unit {
+        paparazzi.snapshot {
+            HomeservicesTheme(darkTheme = true) {
+                KycStepManualReview()
+            }
+        }
+    }
+
+    // KycPanContent(aadhaarVerified = false): renders the locked PAN control. Future-proofing
+    // only — this codebase's two real call sites both pass aadhaarVerified = true by
+    // construction, so no user-reachable state currently renders this. The sequential
+    // Aadhaar-before-PAN gate itself is enforced in KycViewModel.terminalStateFor and is
+    // covered by that class's unit tests, not by this snapshot.
+
+    @Test
+    public fun snapshot_pan_locked_light(): Unit {
+        paparazzi.snapshot {
+            HomeservicesTheme(darkTheme = false) {
+                KycPanContent(
+                    selectedUri = null,
+                    onChoosePhoto = {},
+                    onSubmit = {},
+                    aadhaarVerified = false,
+                )
+            }
+        }
+    }
+
+    @Test
+    public fun snapshot_pan_locked_dark(): Unit {
+        paparazzi.snapshot {
+            HomeservicesTheme(darkTheme = true) {
+                KycPanContent(
+                    selectedUri = null,
+                    onChoosePhoto = {},
+                    onSubmit = {},
+                    aadhaarVerified = false,
+                )
+            }
+        }
+    }
 }
