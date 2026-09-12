@@ -1,17 +1,23 @@
 package com.homeservices.technician.data.kyc
 
+import com.homeservices.technician.data.network.defaultMoshi
 import com.homeservices.technician.domain.kyc.model.DigiLockerResult
 import com.homeservices.technician.domain.kyc.model.KycStatus
 import com.homeservices.technician.domain.kyc.model.PanOcrResult
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.ResponseBody.Companion.toResponseBody
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
+import retrofit2.Response
+
+private fun createRepository(api: KycApiService): KycRepositoryImpl = KycRepositoryImpl(api, defaultMoshi)
 
 public class KycRepositoryImplTest {
     private val api: KycApiService = mockk()
-    private val sut = KycRepositoryImpl(api)
+    private val sut = createRepository(api)
 
     @Test
     public fun `exchangeAadhaarCode returns AadhaarVerified on success`(): Unit =
@@ -51,7 +57,8 @@ public class KycRepositoryImplTest {
     @Test
     public fun `submitPanOcr returns ManualReview when API returns MANUAL_REVIEW`(): Unit =
         runTest {
-            coEvery { api.submitPanOcr(any()) } returns PanOcrResponse(kycStatus = "MANUAL_REVIEW", panNumber = null)
+            coEvery { api.submitPanOcr(any()) } returns
+                Response.success(PanOcrResponse(kycStatus = "MANUAL_REVIEW", panNumber = null))
             val result = sut.submitPanOcr("technicians/t1/pan.jpg")
             assertThat(result).isEqualTo(PanOcrResult.ManualReview)
         }
@@ -59,7 +66,8 @@ public class KycRepositoryImplTest {
     @Test
     public fun `submitPanOcr returns Success with masked panNumber`(): Unit =
         runTest {
-            coEvery { api.submitPanOcr(any()) } returns PanOcrResponse(kycStatus = "PAN_DONE", panNumber = "XXXXX1234F")
+            coEvery { api.submitPanOcr(any()) } returns
+                Response.success(PanOcrResponse(kycStatus = "PAN_DONE", panNumber = "XXXXX1234F"))
             val result = sut.submitPanOcr("technicians/t1/pan.jpg")
             assertThat(result).isInstanceOf(PanOcrResult.Success::class.java)
             assertThat((result as PanOcrResult.Success).panNumber).isEqualTo("XXXXX1234F")
@@ -68,7 +76,8 @@ public class KycRepositoryImplTest {
     @Test
     public fun `submitPanOcr returns ManualReview when server sends raw unmasked PAN (S-001 guard)`(): Unit =
         runTest {
-            coEvery { api.submitPanOcr(any()) } returns PanOcrResponse(kycStatus = "PAN_DONE", panNumber = "ABCDE1234F")
+            coEvery { api.submitPanOcr(any()) } returns
+                Response.success(PanOcrResponse(kycStatus = "PAN_DONE", panNumber = "ABCDE1234F"))
             val result = sut.submitPanOcr("technicians/t1/pan.jpg")
             assertThat(result).isEqualTo(PanOcrResult.ManualReview)
         }
@@ -84,7 +93,8 @@ public class KycRepositoryImplTest {
     @Test
     public fun `submitPanOcr returns OcrError when panNumber is null but status not MANUAL_REVIEW`(): Unit =
         runTest {
-            coEvery { api.submitPanOcr(any()) } returns PanOcrResponse(kycStatus = "PAN_DONE", panNumber = null)
+            coEvery { api.submitPanOcr(any()) } returns
+                Response.success(PanOcrResponse(kycStatus = "PAN_DONE", panNumber = null))
             val result = sut.submitPanOcr("technicians/t1/pan.jpg")
             assertThat(result).isInstanceOf(PanOcrResult.OcrError::class.java)
         }
@@ -99,11 +109,44 @@ public class KycRepositoryImplTest {
                     aadhaarVerified = true,
                     aadhaarMaskedNumber = "XXXX-XXXX-1234",
                     panNumber = "XXXXX1234F",
+                    panVerified = true,
                 )
             val state = sut.getKycStatus()
             assertThat(state.aadhaarVerified).isTrue()
             assertThat(state.panNumber).isEqualTo("XXXXX1234F")
             assertThat(state.status).isEqualTo(KycStatus.COMPLETE)
+        }
+
+    @Test
+    public fun `getKycStatus maps panVerified from the response`(): Unit =
+        runTest {
+            coEvery { api.getKycStatus() } returns
+                KycStatusResponse(
+                    technicianId = "t1",
+                    kycStatus = "COMPLETE",
+                    aadhaarVerified = true,
+                    aadhaarMaskedNumber = "XXXXXXXX1234",
+                    panNumber = "XXXXX1234F",
+                    panVerified = true,
+                )
+
+            val state = sut.getKycStatus()
+
+            assertThat(state.panVerified).isTrue()
+            assertThat(state.aadhaarVerified).isTrue()
+        }
+
+    @Test
+    public fun `submitPan maps 409 AADHAAR_REQUIRED_FIRST to AadhaarRequired`(): Unit =
+        runTest {
+            val body =
+                """{"code":"AADHAAR_REQUIRED_FIRST"}"""
+                    .toResponseBody("application/json".toMediaType())
+            coEvery { api.submitPanOcr(any()) } returns Response.error(409, body)
+
+            val result = sut.submitPanOcr("kyc/t1/pan.jpg")
+
+            assertThat(result).isInstanceOf(PanOcrResult.AadhaarRequired::class.java)
         }
 
     @Test
@@ -116,6 +159,7 @@ public class KycRepositoryImplTest {
                     aadhaarVerified = true,
                     aadhaarMaskedNumber = "XXXX-XXXX-1234",
                     panNumber = "ABCDE1234F",
+                    panVerified = false,
                 )
             val state = sut.getKycStatus()
             assertThat(state.panNumber).isNull()

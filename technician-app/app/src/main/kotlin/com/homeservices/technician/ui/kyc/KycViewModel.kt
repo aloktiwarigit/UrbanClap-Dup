@@ -151,6 +151,10 @@ internal class KycViewModel
                                 persistPhotoUploadRetry(fileUri, techId)
                                 KycUiState.Error("Failed to upload PAN image. Please try again.")
                             }
+                            is PanOcrResult.AadhaarRequired -> {
+                                clearSubmissionRows(techId)
+                                KycUiState.AadhaarPending(consentUrl = DIGILOCKER_CONSENT_URL)
+                            }
                         }
                 }
             }
