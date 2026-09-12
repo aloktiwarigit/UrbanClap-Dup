@@ -63,6 +63,17 @@ const ACTION_REQUIRED_STATUSES = new Set([
 const COMPLETE_STATUSES = new Set(['COMPLETE']);
 
 /**
+ * Forward-progress statuses: the change-feed event immediately following a SUCCESSFUL step
+ * submission. The action must still be upserted (the "finish your KYC" reminder stays live
+ * in-app for the outstanding step), but it must NOT push an FCM notification — the technician
+ * just completed a step seconds ago and is mid-flow on the next one; pushing "finish your KYC"
+ * at that moment reads as if nothing happened. PENDING / PENDING_MANUAL / MANUAL_REVIEW are
+ * genuine attention states (something needs the technician's action outside the happy path)
+ * and keep pushing FCM exactly as before.
+ */
+const SILENT_ACTION_STATUSES = new Set(['AADHAAR_DONE', 'PAN_DONE']);
+
+/**
  * Exported for unit testing without Azure Functions runtime.
  *
  * Receives a TechnicianDoc change-feed event, inspects `doc.kyc.kycStatus`,
@@ -97,7 +108,7 @@ export async function processKycChangeFeedDoc(
       payload: { kycStatus },
     });
 
-    if (!noOp) {
+    if (!noOp && !SILENT_ACTION_STATUSES.has(kycStatus)) {
       // STRICT: upsertAction THEN emitFcmForAction
       await emitFcmForAction(upserted, 'technicians');
     }
