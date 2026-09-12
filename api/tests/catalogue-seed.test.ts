@@ -181,4 +181,12 @@ describe('E22-S01 — Hindi coverage', () => {
       expect(c.nameHi, `${c.id} is missing nameHi`).toBeTruthy();
     }
   });
+
+  it('every seeded service id is registered in catalogue-ids.ts (waitlist handler contract)', async () => {
+    const { CATALOGUE_SERVICE_IDS } = await import('../src/data/catalogue-ids.js');
+    const registered = new Set(CATALOGUE_SERVICE_IDS);
+    for (const s of SERVICES) {
+      expect(registered.has(s.id), `${s.id} missing from catalogue-ids.ts`).toBe(true);
+    }
+  });
 });
