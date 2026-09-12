@@ -422,6 +422,7 @@ export interface TechnicianLookupInfo {
   rating?: number;
   isOnline?: boolean;
   isAvailable?: boolean;
+  paymentProfile?: PaymentProfile;
 }
 
 export async function getTechniciansByIds(
@@ -434,7 +435,7 @@ export async function getTechniciansByIds(
   const container = client.database(DB_NAME).container(CONTAINER);
   const { resources } = await container.items
     .query<TechnicianLookupInfo>({
-      query: `SELECT c.id, c.technicianId, c.displayName, c.name, c.rating, c.isOnline, c.isAvailable
+      query: `SELECT c.id, c.technicianId, c.displayName, c.name, c.rating, c.isOnline, c.isAvailable, c.paymentProfile
               FROM c
               WHERE ARRAY_CONTAINS(@ids, c.id) OR ARRAY_CONTAINS(@ids, c.technicianId)`,
       parameters: [{ name: '@ids', value: ids }],

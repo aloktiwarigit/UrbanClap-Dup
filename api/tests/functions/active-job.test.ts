@@ -106,6 +106,34 @@ describe('GET /v1/technicians/active-job/:bookingId', () => {
     expect(body['addressText']).toBe('12 Main St');
   });
 
+  it('includes amount, preferring finalAmount over amount', async () => {
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+    const { bookingRepo } = await import('../../src/cosmos/booking-repository.js');
+    const { catalogueRepo } = await import('../../src/cosmos/catalogue-repository.js');
+
+    (verifyTechnicianToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
+    (bookingRepo.getById as MockFn).mockResolvedValue({ ...aBooking(), amount: 50000, finalAmount: 65000 });
+    (catalogueRepo.getServiceByIdCrossPartition as MockFn).mockResolvedValue(aService());
+
+    const res = await getActiveJobHandler(makeGetReq('bk-1'), new InvocationContext()) as HttpResponseInit;
+
+    expect((res.jsonBody as Record<string, unknown>)['amount']).toBe(65000);
+  });
+
+  it('falls back to amount when finalAmount is absent', async () => {
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+    const { bookingRepo } = await import('../../src/cosmos/booking-repository.js');
+    const { catalogueRepo } = await import('../../src/cosmos/catalogue-repository.js');
+
+    (verifyTechnicianToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
+    (bookingRepo.getById as MockFn).mockResolvedValue(aBooking());
+    (catalogueRepo.getServiceByIdCrossPartition as MockFn).mockResolvedValue(aService());
+
+    const res = await getActiveJobHandler(makeGetReq('bk-1'), new InvocationContext()) as HttpResponseInit;
+
+    expect((res.jsonBody as Record<string, unknown>)['amount']).toBe(50000);
+  });
+
   it('returns 403 if booking.technicianId !== caller uid', async () => {
     const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
     const { bookingRepo } = await import('../../src/cosmos/booking-repository.js');

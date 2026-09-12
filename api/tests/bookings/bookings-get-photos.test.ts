@@ -25,9 +25,14 @@ vi.mock('../../src/firebase/admin.js', () => ({
   checkStorageFileExists: vi.fn(),
 }));
 
+vi.mock('../../src/cosmos/technician-repository.js', () => ({
+  getTechniciansByIds: vi.fn(),
+}));
+
 import { getBookingHandler } from '../../src/functions/bookings.js';
 import { bookingRepo } from '../../src/cosmos/booking-repository.js';
 import { getStorageDownloadUrlWithTtl, checkStorageFileExists } from '../../src/firebase/admin.js';
+import { getTechniciansByIds } from '../../src/cosmos/technician-repository.js';
 import { GetBookingResponseSchema } from '../../src/schemas/booking.js';
 
 type MockFn = ReturnType<typeof vi.fn>;
@@ -58,6 +63,7 @@ describe('GET /v1/bookings/{id} — photos + reportSignedUrl projection', () => 
     (bookingRepo.getById as MockFn).mockReset();
     (getStorageDownloadUrlWithTtl as MockFn).mockReset();
     (checkStorageFileExists as MockFn).mockReset();
+    (getTechniciansByIds as MockFn).mockReset().mockResolvedValue([]);
   });
 
   it('T1 — no photos: omits photos key, reportSignedUrl is null', async () => {
@@ -174,5 +180,78 @@ describe('GET /v1/bookings/{id} — photos + reportSignedUrl projection', () => 
     (bookingRepo.getById as MockFn).mockResolvedValue(null);
     const res: any = await getBookingHandler(req('bk-1'), {} as any);
     expect(res.status).toBe(404);
+  });
+
+  it('T10 — technicianUpiMasked reflects the assigned technician\'s masked VPA', async () => {
+    (bookingRepo.getById as MockFn).mockResolvedValue({ ...baseBooking });
+    (getTechniciansByIds as MockFn).mockResolvedValue([
+      {
+        id: 'tech-1',
+        technicianId: 'tech-1',
+        paymentProfile: { upiVpa: 'alok.tiwari@okhdfcbank', upiUpdatedAt: '2026-09-01T00:00:00.000Z' },
+      },
+    ]);
+
+    const res: any = await getBookingHandler(req('bk-1'), {} as any);
+
+    expect(res.status).toBe(200);
+    expect(res.jsonBody.technicianUpiMasked).toBe('al••••••@okhdfcbank');
+  });
+
+  it('T11 — technicianUpiMasked is null when no technician is assigned yet', async () => {
+    (bookingRepo.getById as MockFn).mockResolvedValue({ ...baseBooking, technicianId: undefined });
+
+    const res: any = await getBookingHandler(req('bk-1'), {} as any);
+
+    expect(res.status).toBe(200);
+    expect(res.jsonBody.technicianUpiMasked).toBeNull();
+    expect(getTechniciansByIds).not.toHaveBeenCalled();
+  });
+
+  it('T12 — technicianUpiMasked is null when the assigned technician has no VPA on file', async () => {
+    (bookingRepo.getById as MockFn).mockResolvedValue({ ...baseBooking });
+    (getTechniciansByIds as MockFn).mockResolvedValue([{ id: 'tech-1', technicianId: 'tech-1' }]);
+
+    const res: any = await getBookingHandler(req('bk-1'), {} as any);
+
+    expect(res.status).toBe(200);
+    expect(res.jsonBody.technicianUpiMasked).toBeNull();
+  });
+
+  it('T13 — technicianUpiMasked resolves via a unique technicianId-alias match when there is no exact id match', async () => {
+    (bookingRepo.getById as MockFn).mockResolvedValue({ ...baseBooking });
+    // booking.technicianId stored in "alias" form: matches doc.technicianId, not doc.id.
+    (getTechniciansByIds as MockFn).mockResolvedValue([
+      { id: 'tech-2', technicianId: 'tech-1', paymentProfile: { upiVpa: 'someone.else@ybl', upiUpdatedAt: '2026-09-01T00:00:00.000Z' } },
+    ]);
+
+    const res: any = await getBookingHandler(req('bk-1'), {} as any);
+
+    expect(res.status).toBe(200);
+    expect(res.jsonBody.technicianUpiMasked).toBe('so••••••@ybl');
+  });
+
+  it('T14 — technicianUpiMasked is null when the alias match is ambiguous (must not guess)', async () => {
+    (bookingRepo.getById as MockFn).mockResolvedValue({ ...baseBooking });
+    // Two docs alias to 'tech-1' with no exact id match on either — ambiguous, refuse to guess.
+    (getTechniciansByIds as MockFn).mockResolvedValue([
+      { id: 'tech-2', technicianId: 'tech-1', paymentProfile: { upiVpa: 'a@ybl', upiUpdatedAt: '2026-09-01T00:00:00.000Z' } },
+      { id: 'tech-3', technicianId: 'tech-1', paymentProfile: { upiVpa: 'b@ybl', upiUpdatedAt: '2026-09-01T00:00:00.000Z' } },
+    ]);
+
+    const res: any = await getBookingHandler(req('bk-1'), {} as any);
+
+    expect(res.status).toBe(200);
+    expect(res.jsonBody.technicianUpiMasked).toBeNull();
+  });
+
+  it('T15 — technicianUpiMasked is null (not a 500) when the technician lookup throws', async () => {
+    (bookingRepo.getById as MockFn).mockResolvedValue({ ...baseBooking });
+    (getTechniciansByIds as MockFn).mockRejectedValue(new Error('technicians container throttled'));
+
+    const res: any = await getBookingHandler(req('bk-1'), {} as any);
+
+    expect(res.status).toBe(200);
+    expect(res.jsonBody.technicianUpiMasked).toBeNull();
   });
 });
