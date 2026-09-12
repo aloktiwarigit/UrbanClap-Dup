@@ -313,31 +313,33 @@ git commit -m "feat(api): add PATCH /v1/technicians/me/payment-profile"
 
 ## Work Stream B — widen two existing read paths
 
-### Task 3: Add `amount` to the technician active-job response
+### Task 3: Add `amountPaise` to the technician active-job response
+
+**Field name note:** originally implemented as `amount`, renamed to `amountPaise` before merge — a parallel story (E21-S05c, technician-app cash-confirm) is independently widening this same response and had already committed to `amountPaise` (same `finalAmount ?? amount` computation) plus a sibling `paymentMethod` field. Confirmed directly against their committed plan rather than assumed, and renamed here (single reader — the not-yet-built QR builder in E24-S01b) to avoid carrying two names for one value.
 
 **Files:**
 - Modify: `api/src/functions/active-job.ts:63-76` (GET response) and `:200-213` (transition response)
 - Test: `api/tests/functions/active-job.test.ts` (existing file — add cases, do not restructure it)
 
 **Interfaces:**
-- Produces: both `getActiveJobHandler` and `transitionStatusHandler` responses now include `amount: number` (`booking.finalAmount ?? booking.amount`, matching the `bookingAmount` convention used everywhere else in the codebase, e.g. `api/src/services/commission-settlement.service.ts:30`).
+- Produces: both `getActiveJobHandler` and `transitionStatusHandler` responses now include `amountPaise: number` (`booking.finalAmount ?? booking.amount`, matching the `bookingAmount` convention used everywhere else in the codebase, e.g. `api/src/services/commission-settlement.service.ts:30`).
 
 - [ ] **Step 1: Write the failing test**
 
 Add to `api/tests/functions/active-job.test.ts` (match its existing mock/fixture style — read the file first for its `booking` fixture shape):
 
 ```typescript
-it('getActiveJobHandler includes amount, preferring finalAmount over amount', async () => {
+it('includes amountPaise, preferring finalAmount over amount', async () => {
   // extend the existing booking fixture with `amount: 50000, finalAmount: 65000`
-  // (add-ons approved) and assert the response body's `amount` is 65000.
+  // (add-ons approved) and assert the response body's `amountPaise` is 65000.
   const res = await getActiveJobHandler(makeReq(), ctx) as HttpResponseInit;
-  expect((res.jsonBody as any).amount).toBe(65000);
+  expect((res.jsonBody as any).amountPaise).toBe(65000);
 });
 
-it('getActiveJobHandler falls back to amount when finalAmount is absent', async () => {
+it('falls back to amountPaise when finalAmount is absent', async () => {
   // fixture with `amount: 50000` and no `finalAmount` field.
   const res = await getActiveJobHandler(makeReq(), ctx) as HttpResponseInit;
-  expect((res.jsonBody as any).amount).toBe(50000);
+  expect((res.jsonBody as any).amountPaise).toBe(50000);
 });
 ```
 
@@ -346,7 +348,7 @@ it('getActiveJobHandler falls back to amount when finalAmount is absent', async 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `cd api && npx vitest run tests/functions/active-job.test.ts`
-Expected: FAIL — `amount` is `undefined` on the response body.
+Expected: FAIL — `amountPaise` is `undefined` on the response body.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -354,7 +356,7 @@ In `getActiveJobHandler`'s return (active-job.ts:63-76), add one line:
 
 ```typescript
       addressText: normalizeAddressText(booking.addressText),
-      amount: booking.finalAmount ?? booking.amount,
+      amountPaise: booking.finalAmount ?? booking.amount,
       addressLatLng: booking.addressLatLng,
 ```
 
@@ -362,7 +364,7 @@ And identically in `transitionStatusHandler`'s return (active-job.ts:200-213):
 
 ```typescript
       addressText: normalizeAddressText(updated.addressText),
-      amount: updated.finalAmount ?? updated.amount,
+      amountPaise: updated.finalAmount ?? updated.amount,
       addressLatLng: updated.addressLatLng,
 ```
 
@@ -375,7 +377,7 @@ Expected: PASS, no regressions in the existing cases in that file.
 
 ```bash
 git add api/src/functions/active-job.ts api/tests/functions/active-job.test.ts
-git commit -m "feat(api): include settled amount in active-job responses"
+git commit -m "feat(api): include settled amountPaise in active-job responses"
 ```
 
 ### Task 4: Masked technician VPA on the customer's booking read
