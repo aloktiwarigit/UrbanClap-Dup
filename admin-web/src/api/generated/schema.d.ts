@@ -611,6 +611,78 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/incentives/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the effective weekly incentive config (defaults applied, never 404) */
+        get: operations["getIncentiveConfig"];
+        /** Update the incentive milestones, cap and minimum countable booking (super-admin only) */
+        put: operations["putIncentiveConfig"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/incentives/awards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List incentive awards, optionally filtered by IST week and technician */
+        get: operations["listIncentiveAwards"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/incentives/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run the weekly incentive award for one IST week (super-admin only)
+         * @description Idempotent. Award ids are deterministic (`inc:<technicianId>:<weekKey>`), so re-running a week that already awarded replays per technician and grants nothing twice — the response `replayed` count reports how much was already done. Defaults to the previous IST week, so an argument-less call can never award a week still in progress. Returns `enabled: false` with zeroed counts when the programme is dark; that is a 200, not an error.
+         */
+        post: operations["runIncentives"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/technicians/me/incentives": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Live current-week milestone progress plus the technician's last 8 awards */
+        get: operations["getTechnicianIncentives"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/waitlist": {
         parameters: {
             query?: never;
@@ -1335,6 +1407,113 @@ export interface components {
             };
             minSupportedVersionCode?: number;
         };
+        Milestone: {
+            jobs: number;
+            bonusPaise: number;
+        };
+        EffectiveIncentiveConfig: {
+            enabled: boolean;
+            milestones: {
+                jobs: number;
+                bonusPaise: number;
+            }[];
+            capFractionBps: number;
+            minCountableBookingPaise: number;
+            updatedBy?: string;
+            updatedAt?: string;
+        };
+        UpdateIncentiveConfigBody: {
+            enabled?: boolean;
+            milestones?: {
+                jobs: number;
+                bonusPaise: number;
+            }[];
+            capFractionBps?: number;
+            minCountableBookingPaise?: number;
+        };
+        IncentiveAwardDoc: {
+            id: string;
+            /** @enum {string} */
+            docType: "INCENTIVE_AWARD";
+            technicianId: string;
+            partitionKey: string;
+            weekKey: string;
+            weekStart: string;
+            weekEnd: string;
+            countedJobs: number;
+            countedCommissionPaise: number;
+            milestoneSnapshot: {
+                jobs: number;
+                bonusPaise: number;
+            }[];
+            capFractionBpsSnapshot: number;
+            minCountableBookingPaiseSnapshot: number;
+            reachedMilestone?: {
+                jobs: number;
+                bonusPaise: number;
+            };
+            grossBonusPaise: number;
+            capPaise: number;
+            awardedPaise: number;
+            appliedPaise: number;
+            /** @enum {string} */
+            status: "AWARDED" | "PARTIAL" | "APPLIED";
+            computedAt: string;
+            updatedAt?: string;
+        };
+        TechnicianIncentivesResponse: {
+            enabled: boolean;
+            milestones: {
+                jobs: number;
+                bonusPaise: number;
+            }[];
+            capFractionBps: number;
+            minCountableBookingPaise: number;
+            currentWeek: {
+                weekKey: string;
+                weekStart: string;
+                weekEnd: string;
+                countedJobs: number;
+                countedCommissionPaise: number;
+                nextMilestone?: {
+                    jobs: number;
+                    bonusPaise: number;
+                };
+                jobsToNextMilestone?: number;
+                projectedBonusPaise: number;
+                projectedCapPaise: number;
+            };
+            awards: {
+                id: string;
+                /** @enum {string} */
+                docType: "INCENTIVE_AWARD";
+                technicianId: string;
+                partitionKey: string;
+                weekKey: string;
+                weekStart: string;
+                weekEnd: string;
+                countedJobs: number;
+                countedCommissionPaise: number;
+                milestoneSnapshot: {
+                    jobs: number;
+                    bonusPaise: number;
+                }[];
+                capFractionBpsSnapshot: number;
+                minCountableBookingPaiseSnapshot: number;
+                reachedMilestone?: {
+                    jobs: number;
+                    bonusPaise: number;
+                };
+                grossBonusPaise: number;
+                capPaise: number;
+                awardedPaise: number;
+                appliedPaise: number;
+                /** @enum {string} */
+                status: "AWARDED" | "PARTIAL" | "APPLIED";
+                computedAt: string;
+                updatedAt?: string;
+            }[];
+        };
         WaitlistRequest: {
             /** @example +916000000001 */
             phone: string;
@@ -1541,6 +1720,49 @@ export interface components {
             /** Format: date-time */
             until: string;
             reason: string;
+        };
+        IncentiveAwardsPage: {
+            awards: {
+                id: string;
+                /** @enum {string} */
+                docType: "INCENTIVE_AWARD";
+                technicianId: string;
+                partitionKey: string;
+                weekKey: string;
+                weekStart: string;
+                weekEnd: string;
+                countedJobs: number;
+                countedCommissionPaise: number;
+                milestoneSnapshot: {
+                    jobs: number;
+                    bonusPaise: number;
+                }[];
+                capFractionBpsSnapshot: number;
+                minCountableBookingPaiseSnapshot: number;
+                reachedMilestone?: {
+                    jobs: number;
+                    bonusPaise: number;
+                };
+                grossBonusPaise: number;
+                capPaise: number;
+                awardedPaise: number;
+                appliedPaise: number;
+                /** @enum {string} */
+                status: "AWARDED" | "PARTIAL" | "APPLIED";
+                computedAt: string;
+                updatedAt?: string;
+            }[];
+            continuationToken?: string;
+        };
+        IncentiveRunSummary: {
+            weekKey: string;
+            enabled: boolean;
+            technicianCount: number;
+            awarded: number;
+            replayed: number;
+            noAward: number;
+            failed: number;
+            totalAwardedPaise: number;
         };
         AdminLoginRequest: {
             idToken: string;
@@ -3572,6 +3794,280 @@ export interface operations {
                         };
                         minSupportedVersionCode: number;
                         serverTime: string;
+                    };
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getIncentiveConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Effective incentive config */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        enabled: boolean;
+                        milestones: {
+                            jobs: number;
+                            bonusPaise: number;
+                        }[];
+                        capFractionBps: number;
+                        minCountableBookingPaise: number;
+                        updatedBy?: string;
+                        updatedAt?: string;
+                    };
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    putIncentiveConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    enabled?: boolean;
+                    milestones?: {
+                        jobs: number;
+                        bonusPaise: number;
+                    }[];
+                    capFractionBps?: number;
+                    minCountableBookingPaise?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated config */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        enabled: boolean;
+                        milestones: {
+                            jobs: number;
+                            bonusPaise: number;
+                        }[];
+                        capFractionBps: number;
+                        minCountableBookingPaise: number;
+                        updatedBy?: string;
+                        updatedAt?: string;
+                    };
+                };
+            };
+            /** @description Validation error (empty patch, unknown field, cap outside 0–10000, or non-ascending milestones) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden (requires super-admin) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listIncentiveAwards: {
+        parameters: {
+            query?: {
+                week?: string;
+                technicianId?: string;
+                continuationToken?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of awards */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncentiveAwardsPage"];
+                };
+            };
+            /** @description Validation error (week must be YYYY-Www) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    runIncentives: {
+        parameters: {
+            query?: {
+                week?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Run summary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncentiveRunSummary"];
+                };
+            };
+            /** @description Validation error (week must be YYYY-Www) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden (requires super-admin) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getTechnicianIncentives: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Progress and recent awards */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        enabled: boolean;
+                        milestones: {
+                            jobs: number;
+                            bonusPaise: number;
+                        }[];
+                        capFractionBps: number;
+                        minCountableBookingPaise: number;
+                        currentWeek: {
+                            weekKey: string;
+                            weekStart: string;
+                            weekEnd: string;
+                            countedJobs: number;
+                            countedCommissionPaise: number;
+                            nextMilestone?: {
+                                jobs: number;
+                                bonusPaise: number;
+                            };
+                            jobsToNextMilestone?: number;
+                            projectedBonusPaise: number;
+                            projectedCapPaise: number;
+                        };
+                        awards: {
+                            id: string;
+                            /** @enum {string} */
+                            docType: "INCENTIVE_AWARD";
+                            technicianId: string;
+                            partitionKey: string;
+                            weekKey: string;
+                            weekStart: string;
+                            weekEnd: string;
+                            countedJobs: number;
+                            countedCommissionPaise: number;
+                            milestoneSnapshot: {
+                                jobs: number;
+                                bonusPaise: number;
+                            }[];
+                            capFractionBpsSnapshot: number;
+                            minCountableBookingPaiseSnapshot: number;
+                            reachedMilestone?: {
+                                jobs: number;
+                                bonusPaise: number;
+                            };
+                            grossBonusPaise: number;
+                            capPaise: number;
+                            awardedPaise: number;
+                            appliedPaise: number;
+                            /** @enum {string} */
+                            status: "AWARDED" | "PARTIAL" | "APPLIED";
+                            computedAt: string;
+                            updatedAt?: string;
+                        }[];
                     };
                 };
             };
