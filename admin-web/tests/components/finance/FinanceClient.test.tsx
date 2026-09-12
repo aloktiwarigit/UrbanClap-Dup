@@ -104,3 +104,31 @@ describe('FinanceClient — Payout Queue visibility', () => {
     expect(screen.queryByText('Payout Queue')).toBeNull();
   });
 });
+
+// Issue #340: totalNet was hard-coded to var(--color-success) regardless of sign. Widening
+// FinanceSummary.totalNet off z.number().nonnegative() (E23-S01, in flight on another branch)
+// makes a negative totalNet reachable for the first time — an incentive-only day with no
+// completed bookings. The figure must key its colour off its own sign.
+describe('FinanceClient — net-to-owner colour keys off sign', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    fetchPayoutQueue.mockResolvedValue(queue);
+  });
+
+  it('renders a non-negative totalNet in the success colour', async () => {
+    fetchFinanceSummary.mockResolvedValue(summary({ totalNet: 116250 }));
+    render(<FinanceClient />);
+    const value = await screen.findByTestId('net-to-owner-value');
+    expect(value.className).toContain('text-[var(--color-success)]');
+    expect(value.className).not.toContain('text-[var(--color-danger)]');
+  });
+
+  it('renders a negative totalNet in the danger colour, not success', async () => {
+    // Incentive-only day: gross 0, commission 0, incentiveCost > 0 -> totalNet < 0.
+    fetchFinanceSummary.mockResolvedValue(summary({ totalNet: -50000 }));
+    render(<FinanceClient />);
+    const value = await screen.findByTestId('net-to-owner-value');
+    expect(value.className).toContain('text-[var(--color-danger)]');
+    expect(value.className).not.toContain('text-[var(--color-success)]');
+  });
+});
