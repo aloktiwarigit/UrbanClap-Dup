@@ -23,6 +23,8 @@ import { AYODHYA_SERVICE_AREA } from '../data/service-area-ayodhya.js';
 import { slotHoldsRepo } from '../cosmos/slot-holds-repository.js';
 import { generateSlots, filterElapsedSlots, currentIstMinuteOfDay, todayIst } from '../shared/slot-utils.js';
 import { getStorageDownloadUrlWithTtl, checkStorageFileExists } from '../firebase/admin.js';
+import { getTechniciansByIds } from '../cosmos/technician-repository.js';
+import { maskVpa } from '../lib/pii/mask.js';
 
 const PHOTO_STAGE_ORDER = ['EN_ROUTE', 'REACHED', 'IN_PROGRESS', 'COMPLETED'] as const;
 const PHOTO_SIGNED_URL_TTL_SECONDS = 300;
@@ -653,6 +655,13 @@ const getBookingInner: CustomerHttpHandler = async (req, _ctx, customer) => {
     projectReportSignedUrl(id, booking.status),
   ]);
 
+  let technicianUpiMasked: string | null = null;
+  if (booking.technicianId) {
+    const techs = await getTechniciansByIds([booking.technicianId]);
+    const exact = techs.find((t) => t.id === booking.technicianId);
+    technicianUpiMasked = exact?.paymentProfile?.upiVpa ? maskVpa(exact.paymentProfile.upiVpa) : null;
+  }
+
   return {
     status: 200,
     jsonBody: {
@@ -660,6 +669,7 @@ const getBookingInner: CustomerHttpHandler = async (req, _ctx, customer) => {
       status: booking.status,
       amount: booking.amount,
       finalAmount: booking.finalAmount ?? null,
+      technicianUpiMasked,
       pendingAddOns: booking.pendingAddOns ?? [],
       approvedAddOns: booking.approvedAddOns ?? [],
       ...(photos !== undefined ? { photos } : {}),
