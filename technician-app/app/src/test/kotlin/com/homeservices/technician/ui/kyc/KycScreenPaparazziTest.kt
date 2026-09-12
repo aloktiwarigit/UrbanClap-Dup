@@ -29,7 +29,7 @@ public class KycScreenPaparazziTest {
     public fun snapshot_step2_pan_no_selection(): Unit {
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = false) {
-                KycPanContent(selectedUri = null, onChoosePhoto = {}, onSubmit = {})
+                KycPanContent(selectedUri = null, onChoosePhoto = {}, onSubmit = {}, aadhaarVerified = true)
             }
         }
     }
@@ -42,6 +42,7 @@ public class KycScreenPaparazziTest {
                     selectedUri = Uri.parse("content://media/external/images/media/1"),
                     onChoosePhoto = {},
                     onSubmit = {},
+                    aadhaarVerified = true,
                 )
             }
         }

@@ -327,17 +327,17 @@ internal fun KycStepAadhaar(
  * @param aadhaarVerified Gates the upload control itself. `false` renders the whole step as
  *   locked — a reason banner plus a disabled upload button, and the photo picker is never
  *   launched — so a technician can never start a PAN submission the server would refuse for
- *   want of Aadhaar. Defaults to `true`: every reachable caller today only shows this step once
- *   Aadhaar has verified (see [KycScreen]'s `AadhaarDone`/`PanReady` branches), so the default
- *   preserves that behaviour; the parameter exists so the control enforces the invariant itself
- *   rather than relying solely on the caller never getting it wrong.
+ *   want of Aadhaar. Defaults to `false`: this is a LOCK parameter, so an omitted argument must
+ *   fail closed (locked) rather than unlocked. Both reachable callers today (see [KycScreen]'s
+ *   `AadhaarDone`/`PanReady` branches) pass `aadhaarVerified = true` explicitly, so this default
+ *   is never exercised by them; it only protects a future call site that forgets the argument.
  */
 @Composable
 internal fun KycStepPan(
     selectedUri: Uri?,
     onUriSelected: (Uri?) -> Unit,
     modifier: Modifier = Modifier,
-    aadhaarVerified: Boolean = true,
+    aadhaarVerified: Boolean = false,
 ) {
     val launcher =
         rememberLauncherForActivityResult(
@@ -360,7 +360,7 @@ internal fun KycPanContent(
     onChoosePhoto: () -> Unit,
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier,
-    aadhaarVerified: Boolean = true,
+    aadhaarVerified: Boolean = false,
 ) {
     KycFrame(
         eyebrow = "Step 2 of 2",
