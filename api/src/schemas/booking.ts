@@ -125,6 +125,10 @@ export const GetBookingResponseSchema = z.object({
   status: BookingDocSchema.shape.status,
   amount: z.number().int().positive(),
   finalAmount: z.number().int().positive().nullable(),
+  /** E24-S01: masked view of the assigned technician's UPI VPA (maskVpa), for the
+   *  in-app UPI-QR swap-detection mitigation. Null until a technician is assigned
+   *  or until they have a VPA on file. Read-path widening only. */
+  technicianUpiMasked: z.string().nullable().optional(),
   pendingAddOns: z.array(PendingAddOnSchema).default([]),
   approvedAddOns: z.array(PendingAddOnSchema).default([]),
   photos: z.record(z.string(), PhotoStageResponseSchema).optional(),
