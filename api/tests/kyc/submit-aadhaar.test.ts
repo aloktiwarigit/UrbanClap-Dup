@@ -3,6 +3,7 @@ import { HttpRequest, InvocationContext } from '@azure/functions';
 
 vi.mock('../../src/cosmos/technician-repository.js', () => ({
   upsertKycStatus: vi.fn(),
+  upsertKycStepAndDeriveStatus: vi.fn(),
 }));
 vi.mock('../../src/middleware/verifyTechnicianToken.js', () => ({
   verifyTechnicianToken: vi.fn(),
@@ -25,10 +26,10 @@ describe('POST /v1/kyc/aadhaar', () => {
   it('returns 200 with masked number on successful DigiLocker exchange', async () => {
     const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
     const { exchangeCodeForAadhaar } = await import('../../src/services/digilocker.service.js');
-    const { upsertKycStatus } = await import('../../src/cosmos/technician-repository.js');
+    const { upsertKycStepAndDeriveStatus } = await import('../../src/cosmos/technician-repository.js');
     vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
     vi.mocked(exchangeCodeForAadhaar).mockResolvedValue({ maskedNumber: 'XXXX-XXXX-1234' });
-    vi.mocked(upsertKycStatus).mockResolvedValue(undefined);
+    vi.mocked(upsertKycStepAndDeriveStatus).mockResolvedValue('AADHAAR_DONE');
 
     const req = new HttpRequest({
       method: 'POST',
@@ -67,11 +68,11 @@ describe('POST /v1/kyc/aadhaar', () => {
   it('emits KYC_AADHAAR_VERIFIED audit entry on successful DigiLocker exchange', async () => {
     const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
     const { exchangeCodeForAadhaar } = await import('../../src/services/digilocker.service.js');
-    const { upsertKycStatus } = await import('../../src/cosmos/technician-repository.js');
+    const { upsertKycStepAndDeriveStatus } = await import('../../src/cosmos/technician-repository.js');
     const { kycAuditEntry } = await import('../../src/services/kycAudit.service.js');
     vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
     vi.mocked(exchangeCodeForAadhaar).mockResolvedValue({ maskedNumber: 'XXXX-XXXX-1234' });
-    vi.mocked(upsertKycStatus).mockResolvedValue(undefined);
+    vi.mocked(upsertKycStepAndDeriveStatus).mockResolvedValue('AADHAAR_DONE');
 
     const req = new HttpRequest({
       method: 'POST', url: 'http://localhost/v1/kyc/aadhaar',

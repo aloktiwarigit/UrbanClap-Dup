@@ -1,7 +1,10 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { verifyTechnicianToken } from '../../middleware/verifyTechnicianToken.js';
 import { exchangeCodeForAadhaar } from '../../services/digilocker.service.js';
-import { upsertKycStatus } from '../../cosmos/technician-repository.js';
+import {
+  upsertKycStatus,
+  upsertKycStepAndDeriveStatus,
+} from '../../cosmos/technician-repository.js';
 import { SubmitAadhaarRequestSchema } from '../../schemas/kyc.js';
 import { kycAuditEntry } from '../../services/kycAudit.service.js';
 
@@ -49,17 +52,16 @@ export async function submitAadhaar(
     };
   }
 
-  await upsertKycStatus(technicianId, {
+  const derivedStatus = await upsertKycStepAndDeriveStatus(technicianId, {
     aadhaarVerified: true,
     aadhaarMaskedNumber: aadhaarResult.maskedNumber,
-    kycStatus: 'AADHAAR_DONE',
   });
   void kycAuditEntry(technicianId, 'AADHAAR', 'VERIFIED');
 
   return {
     status: 200,
     jsonBody: {
-      kycStatus: 'AADHAAR_DONE',
+      kycStatus: derivedStatus,
       aadhaarVerified: true,
       aadhaarMaskedNumber: aadhaarResult.maskedNumber,
     },
