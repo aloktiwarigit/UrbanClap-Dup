@@ -34,7 +34,7 @@ describe('upsertKycStepAndDeriveStatus', () => {
     const status = await upsertKycStepAndDeriveStatus('t1', { panHash: 'c'.repeat(64) });
 
     expect(status).toBe('COMPLETE');
-    expect(replace.mock.calls[0][0].kyc.kycStatus).toBe('COMPLETE');
+    expect(replace.mock.calls[0]![0].kyc.kycStatus).toBe('COMPLETE');
   });
 
   it('derives AADHAAR_DONE when Aadhaar lands with no PAN yet', async () => {
@@ -43,7 +43,7 @@ describe('upsertKycStepAndDeriveStatus', () => {
     const status = await upsertKycStepAndDeriveStatus('t1', { aadhaarVerified: true });
 
     expect(status).toBe('AADHAAR_DONE');
-    expect(replace.mock.calls[0][0].kyc.kycStatus).toBe('AADHAAR_DONE');
+    expect(replace.mock.calls[0]![0].kyc.kycStatus).toBe('AADHAAR_DONE');
   });
 
   it('derives from the MERGED document, not the patch alone', async () => {
