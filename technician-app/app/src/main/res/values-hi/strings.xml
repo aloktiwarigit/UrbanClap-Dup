@@ -192,7 +192,7 @@
     <string name="kyc_pan_done_title">एक कदम बाकी है</string>
     <string name="kyc_pan_done_body">आपका पैन सत्यापित हो गया है। पूरा करने के लिए आधार सत्यापित करें।</string>
     <string name="kyc_complete_title">केवाईसी पूरी हुई</string>
-    <string name="kyc_complete_body">दोनों दस्तावेज़ सत्यापित हैं। अब आप जॉब ले सकते हैं।</string>
+    <string name="kyc_complete_body">दोनों दस्तावेज़ सत्यापित हैं। अब आप काम प्राप्त कर सकते हैं।</string>
 
     <!-- Active job location foreground service (E17-S02) -->
     <string name="active_job_location_notification_title">ग्राहक के साथ स्थान साझा कर रहे हैं</string>
