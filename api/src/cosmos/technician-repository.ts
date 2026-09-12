@@ -68,6 +68,30 @@ export async function upsertKycStatus(
   });
 }
 
+/**
+ * The single source of truth for "is this technician's KYC finished".
+ *
+ * `kyc.kycStatus` was historically a progress marker for a two-step process completable in either
+ * order, so it could not express "both done" — whichever step ran last won, and `COMPLETE` had no
+ * writer at all. Three consecutive review rounds each produced a wrong predicate over that scalar
+ * (ADR-0032). This function is now the only thing that writes `COMPLETE`, and it derives it from
+ * the same two independent facts the dispatch predicate reads, so the two can never disagree.
+ *
+ * Order-independent by construction: it reads the merged document, not the incoming patch.
+ * An empty-string panHash is treated as absent — a hash is never legitimately empty, and
+ * accepting one would let a blank write satisfy the completion fact.
+ */
+export function deriveKycStatus(facts: {
+  aadhaarVerified: boolean;
+  panHash: string | null | undefined;
+}): KycStatus {
+  const panVerified = facts.panHash != null && facts.panHash !== '';
+  if (facts.aadhaarVerified && panVerified) return 'COMPLETE';
+  if (panVerified) return 'PAN_DONE';
+  if (facts.aadhaarVerified) return 'AADHAAR_DONE';
+  return 'PENDING';
+}
+
 export async function getKycByTechnicianId(
   technicianId: string
 ): Promise<TechnicianKyc | null> {
