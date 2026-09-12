@@ -22,4 +22,8 @@ export const CATALOGUE_SERVICE_IDS: readonly string[] = [
   'electrical-wiring',
   'ro-installation',
   'ro-service-amc',
+  'appliance-fridge-repair',
+  'appliance-cooler-service',
+  'appliance-washing-machine-repair',
+  'electrical-camera-installation',
 ] as const;
