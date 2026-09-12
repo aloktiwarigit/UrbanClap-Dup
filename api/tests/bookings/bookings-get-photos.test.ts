@@ -218,12 +218,36 @@ describe('GET /v1/bookings/{id} — photos + reportSignedUrl projection', () => 
     expect(res.jsonBody.technicianUpiMasked).toBeNull();
   });
 
-  it('T13 — technicianUpiMasked is null when the lookup has no exact id match (must not guess)', async () => {
+  it('T13 — technicianUpiMasked resolves via a unique technicianId-alias match when there is no exact id match', async () => {
     (bookingRepo.getById as MockFn).mockResolvedValue({ ...baseBooking });
-    // Only a technicianId-field match, no doc with id === 'tech-1' — an unrelated technician.
+    // booking.technicianId stored in "alias" form: matches doc.technicianId, not doc.id.
     (getTechniciansByIds as MockFn).mockResolvedValue([
       { id: 'tech-2', technicianId: 'tech-1', paymentProfile: { upiVpa: 'someone.else@ybl', upiUpdatedAt: '2026-09-01T00:00:00.000Z' } },
     ]);
+
+    const res: any = await getBookingHandler(req('bk-1'), {} as any);
+
+    expect(res.status).toBe(200);
+    expect(res.jsonBody.technicianUpiMasked).toBe('so••••••@ybl');
+  });
+
+  it('T14 — technicianUpiMasked is null when the alias match is ambiguous (must not guess)', async () => {
+    (bookingRepo.getById as MockFn).mockResolvedValue({ ...baseBooking });
+    // Two docs alias to 'tech-1' with no exact id match on either — ambiguous, refuse to guess.
+    (getTechniciansByIds as MockFn).mockResolvedValue([
+      { id: 'tech-2', technicianId: 'tech-1', paymentProfile: { upiVpa: 'a@ybl', upiUpdatedAt: '2026-09-01T00:00:00.000Z' } },
+      { id: 'tech-3', technicianId: 'tech-1', paymentProfile: { upiVpa: 'b@ybl', upiUpdatedAt: '2026-09-01T00:00:00.000Z' } },
+    ]);
+
+    const res: any = await getBookingHandler(req('bk-1'), {} as any);
+
+    expect(res.status).toBe(200);
+    expect(res.jsonBody.technicianUpiMasked).toBeNull();
+  });
+
+  it('T15 — technicianUpiMasked is null (not a 500) when the technician lookup throws', async () => {
+    (bookingRepo.getById as MockFn).mockResolvedValue({ ...baseBooking });
+    (getTechniciansByIds as MockFn).mockRejectedValue(new Error('technicians container throttled'));
 
     const res: any = await getBookingHandler(req('bk-1'), {} as any);
 

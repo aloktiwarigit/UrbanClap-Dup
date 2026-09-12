@@ -91,6 +91,32 @@ async function projectReportSignedUrl(
   }
 }
 
+/**
+ * Best-effort masked-VPA lookup for the customer's booking read — same
+ * safe-resolution shape as `technicianUid()` in reveal-contact.ts (exact `id`
+ * match wins outright; a `technicianId`-alias match is accepted only when
+ * unique, since `getTechniciansByIds` matches `id OR technicianId` with no
+ * ORDER BY and `booking.technicianId` may be stored in either form). Unlike
+ * that PII-disclosure endpoint, an ambiguous or failed lookup here just
+ * means the field renders `null` — never guess, but also never fail the
+ * whole booking read over an optional display field.
+ */
+async function resolveTechnicianUpiMasked(technicianId: string): Promise<string | null> {
+  try {
+    const techs = await getTechniciansByIds([technicianId]);
+    const exact = techs.find((t) => t.id === technicianId);
+    const resolved = exact ?? (() => {
+      const byAlias = techs.filter((t) => t.technicianId === technicianId);
+      return byAlias.length === 1 ? byAlias[0] : undefined;
+    })();
+    return resolved?.paymentProfile?.upiVpa ? maskVpa(resolved.paymentProfile.upiVpa) : null;
+  } catch (err) {
+    Sentry.captureException(err);
+    console.warn('[getBooking] technician UPI lookup failed', { technicianId });
+    return null;
+  }
+}
+
 function makeRazorpayReceipt(customerId: string): string {
   return `bk_${Date.now().toString(36)}_${customerId.slice(0, 20)}`;
 }
@@ -655,12 +681,9 @@ const getBookingInner: CustomerHttpHandler = async (req, _ctx, customer) => {
     projectReportSignedUrl(id, booking.status),
   ]);
 
-  let technicianUpiMasked: string | null = null;
-  if (booking.technicianId) {
-    const techs = await getTechniciansByIds([booking.technicianId]);
-    const exact = techs.find((t) => t.id === booking.technicianId);
-    technicianUpiMasked = exact?.paymentProfile?.upiVpa ? maskVpa(exact.paymentProfile.upiVpa) : null;
-  }
+  const technicianUpiMasked = booking.technicianId
+    ? await resolveTechnicianUpiMasked(booking.technicianId)
+    : null;
 
   return {
     status: 200,
