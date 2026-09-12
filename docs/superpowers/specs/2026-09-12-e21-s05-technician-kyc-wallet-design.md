@@ -66,6 +66,15 @@ if (kyc?.aadhaarVerified !== true) {
 
 This makes PAN-first structurally impossible going forward. It does **not** retroactively fix any of the 16 current prod technicians (all of whom have no `kyc` object at all today, per the interface notes — zero are PAN-first already, so no backfill is needed; confirm this count is unchanged immediately before merge as a smoke-gate check, not an assumption).
 
+**`trigger-projector-kyc.ts` must follow the new terminal state.** It currently treats
+`COMPLETE_STATUSES = new Set(['COMPLETE', 'AADHAAR_DONE', 'PAN_DONE'])` and **resolves** the
+`KYC_RESUME` pending action — the "finish your KYC" reminder — on any of them. So a technician who
+finishes only Aadhaar has their reminder cleared while a step is still outstanding: the same
+"looks done, isn't done" failure at the notification layer. With a real terminal state this
+becomes `COMPLETE_STATUSES = new Set(['COMPLETE'])`, and `AADHAAR_DONE` / `PAN_DONE` move into
+`ACTION_REQUIRED_STATUSES` so the reminder persists until both steps land. Without this change the
+story would write a correct terminal value that nothing downstream respects.
+
 **`get-kyc-status.ts`** adds `panVerified: boolean` to its response (computed the same way, `panHash != null`, after the existing canonical-mask validation) — the client keys UI off explicit `aadhaarVerified`/`panVerified` booleans, never off `kycStatus` as a trust boundary, mirroring dispatch's own posture per the interface notes ("derive from the same two facts dispatch uses, not from `kyc.kycStatus`"). `kycStatus` is still returned and now trustworthy, but is treated as display-only, not as the completion fact.
 
 ### 2.3 Android: KYC flow becomes sequential
@@ -80,25 +89,71 @@ This makes PAN-first structurally impossible going forward. It does **not** retr
 
 ## 3. Wallet screen
 
-Read-only. New `WalletScreen` + `WalletViewModel` reading:
+Read-only, and **entirely client-side — no API work.** `GET /v1/technicians/me/commission-due` already exists (`api/src/functions/technicians/commission-due.ts`, `verifyTechnicianToken`) and returns exactly what the wallet needs. E21-S02 built it; the technician app has never consumed it (zero matches for `commission-due` in `technician-app/app/src/main`).
 
-- `GET /v1/admin/finance/commission-receivables/{technicianId}` (existing E21-S02 endpoint — confirm technician-scoped auth is already permitted; if this route is admin-only today, add a technician-scoped equivalent under `/v1/technicians/me/commission-receivables` rather than loosening the admin route's auth).
-- Displays: hold state chip (`CLEAR`/`WARN`/`BLOCKED`), `outstandingPaise`, `blockThresholdPaise`, and the receivable row list.
-- "Contact admin to settle" CTA — an `Intent` to WhatsApp/phone (whatever channel technicians already use; confirm the exact number/link source during execution — likely a support contact already surfaced elsewhere in the app, e.g. the help/support screen).
-- No payment SDK, no Razorpay integration, no new write endpoint.
+Response shape (`TechnicianCommissionDueV2Schema`, `api/src/schemas/commission-receivable.ts:153-202`):
+
+```
+totalOutstandingPaise: int, dueCount: int,
+hold: { state: 'CLEAR'|'WARN'|'BLOCKED', warnPaise: int, blockPaise: int,
+        enforcementEnabled: bool, override?: { until, reason } },
+entries: [{ bookingId, serviceName?, slotDate?, bookingAmount, cashCollectedAmount?,
+            commissionDue, remittedAmount, outstandingPaise, collectionMethod?,
+            remittanceStatus, createdAt }],
+remittances: [...], credits: [...], weekSummary: {...}
+```
+
+**Naming trap:** this endpoint spells the block threshold `hold.blockPaise`; the accept-path `403` body spells the same concept `blockThresholdPaise`. Both names are correct in their own response. Use each verbatim; do not normalise one into the other.
+
+- Displays: hold state chip (`CLEAR`/`WARN`/`BLOCKED`), `totalOutstandingPaise`, `hold.blockPaise`, and the `entries[]` list.
+- "Contact admin to settle" CTA — a WhatsApp intent to the real support number (**blocking input: Alok to supply the number**). The existing contact in `TechnicianHomeScreen.kt:988-1010` is the placeholder `tel:+919876543210` plus `partners@homeheroo.in`, which conflicts with `support@homeheroo.in` in `strings.xml:91`. The real number is extracted to `strings.xml` + `values-hi/strings.xml` and reused for both the wallet CTA and the existing home-screen support entry, retiring the placeholder.
+- No payment SDK, no Razorpay integration, no new endpoint of any kind.
 
 ---
 
 ## 4. Cash confirm — `CompletionConfirmationDialog.kt`
 
-Currently a bare confirm/cancel `AlertDialog` with no fields. This story adds:
+Currently a bare confirm/cancel `AlertDialog` with no fields.
 
-- An amount field (`collectedAmount`, paise) — pre-filled with the booking's known price where available, editable.
-- `collectionMethod` fixed to `CASH` for this story (no picker — E24-S01 adds the picker when it introduces `UPI_QR`).
-- On confirm, the existing `COMPLETE_JOB` call includes `cashCollected: true, collectedAmount, collectionMethod: 'CASH'` — wiring fields the API (`active-job.ts`) already accepts and currently never receives from this client.
-- No new endpoint. No change to `active-job.ts`'s existing handling of these fields.
+**Required API widening (forced by correctness).** The active-job `GET` response
+(`api/src/functions/active-job.ts:62-74`) carries neither an amount nor a payment method, so the
+client cannot currently tell a cash booking from a prepaid one. It gains two fields:
 
-**Coordination note for E24-S01:** this story's dialog changes land first; E24-S01 sequences its `UPI_QR` collection-method option on top of the resulting dialog shape (per Alok's decision, relayed to session-1).
+- `amountPaise: booking.finalAmount ?? booking.amount` — the expected collection amount.
+- `paymentMethod: booking.paymentMethod ?? 'CASH_ON_SERVICE'` — `'RAZORPAY' | 'CASH_ON_SERVICE'`.
+
+Both are additive read-path widenings (no write schema tightened — `feedback_read_path_validation`).
+Without `paymentMethod` the dialog would ask for cash on a prepaid Razorpay booking, which
+`settleCashCompletion` skips entirely (`skipped: 'NOT_CASH'`).
+
+**The commission is computed server-side** from `finalAmount ?? amount`
+(`commission-settlement.service.ts:46`), never from the client's `collectedAmount`. A mistyped
+amount therefore corrupts the *collection record*, not the debt owed — which is why an editable
+amount field is acceptable at all.
+
+The dialog gains:
+
+- Cash UI shown **only** when `paymentMethod == 'CASH_ON_SERVICE'`. Prepaid bookings keep today's
+  plain confirm/cancel dialog unchanged.
+- An amount field pre-filled with `amountPaise`, editable downward.
+- **Short collection (in scope).** If the entered amount is below `amountPaise`, a reason picker
+  becomes required and `shortCollectionReason` is sent. The API already accepts this field.
+- `collectionMethod` fixed to `CASH` (no picker — E24-S01 adds the picker with `UPI_QR`).
+- On confirm, `COMPLETE_JOB` includes `cashCollected: true, collectedAmount, collectionMethod: 'CASH'`
+  and `shortCollectionReason` when applicable.
+
+**Offline replay gap (in scope).** `PendingTransitionEntity` stores only
+`(id, bookingId, targetStatus, createdAt, retryCount)` and `syncPendingTransitions()` replays
+`TransitionRequest(entry.targetStatus)` alone — a completion queued offline reaches the server with
+no cash fields at all. The commission debt is still created correctly server-side, but the
+collection record (`cashCollectionStatus` / `cashCollectedAt` / `cashCollectedAmount`) and the
+`CASH_COLLECTION_RECORDED` audit entry are lost. Rural Ayodhya connectivity makes offline
+completion a normal case, so this story adds the cash fields to the Room entity (with a migration)
+and threads them through the replay path.
+
+**Coordination note for E24-S01:** this story's dialog changes land first; E24-S01 sequences its
+`UPI_QR` collection-method option on top of the resulting dialog shape (per Alok's decision,
+relayed to session-1).
 
 ---
 
@@ -152,15 +207,41 @@ Terminal state (no retry button) with a wallet CTA. `HoldCheckUnavailable` does 
 
 ---
 
-## 8. Open items for the implementation plan (not blocking this design)
+## 8. Open items — resolved at plan-writing time
 
-- Exact endpoint for technician-scoped commission-receivables read (existing admin route vs. new `/v1/technicians/me/...` route) — resolve during plan-writing by reading the current route's auth middleware.
-- Support contact source for the wallet's "contact admin" CTA — likely already exists elsewhere in the app; locate rather than invent.
-- Whether a new ADR (next number: **0036**) is warranted for the KYC-ordering-gap fix, mirroring how ADR-0032 documented the analogous dispatch decision. Recommended: yes, short — the "single writer, order-independent terminal state" pattern is exactly the kind of hard-won invariant future KYC-adjacent stories need spelled out, per this repo's own ADR-0032 postmortem of three consecutive wrong guesses at the same problem.
+| Item | Resolution |
+|---|---|
+| Technician-scoped commission read | **No new route.** `GET /v1/technicians/me/commission-due` already exists and is unconsumed by the client. The admin route (`requireAdmin(['super-admin','finance','ops-manager'])`) is not reused. |
+| Hold-state source for the home banner | The same `commission-due` call. No lighter endpoint carries hold state, and `TechnicianHomeViewModel` currently makes exactly one call (`getBookings()`), so the banner adds a second, independent fetch — folded as a nullable field on the Ready state so a banner failure never degrades the jobs list. |
+| Support contact for the wallet CTA | WhatsApp intent to a real number (**blocking input from Alok**), extracted to `strings.xml` + `values-hi`, replacing the `+919876543210` placeholder in both the wallet and the existing home-screen entry. |
+| ADR | **Yes — ADR-0036** (next free number; 0035 is the highest present). Records the "single writer, order-independent terminal state" decision, mirroring ADR-0032's postmortem of three consecutive wrong guesses at this same problem. |
+
+## 9. Story split
+
+Per root `CLAUDE.md`'s split rule, this work splits **by feature** into three plans that share no
+files except navigation and the two string files, and can run in parallel or back-to-back:
+
+- **E21-S05a — KYC completion** (`docs/superpowers/plans/2026-09-12-e21-s05a-kyc-completion.md`,
+  1221 lines). `deriveKycStatus` terminal writer, `409 AADHAAR_REQUIRED_FIRST` precondition,
+  `panVerified`, the `trigger-projector-kyc` fix, ADR-0036, and the sequential Android KYC UI
+  (including the `submitPan()` false-`Complete` bug fix). This is the item gating any future
+  `enforceKycInDispatch` decision, so it lands first and on its own.
+- **E21-S05b — Dues visibility** (`…-e21-s05b-dues-visibility.md`, 1059 lines). Wallet screen,
+  home dues banner, job-offer `403`/`503` handling. **Zero API changes** — every endpoint it
+  consumes is already deployed.
+- **E21-S05c — Cash confirm** (`…-e21-s05c-cash-confirm.md`, 670 lines). Active-job response
+  widening, the cash-aware completion dialog with short collection, and the Room migration that
+  stops offline completions from losing their collection record. **E24-S01 depends on this one**,
+  so it is deliberately the smallest of the three.
+
+The original two-way split (S05a / "money surfaces") was revised to three at plan-writing time:
+written at the density this repo's plans require, the combined money-surfaces plan projected to
+~1800-2000 lines, past the 1500-line split-required threshold. The S05b/S05c seam also shrinks
+E24-S01's blocking dependency from the whole money surface to just the dialog.
 
 ---
 
-## 9. References
+## 10. References
 
 - `docs/stories/E21-S04-interface-notes.md` — the accept contract and the KYC landmine list this story is built against.
 - `docs/adr/0032-commission-hold-is-an-eligibility-gate.md` — the two-fact KYC predicate and the ordering-gap analysis this story closes.
