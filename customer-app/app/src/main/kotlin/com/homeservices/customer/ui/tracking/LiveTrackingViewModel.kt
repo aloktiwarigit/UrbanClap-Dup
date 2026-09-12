@@ -33,6 +33,22 @@ public class LiveTrackingViewModel
                 .filter { it.bookingId == bookingId }
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+        // KNOWN LIMITATION (accepted, tracked — see backlog issue "share the trackBooking flow
+        // across LiveTrackingViewModel's use cases"): each of these three use cases independently
+        // subscribes to the same cold TrackingRepository.trackBooking(bookingId) flow. Since that
+        // flow re-fetches the booking on every status transition (E24-S01c, for
+        // technicianUpiMasked), a single status push issues 3 redundant reads, and a transient
+        // failure in just one of the three subscriptions' refetch can suppress that one field
+        // (e.g. the payment-declaration card) even though the other two succeeded. Accepted
+        // because: (a) not money-correctness — commission settles server-side off finalAmount
+        // regardless of what this screen shows, matching the E09-S08/E21-S04 precedent that client
+        // display state never feeds the ledger; (b) pre-existing debt this story made 3-way rather
+        // than introduced — the location/status split already had the same redundancy; (c) the
+        // real fix (share one flow instance — either a repository-level shareIn behind a proper
+        // CoroutineScope/Dispatcher DI seam, or replacing these three use cases with one shared
+        // TrackingRepository subscription) is real work that touches this ViewModel's two existing,
+        // already-passing test files' mocking approach — out of scope for a Feature-tier story
+        // after 3 Codex rounds already spent on this branch.
         public val uiState: StateFlow<LiveTrackingUiState> =
             combine(
                 getLiveLocationUseCase.execute(bookingId),
