@@ -186,6 +186,14 @@
     <string name="photo_upload_retry_banner_action">पुनः प्रयास</string>
     <string name="onboarding_kyc_queued_offline">ऑनलाइन होने पर KYC जमा की जाएगी।</string>
 
+    <!-- KYC sequential-step gating and progress copy (E21-S05a) -->
+    <string name="kyc_step_pan_locked_title">पहले आधार पूरा करें</string>
+    <string name="kyc_step_pan_locked_body">पैन कार्ड अपलोड करने से पहले अपना आधार सत्यापित करें।</string>
+    <string name="kyc_pan_done_title">एक कदम बाकी है</string>
+    <string name="kyc_pan_done_body">आपका पैन सत्यापित हो गया है। पूरा करने के लिए आधार सत्यापित करें।</string>
+    <string name="kyc_complete_title">केवाईसी पूरी हुई</string>
+    <string name="kyc_complete_body">दोनों दस्तावेज़ सत्यापित हैं। अब आप जॉब ले सकते हैं।</string>
+
     <!-- Active job location foreground service (E17-S02) -->
     <string name="active_job_location_notification_title">ग्राहक के साथ स्थान साझा कर रहे हैं</string>
     <string name="active_job_location_notification_body">केवल सक्रिय बुकिंग के दौरान</string>
