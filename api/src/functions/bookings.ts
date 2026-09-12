@@ -23,6 +23,8 @@ import { AYODHYA_SERVICE_AREA } from '../data/service-area-ayodhya.js';
 import { slotHoldsRepo } from '../cosmos/slot-holds-repository.js';
 import { generateSlots, filterElapsedSlots, currentIstMinuteOfDay, todayIst } from '../shared/slot-utils.js';
 import { getStorageDownloadUrlWithTtl, checkStorageFileExists } from '../firebase/admin.js';
+import { getTechniciansByIds } from '../cosmos/technician-repository.js';
+import { maskVpa } from '../lib/pii/mask.js';
 
 const PHOTO_STAGE_ORDER = ['EN_ROUTE', 'REACHED', 'IN_PROGRESS', 'COMPLETED'] as const;
 const PHOTO_SIGNED_URL_TTL_SECONDS = 300;
@@ -85,6 +87,32 @@ async function projectReportSignedUrl(
       bookingId,
       signedUrl: '[redacted-signed-url]',
     });
+    return null;
+  }
+}
+
+/**
+ * Best-effort masked-VPA lookup for the customer's booking read — same
+ * safe-resolution shape as `technicianUid()` in reveal-contact.ts (exact `id`
+ * match wins outright; a `technicianId`-alias match is accepted only when
+ * unique, since `getTechniciansByIds` matches `id OR technicianId` with no
+ * ORDER BY and `booking.technicianId` may be stored in either form). Unlike
+ * that PII-disclosure endpoint, an ambiguous or failed lookup here just
+ * means the field renders `null` — never guess, but also never fail the
+ * whole booking read over an optional display field.
+ */
+async function resolveTechnicianUpiMasked(technicianId: string): Promise<string | null> {
+  try {
+    const techs = await getTechniciansByIds([technicianId]);
+    const exact = techs.find((t) => t.id === technicianId);
+    const resolved = exact ?? (() => {
+      const byAlias = techs.filter((t) => t.technicianId === technicianId);
+      return byAlias.length === 1 ? byAlias[0] : undefined;
+    })();
+    return resolved?.paymentProfile?.upiVpa ? maskVpa(resolved.paymentProfile.upiVpa) : null;
+  } catch (err) {
+    Sentry.captureException(err);
+    console.warn('[getBooking] technician UPI lookup failed', { technicianId });
     return null;
   }
 }
@@ -653,6 +681,10 @@ const getBookingInner: CustomerHttpHandler = async (req, _ctx, customer) => {
     projectReportSignedUrl(id, booking.status),
   ]);
 
+  const technicianUpiMasked = booking.technicianId
+    ? await resolveTechnicianUpiMasked(booking.technicianId)
+    : null;
+
   return {
     status: 200,
     jsonBody: {
@@ -660,6 +692,7 @@ const getBookingInner: CustomerHttpHandler = async (req, _ctx, customer) => {
       status: booking.status,
       amount: booking.amount,
       finalAmount: booking.finalAmount ?? null,
+      technicianUpiMasked,
       pendingAddOns: booking.pendingAddOns ?? [],
       approvedAddOns: booking.approvedAddOns ?? [],
       ...(photos !== undefined ? { photos } : {}),

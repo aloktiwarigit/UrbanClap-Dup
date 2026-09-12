@@ -23,6 +23,9 @@ vi.mock('../../src/services/fcm.service.js', () => ({
   sendPriceApprovalPush: vi.fn().mockResolvedValue(undefined),
   sendTechnicianBookingStatusUpdatePush: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock('../../src/cosmos/technician-repository.js', () => ({
+  getTechniciansByIds: vi.fn().mockResolvedValue([]),
+}));
 
 import { getBookingHandler, requestAddonHandler, approveFinalPriceHandler } from '../../src/functions/bookings.js';
 import { bookingRepo } from '../../src/cosmos/booking-repository.js';
