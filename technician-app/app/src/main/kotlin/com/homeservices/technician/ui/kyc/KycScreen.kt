@@ -471,7 +471,7 @@ private fun KycNoticeBanner(
                     fontWeight = FontWeight.SemiBold,
                     color = contentColor,
                 )
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = body,
                     style = MaterialTheme.typography.bodySmall,
@@ -563,14 +563,14 @@ private fun KycTerminalStatus(
                 Surface(
                     shape = CircleShape,
                     color = iconTint.copy(alpha = 0.12f),
-                    modifier = Modifier.size(72.dp),
+                    modifier = Modifier.size(64.dp),
                 ) {
                     Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                         Icon(
                             imageVector = icon,
                             contentDescription = null,
                             tint = iconTint,
-                            modifier = Modifier.size(36.dp),
+                            modifier = Modifier.size(32.dp),
                         )
                     }
                 }
