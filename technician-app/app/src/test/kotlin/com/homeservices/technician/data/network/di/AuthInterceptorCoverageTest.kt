@@ -9,6 +9,7 @@ import com.homeservices.technician.data.integrity.IntegrityApiService
 import com.homeservices.technician.data.jobOffer.JobOfferApiService
 import com.homeservices.technician.data.jobs.remote.TechnicianJobsApiService
 import com.homeservices.technician.data.kyc.KycApiService
+import com.homeservices.technician.data.paymentprofile.PaymentProfileApiService
 import com.homeservices.technician.data.payout.remote.PayoutApiService
 import com.homeservices.technician.data.photo.PhotoApiService
 import com.homeservices.technician.data.rating.remote.RatingApiService
@@ -165,6 +166,7 @@ public class AuthInterceptorCoverageTest {
                 JobOfferApiService::class,
                 TechnicianJobsApiService::class,
                 KycApiService::class,
+                PaymentProfileApiService::class,
                 PayoutApiService::class,
                 PhotoApiService::class,
                 RatingApiService::class,

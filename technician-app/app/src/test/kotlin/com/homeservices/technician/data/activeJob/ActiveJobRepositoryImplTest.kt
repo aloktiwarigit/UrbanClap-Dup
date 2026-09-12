@@ -32,18 +32,21 @@ public class ActiveJobRepositoryImplTest {
     private lateinit var currentLocationProvider: CurrentLocationProvider
     private lateinit var repo: ActiveJobRepositoryImpl
 
-    private fun aResponse(status: String = "ASSIGNED") =
-        ActiveJobResponse(
-            id = "bk-1",
-            customerId = "c-1",
-            serviceId = "svc-1",
-            serviceName = "AC Repair",
-            addressText = "12 Main St",
-            addressLatLng = LatLngDto(lat = 12.9, lng = 77.6),
-            status = status,
-            slotDate = "2026-05-01",
-            slotWindow = "10:00-12:00",
-        )
+    private fun aResponse(
+        status: String = "ASSIGNED",
+        amountPaise: Int = 65000,
+    ) = ActiveJobResponse(
+        id = "bk-1",
+        customerId = "c-1",
+        serviceId = "svc-1",
+        serviceName = "AC Repair",
+        addressText = "12 Main St",
+        addressLatLng = LatLngDto(lat = 12.9, lng = 77.6),
+        status = status,
+        slotDate = "2026-05-01",
+        slotWindow = "10:00-12:00",
+        amountPaise = amountPaise,
+    )
 
     @BeforeEach
     public fun setUp() {
@@ -250,6 +253,16 @@ public class ActiveJobRepositoryImplTest {
         }
 
     @Test
+    public fun `toDomain maps amountPaise from the response`(): Unit =
+        runTest {
+            coEvery { api.getActiveJob("bk-1") } returns Response.success(aResponse(amountPaise = 78500))
+
+            repo.startObserving("bk-1")
+
+            assertThat(repo.activeJobState.value?.amountPaise).isEqualTo(78500)
+        }
+
+    @Test
     public fun `updateFromFcm — updates activeJobState immediately`(): Unit =
         runTest {
             val job =
@@ -263,6 +276,7 @@ public class ActiveJobRepositoryImplTest {
                     status = ActiveJobStatus.EN_ROUTE,
                     slotDate = "2026-05-01",
                     slotWindow = "10:00-12:00",
+                    amountPaise = 65000,
                 )
 
             repo.updateFromFcm(job)
@@ -284,6 +298,7 @@ public class ActiveJobRepositoryImplTest {
                     status = ActiveJobStatus.EN_ROUTE,
                     slotDate = "2026-05-01",
                     slotWindow = "10:00-12:00",
+                    amountPaise = 65000,
                 )
 
             var emitted: ActiveJob? = null
