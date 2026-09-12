@@ -193,7 +193,7 @@ Add to `api/tests/catalogue-seed.test.ts`, inside the top `describe('catalogue s
     // Each service must point at its OWN storage path, not a borrowed sibling's —
     // this was the exact PR #346 gap for electrical-camera-installation, which
     // pointed at services%2Felectrical-switchboard-fix.jpg instead of its own id.
-    for (const id of ['appliance-fridge-repair', 'appliance-washing-machine-repair', 'electrical-camera-installation', 'appliance-inverter-service']) {
+    for (const id of ['appliance-fridge-repair', 'appliance-cooler-service', 'appliance-washing-machine-repair', 'electrical-camera-installation', 'appliance-inverter-service']) {
       const svc = byId.get(id)!;
       expect(svc.heroImageUrl, `${id} must reference its own object path`).toContain(encodeURIComponent(`services/${id}.jpg`));
     }
@@ -422,12 +422,13 @@ Expected: parity OK; all tests green.
 - [ ] **Step 2: Re-verify the 6 image URLs one more time against the seed's exact strings**
 
 ```bash
-cd api && node -e "
-const { CATEGORIES, SERVICES } = require('./src/cosmos/seeds/catalogue.ts');
-" 2>&1 || true
+grep -oE "https://firebasestorage\.googleapis\.com/v0/b/homeservices-prod-001\.firebasestorage\.app/o/[^']+" api/src/cosmos/seeds/catalogue.ts | sort -u | while read -r url; do
+  echo "=== $url ==="
+  curl -s -o /dev/null -w "status=%{http_code} type=%{content_type}\n" "$url"
+done
 ```
 
-(If direct `ts-node` eval is awkward, instead grep the seed file for the 6 URLs and re-run the same `curl ... ?alt=media` loop from Task 2 Step 3 against those exact strings, confirming they match what got uploaded.)
+Expected: 6 distinct URLs listed (5 service paths + 1 category path — `appliance-cooler-service` and `appliance-repair` are different objects even though their bytes are duplicates), every one `status=200 type=image/jpeg`.
 
 - [ ] **Step 3: Run the pre-Codex smoke gate**
 
