@@ -214,6 +214,45 @@ public class KycViewModelTest {
         }
 
     @Test
+    public fun `ManualReview result renders a distinct ManualReview state, never PanDone AadhaarDone or Idle`(): Unit =
+        runTest {
+            // panVerified stays false while a human review is outstanding, so this must
+            // NOT be derived from terminalStateFor (which would collapse it into
+            // AadhaarDone/Idle — indistinguishable from "never submitted a PAN").
+            val vm = createViewModel(aadhaarVerified = false, panVerified = false)
+            every { orchestrator.submitPan(any(), any()) } returns flowOf(PanOcrResult.ManualReview)
+
+            vm.submitPan(aUri())
+
+            assertThat(vm.uiState.value).isInstanceOf(KycUiState.ManualReview::class.java)
+        }
+
+    @Test
+    public fun `submitPan Success does NOT render Complete when the status re-fetch throws`(): Unit =
+        runTest {
+            val vm = createViewModel(aadhaarVerified = true, panVerified = true)
+            coEvery { orchestrator.fetchCurrentStatus() } throws java.io.IOException("network down")
+            every { orchestrator.submitPan(any(), any()) } returns flowOf(PanOcrResult.Success("ABCDE1234F"))
+
+            vm.submitPan(aUri())
+
+            assertThat(vm.uiState.value).isNotInstanceOf(KycUiState.Complete::class.java)
+            assertThat(vm.uiState.value).isInstanceOf(KycUiState.Error::class.java)
+        }
+
+    @Test
+    public fun `KYC status event verified does NOT render Complete when the status re-fetch throws`(): Unit =
+        runTest {
+            val vm = createViewModel(aadhaarVerified = true, panVerified = true)
+            coEvery { orchestrator.fetchCurrentStatus() } throws java.io.IOException("network down")
+
+            kycStatusEventBus.post(KycStatusEvent(technicianId = techId, verified = true))
+
+            assertThat(vm.uiState.value).isNotInstanceOf(KycUiState.Complete::class.java)
+            assertThat(vm.uiState.value).isInstanceOf(KycUiState.Error::class.java)
+        }
+
+    @Test
     public fun `KYC status event verified while Aadhaar unverified does NOT render Complete`(): Unit =
         runTest {
             val vm = createViewModel(aadhaarVerified = false, panVerified = true)

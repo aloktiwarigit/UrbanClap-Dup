@@ -76,6 +76,7 @@ internal fun KycScreen(
             is KycUiState.PanUploading -> Unit
             is KycUiState.PanDone -> Unit
             is KycUiState.AadhaarRequired -> Unit
+            is KycUiState.ManualReview -> Unit
             is KycUiState.Error -> Unit
         }
     }
@@ -114,6 +115,10 @@ internal fun KycScreen(
                 // Minimal interim mapping — Task 9 owns the real gated-PAN-step UI treatment
                 // for PanDone/AadhaarRequired and the parameterless Complete.
                 is KycUiState.PanDone -> KycStepReview(status = KycStatus.PAN_DONE, onRetry = null)
+                // Distinct from PanDone/AadhaarDone/Idle so a technician whose PAN is
+                // pending human review is never told "pick a PAN photo" or "start KYC" —
+                // reuses the existing "under review" treatment. Task 9 owns wider polish.
+                is KycUiState.ManualReview -> KycStepReview(status = KycStatus.MANUAL_REVIEW, onRetry = null)
                 is KycUiState.AadhaarRequired -> {
                     KycStepAadhaar(
                         onStartKyc = { viewModel.startKyc() },

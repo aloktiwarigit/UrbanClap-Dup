@@ -40,6 +40,10 @@ private const val DIGILOCKER_CONSENT_URL =
 
 private const val DEFAULT_REJECTION_MESSAGE = "KYC was rejected. Please contact support."
 
+// Never mapped to Complete: a failed status re-read must not silently claim both KYC
+// facts are verified. See terminalStateForOrError().
+private const val KYC_STATUS_FETCH_ERROR_MESSAGE = "Couldn't confirm your KYC status. Please try again."
+
 @HiltViewModel
 internal class KycViewModel
     @Inject
@@ -122,12 +126,13 @@ internal class KycViewModel
         /**
          * Uploads the chosen PAN card image and submits it for OCR.
          *
-         * On a result that may have changed the technician's verification facts
-         * (a fresh PAN success, or a manual-review verdict — never trust a hardcoded
-         * terminal state), re-reads authoritative status via
+         * On [PanOcrResult.Success] — a result that may have changed the technician's
+         * verification facts — re-reads authoritative status via
          * [KycOrchestrator.fetchCurrentStatus] and resolves the UI state from both
-         * `aadhaarVerified` and `panVerified` via [terminalStateFor]. [KycUiState.Complete]
-         * is reachable only when both are true — see [terminalStateFor].
+         * `aadhaarVerified` and `panVerified` via [terminalStateForOrError].
+         * [KycUiState.Complete] is reachable only when both are true — see
+         * [terminalStateFor]. [PanOcrResult.ManualReview] is handled separately: it is
+         * authoritative on its own and must never be conflated with "not started".
          */
         public fun submitPan(fileUri: Uri): Unit {
             lastSubmittedUri = fileUri
@@ -144,13 +149,17 @@ internal class KycViewModel
                         when (result) {
                             is PanOcrResult.Success -> {
                                 clearSubmissionRows(techId)
-                                val state = orchestrator.fetchCurrentStatus()
-                                terminalStateFor(state.aadhaarVerified, state.panVerified)
+                                terminalStateForOrError()
                             }
                             is PanOcrResult.ManualReview -> {
+                                // Distinct terminal state, not derived from the two-fact
+                                // resolver: panVerified stays false while a human review is
+                                // outstanding, so terminalStateFor() would (correctly, per its
+                                // own contract) return AadhaarDone/Idle — indistinguishable from
+                                // "never submitted a PAN". No status re-read is needed here:
+                                // this outcome is authoritative from the OCR response itself.
                                 clearSubmissionRows(techId)
-                                val state = orchestrator.fetchCurrentStatus()
-                                terminalStateFor(state.aadhaarVerified, state.panVerified)
+                                KycUiState.ManualReview
                             }
                             is PanOcrResult.OcrError ->
                                 KycUiState.Error(result.message)
@@ -202,8 +211,7 @@ internal class KycViewModel
                     // No HTTP response is in hand on this FCM-driven path, so — same as
                     // submitPan() — re-read authoritative status and resolve from both
                     // facts rather than assuming this single verdict means Complete.
-                    val state = orchestrator.fetchCurrentStatus()
-                    terminalStateFor(state.aadhaarVerified, state.panVerified)
+                    terminalStateForOrError()
                 } else {
                     KycUiState.Error(event.rejectionReason ?: DEFAULT_REJECTION_MESSAGE)
                 }
@@ -224,6 +232,24 @@ internal class KycViewModel
                 aadhaarVerified -> KycUiState.AadhaarDone
                 else -> KycUiState.Idle
             }
+
+        /**
+         * [terminalStateFor], guarded against a failed re-read.
+         *
+         * [KycOrchestrator.fetchCurrentStatus] makes a live network call (`GET
+         * /v1/kyc/status`) with no retry of its own, right after a PAN submission or an
+         * FCM verdict — exactly when mobile connectivity is most likely to drop. A thrown
+         * exception here must never be allowed to fall through to a default that implies
+         * `Complete`: the fallback is an explicit, non-terminal [KycUiState.Error] so the
+         * technician is told to retry rather than shown a false completion or a false
+         * "not started" screen.
+         */
+        private suspend fun terminalStateForOrError(): KycUiState =
+            runCatching { orchestrator.fetchCurrentStatus() }
+                .fold(
+                    onSuccess = { state -> terminalStateFor(state.aadhaarVerified, state.panVerified) },
+                    onFailure = { KycUiState.Error(KYC_STATUS_FETCH_ERROR_MESSAGE) },
+                )
 
         private fun currentTechnicianId(): String = (sessionManager.authState.value as? AuthState.Authenticated)?.uid ?: ""
 

@@ -24,6 +24,15 @@ public sealed class KycUiState {
     public data object AadhaarRequired : KycUiState()
 
     /**
+     * The submitted PAN could not be auto-verified and a human must review it. Deliberately
+     * distinct from [PanDone] and [AadhaarDone]/[Idle]: those all imply "no PAN is on file yet
+     * or one more step remains", which would tell a technician whose PAN IS on file (just
+     * pending manual approval) to re-upload it. `panVerified` stays false while this is
+     * outstanding, so this state cannot be derived from the two-fact resolver.
+     */
+    public data object ManualReview : KycUiState()
+
+    /**
      * Both KYC steps have succeeded. Reachable only when `aadhaarVerified && panVerified` —
      * never from a single step's success. Carries no status scalar: the two facts are the
      * completion contract, and a scalar here is what produced the false-complete bug.
