@@ -272,6 +272,27 @@ public class TrackingRepositoryImplTest {
         }
 
     @Test
+    public fun `a status update clears a stale technicianUpiMasked when the re-fetch succeeds with null`(): Unit =
+        runTest {
+            // Technician reassigned mid-tracking to one with no VPA on file — the re-fetch
+            // succeeds but now legitimately reports null. Showing the OLD technician's masked
+            // VPA here would be worse than showing none, so it must NOT be retained.
+            api.technicianUpiMasked = "al••••••@okhdfcbank"
+            val results = mutableListOf<TrackingState>()
+            val job = launch { repo.trackBooking("b11").collect { results.add(it) } }
+            yield()
+
+            api.technicianUpiMasked = null
+            bus.post(TrackingEvent.StatusUpdate(bookingId = "b11", status = "REACHED"))
+            advanceUntilIdle()
+            job.cancel()
+
+            assertThat(results).hasSize(2)
+            assertThat(results[0].technicianUpiMasked).isEqualTo("al••••••@okhdfcbank")
+            assertThat(results[1].technicianUpiMasked).isNull()
+        }
+
+    @Test
     public fun `trackBooking falls back to Unknown status and null technicianUpiMasked when the lookup throws`(): Unit =
         runTest {
             api.shouldFailGetBooking = true

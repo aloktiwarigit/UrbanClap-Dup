@@ -54,13 +54,23 @@ public class TrackingRepositoryImpl
                                     // technician is assigned (or before they've set a UPI VPA)
                                     // would otherwise never see technicianUpiMasked once the
                                     // booking reaches Completed, since status/location updates
-                                    // arrive via FCM events that don't carry it. Falls back to
-                                    // the last known value on a failed refetch rather than
-                                    // regressing a previously-shown masked VPA to null.
-                                    val refreshed = runCatching { bookingApi.getBooking(bookingId) }.getOrNull()
+                                    // arrive via FCM events that don't carry it. A *failed*
+                                    // refetch falls back to the last known value (never regress
+                                    // a previously-shown masked VPA to null over a transient
+                                    // error) — but a *successful* refetch always wins, including
+                                    // when it explicitly reports null (e.g. reassigned to a
+                                    // technician with no VPA on file): showing a stale VPA for
+                                    // the wrong technician is worse than showing none.
+                                    val refreshedBooking = runCatching { bookingApi.getBooking(bookingId) }.getOrNull()
+                                    val technicianUpiMasked =
+                                        if (refreshedBooking != null) {
+                                            refreshedBooking.technicianUpiMasked
+                                        } else {
+                                            state.technicianUpiMasked
+                                        }
                                     state.copy(
                                         status = BookingStatus.fromFcmString(event.status),
-                                        technicianUpiMasked = refreshed?.technicianUpiMasked ?: state.technicianUpiMasked,
+                                        technicianUpiMasked = technicianUpiMasked,
                                     )
                                 }
                             }
