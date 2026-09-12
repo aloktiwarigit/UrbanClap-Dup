@@ -233,6 +233,45 @@ public class TrackingRepositoryImplTest {
         }
 
     @Test
+    public fun `a status update re-fetches technicianUpiMasked (technician assigned mid-tracking)`(): Unit =
+        runTest {
+            // Customer opened tracking before a technician was assigned — initial seed has no VPA.
+            val results = mutableListOf<TrackingState>()
+            val job = launch { repo.trackBooking("b9").collect { results.add(it) } }
+            yield()
+
+            // Technician gets assigned + sets a VPA between the initial fetch and completion.
+            api.technicianUpiMasked = "al••••••@okhdfcbank"
+            bus.post(TrackingEvent.StatusUpdate(bookingId = "b9", status = "COMPLETED"))
+            advanceUntilIdle()
+            job.cancel()
+
+            assertThat(results).hasSize(2)
+            assertThat(results[0].technicianUpiMasked).isNull()
+            assertThat(results[1].status).isEqualTo(BookingStatus.Completed)
+            assertThat(results[1].technicianUpiMasked).isEqualTo("al••••••@okhdfcbank")
+        }
+
+    @Test
+    public fun `a status update keeps the last known technicianUpiMasked when the re-fetch fails`(): Unit =
+        runTest {
+            api.technicianUpiMasked = "al••••••@okhdfcbank"
+            val results = mutableListOf<TrackingState>()
+            val job = launch { repo.trackBooking("b10").collect { results.add(it) } }
+            yield()
+
+            api.shouldFailGetBooking = true
+            bus.post(TrackingEvent.StatusUpdate(bookingId = "b10", status = "COMPLETED"))
+            advanceUntilIdle()
+            job.cancel()
+
+            assertThat(results).hasSize(2)
+            assertThat(results[0].technicianUpiMasked).isEqualTo("al••••••@okhdfcbank")
+            // Re-fetch on this transition failed — must not regress a previously-shown value to null.
+            assertThat(results[1].technicianUpiMasked).isEqualTo("al••••••@okhdfcbank")
+        }
+
+    @Test
     public fun `trackBooking falls back to Unknown status and null technicianUpiMasked when the lookup throws`(): Unit =
         runTest {
             api.shouldFailGetBooking = true

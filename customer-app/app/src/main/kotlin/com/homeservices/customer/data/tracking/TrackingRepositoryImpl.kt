@@ -48,8 +48,21 @@ public class TrackingRepositoryImpl
                                                 techPhotoUrl = event.techPhotoUrl,
                                             ),
                                     )
-                                is TrackingEvent.StatusUpdate ->
-                                    state.copy(status = BookingStatus.fromFcmString(event.status))
+                                is TrackingEvent.StatusUpdate -> {
+                                    // Re-fetch on every status transition, not just at initial
+                                    // subscription: a customer who opens tracking before a
+                                    // technician is assigned (or before they've set a UPI VPA)
+                                    // would otherwise never see technicianUpiMasked once the
+                                    // booking reaches Completed, since status/location updates
+                                    // arrive via FCM events that don't carry it. Falls back to
+                                    // the last known value on a failed refetch rather than
+                                    // regressing a previously-shown masked VPA to null.
+                                    val refreshed = runCatching { bookingApi.getBooking(bookingId) }.getOrNull()
+                                    state.copy(
+                                        status = BookingStatus.fromFcmString(event.status),
+                                        technicianUpiMasked = refreshed?.technicianUpiMasked ?: state.technicianUpiMasked,
+                                    )
+                                }
                             }
                         },
                 )
