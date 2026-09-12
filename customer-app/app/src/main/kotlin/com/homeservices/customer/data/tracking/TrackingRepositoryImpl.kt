@@ -22,11 +22,15 @@ public class TrackingRepositoryImpl
     ) : TrackingRepository {
         public override fun trackBooking(bookingId: String): Flow<TrackingState> =
             flow {
+                val initialBooking = runCatching { bookingApi.getBooking(bookingId) }.getOrNull()
                 val initialStatus =
-                    runCatching {
-                        BookingStatus.fromFcmString(bookingApi.getBooking(bookingId).status)
-                    }.getOrDefault(BookingStatus.Unknown)
-                val initialState = TrackingState(location = null, status = initialStatus)
+                    initialBooking?.status?.let { BookingStatus.fromFcmString(it) } ?: BookingStatus.Unknown
+                val initialState =
+                    TrackingState(
+                        location = null,
+                        status = initialStatus,
+                        technicianUpiMasked = initialBooking?.technicianUpiMasked,
+                    )
 
                 emitAll(
                     eventBus.events

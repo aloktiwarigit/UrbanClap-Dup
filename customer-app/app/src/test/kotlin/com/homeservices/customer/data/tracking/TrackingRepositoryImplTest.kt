@@ -24,6 +24,8 @@ import org.junit.Test
 public class TrackingRepositoryImplTest {
     private class FakeBookingApiService(
         var status: String = "ASSIGNED",
+        var technicianUpiMasked: String? = null,
+        var shouldFailGetBooking: Boolean = false,
     ) : BookingApiService {
         override suspend fun createBooking(
             body: CreateBookingRequestDto,
@@ -36,14 +38,17 @@ public class TrackingRepositoryImplTest {
             integrityToken: String?,
         ): ConfirmBookingResponseDto = error("not used")
 
-        override suspend fun getBooking(bookingId: String): GetBookingResponseDto =
-            GetBookingResponseDto(
+        override suspend fun getBooking(bookingId: String): GetBookingResponseDto {
+            if (shouldFailGetBooking) error("technicians container throttled")
+            return GetBookingResponseDto(
                 bookingId = bookingId,
                 status = status,
                 amount = 59900,
                 finalAmount = null,
                 pendingAddOns = emptyList(),
+                technicianUpiMasked = technicianUpiMasked,
             )
+        }
 
         override suspend fun getMyBookings(): CustomerBookingsResponseDto = error("not used")
 
@@ -202,5 +207,41 @@ public class TrackingRepositoryImplTest {
             job.cancel()
             assertThat(results).hasSize(1)
             assertThat(results[0].status).isEqualTo(BookingStatus.Unknown)
+        }
+
+    @Test
+    public fun `trackBooking's initial state carries technicianUpiMasked from the booking response`(): Unit =
+        runTest {
+            api.technicianUpiMasked = "al••••••@okhdfcbank"
+            val results = mutableListOf<TrackingState>()
+            val job = launch { repo.trackBooking("b6").collect { results.add(it) } }
+            yield()
+            job.cancel()
+            assertThat(results).hasSize(1)
+            assertThat(results[0].technicianUpiMasked).isEqualTo("al••••••@okhdfcbank")
+        }
+
+    @Test
+    public fun `trackBooking's initial state has null technicianUpiMasked when the API omits it`(): Unit =
+        runTest {
+            val results = mutableListOf<TrackingState>()
+            val job = launch { repo.trackBooking("b7").collect { results.add(it) } }
+            yield()
+            job.cancel()
+            assertThat(results).hasSize(1)
+            assertThat(results[0].technicianUpiMasked).isNull()
+        }
+
+    @Test
+    public fun `trackBooking falls back to Unknown status and null technicianUpiMasked when the lookup throws`(): Unit =
+        runTest {
+            api.shouldFailGetBooking = true
+            val results = mutableListOf<TrackingState>()
+            val job = launch { repo.trackBooking("b8").collect { results.add(it) } }
+            yield()
+            job.cancel()
+            assertThat(results).hasSize(1)
+            assertThat(results[0].status).isEqualTo(BookingStatus.Unknown)
+            assertThat(results[0].technicianUpiMasked).isNull()
         }
 }

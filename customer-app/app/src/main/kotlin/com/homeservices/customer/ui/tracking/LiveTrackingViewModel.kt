@@ -7,6 +7,7 @@ import com.homeservices.customer.data.tracking.LocationUpdateEvent
 import com.homeservices.customer.data.tracking.LocationUpdateEventBus
 import com.homeservices.customer.domain.tracking.GetLiveLocationUseCase
 import com.homeservices.customer.domain.tracking.TrackBookingStatusUseCase
+import com.homeservices.customer.domain.tracking.TrackTechnicianUpiUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -22,6 +23,7 @@ public class LiveTrackingViewModel
         savedStateHandle: SavedStateHandle,
         private val getLiveLocationUseCase: GetLiveLocationUseCase,
         private val trackBookingStatusUseCase: TrackBookingStatusUseCase,
+        private val trackTechnicianUpiUseCase: TrackTechnicianUpiUseCase,
         private val locationUpdateEventBus: LocationUpdateEventBus,
     ) : ViewModel() {
         private val bookingId: String = checkNotNull(savedStateHandle["bookingId"])
@@ -35,8 +37,9 @@ public class LiveTrackingViewModel
             combine(
                 getLiveLocationUseCase.execute(bookingId),
                 trackBookingStatusUseCase.execute(bookingId),
+                trackTechnicianUpiUseCase.execute(bookingId),
                 liveLocationFromBus,
-            ) { location, status, busEvent ->
+            ) { location, status, technicianUpiMasked, busEvent ->
                 LiveTrackingUiState.Tracking(
                     bookingId = bookingId,
                     location = location,
@@ -48,6 +51,7 @@ public class LiveTrackingViewModel
                     liveLat = busEvent?.lat ?: location?.lat,
                     liveLng = busEvent?.lng ?: location?.lng,
                     liveCapturedAt = busEvent?.capturedAt,
+                    technicianUpiMasked = technicianUpiMasked,
                 )
             }.stateIn(
                 scope = viewModelScope,
