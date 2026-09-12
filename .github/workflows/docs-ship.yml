@@ -50,6 +50,17 @@ permissions:
   contents: read
 
 jobs:
+  # Not applicable to this sub-project — admin-ship.yml owns the real e2e-and-a11y job
+  # (admin-web a11y/e2e coverage, see issue #335). Required by branch protection
+  # alongside quality-gate on every PR; this no-op lets PRs that don't touch admin-web
+  # satisfy that requirement instead of blocking forever on a check that never runs.
+  # This workflow's broad trigger (docs/** + root-level '*') makes it the most reliable
+  # fallback source for this check, same reasoning as the quality-gate job above.
+  e2e-and-a11y:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "e2e-and-a11y is admin-web-scoped (admin-ship.yml) — no-op here"
+
   quality-gate:
     runs-on: ubuntu-latest
     timeout-minutes: 5
