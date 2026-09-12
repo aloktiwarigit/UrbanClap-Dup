@@ -69,7 +69,9 @@ internal data class KycStatusResponse(
     val aadhaarVerified: Boolean,
     val aadhaarMaskedNumber: String?,
     val panNumber: String?,
-    val panVerified: Boolean,
+    // Default false (not omitted) so a currently-deployed API that doesn't yet return this
+    // field fails closed: the technician sees an incomplete KYC state, never a false "complete".
+    val panVerified: Boolean = false,
 )
 
 public class KycRepositoryImpl
