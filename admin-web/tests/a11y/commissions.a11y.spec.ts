@@ -112,6 +112,15 @@ async function mockCommissionConfig(page: Page) {
 }
 
 test.describe('Commissions a11y', () => {
+  // #335: this suite flakes under CI load (~1 in 4-8 runs) beyond the project-wide
+  // retries:1 in playwright.config.ts. Root cause not yet confirmed — suspected same
+  // class as the hydration race #342 fixed elsewhere, not yet reproduced here in
+  // isolation. Quarantine: extra retries absorb the transient flake without losing
+  // real coverage (a genuine regression still fails every attempt). Remove this
+  // override once the flake is root-caused and fixed; do not raise it further as a
+  // way to silence a worsening failure rate.
+  test.describe.configure({ retries: 4 });
+
   test('commissions roll-up has no critical/serious WCAG 2.1 AA violations', async ({ page, context, baseURL }) => {
     await signInAs(context, baseURL, 'super-admin');
     await mockDashboard(page);
