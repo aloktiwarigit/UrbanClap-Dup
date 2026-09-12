@@ -74,6 +74,33 @@ describe('GET /v1/kyc/status', () => {
     expect(res.status).toBe(401);
   });
 
+  it('[E21-S05a] omitting technicianId defaults to the token uid and succeeds (client sends no query param)', async () => {
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+    const { getKycByTechnicianId } = await import('../../src/cosmos/technician-repository.js');
+    vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
+    vi.mocked(getKycByTechnicianId).mockResolvedValue({
+      aadhaarVerified: true,
+      aadhaarMaskedNumber: 'XXXX-XXXX-1234',
+      panNumber: null,
+      panImagePath: null,
+      kycStatus: 'AADHAAR_DONE',
+      updatedAt: '2026-04-19T10:00:00Z',
+    });
+
+    // No ?technicianId= query param — matches the real Retrofit client, which sends none.
+    const req = new HttpRequest({
+      method: 'GET',
+      url: 'http://localhost/v1/kyc/status',
+      headers: { Authorization: 'Bearer valid' },
+    });
+    const res = await handler(req, new InvocationContext());
+
+    expect(res.status).toBe(200);
+    const body = res.jsonBody as Record<string, unknown>;
+    expect(body['technicianId']).toBe('tech-001');
+    expect(vi.mocked(getKycByTechnicianId)).toHaveBeenCalledWith('tech-001');
+  });
+
   it('[P1-B] returns 403 when token uid does not match requested technicianId (IDOR guard)', async () => {
     const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
     vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });

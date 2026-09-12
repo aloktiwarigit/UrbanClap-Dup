@@ -27,7 +27,10 @@ export const TechnicianKycSchema = z.object({
 });
 
 export const SubmitAadhaarRequestSchema = z.object({
-  technicianId: z.string().min(1),
+  // Optional (E21-S05a): the technician-app client sends no technicianId — the handler
+  // defaults it to the verified token's uid. When a caller DOES supply one, the handler's
+  // IDOR guard still rejects a mismatch with the token's uid.
+  technicianId: z.string().min(1).optional(),
   authCode: z.string(),
   redirectUri: z.string().url(),
 });
@@ -39,7 +42,8 @@ export const SubmitAadhaarResponseSchema = z.object({
 });
 
 export const SubmitPanOcrRequestSchema = z.object({
-  technicianId: z.string().min(1),
+  // Optional (E21-S05a): see SubmitAadhaarRequestSchema — same client/server mismatch, same fix.
+  technicianId: z.string().min(1).optional(),
   firebaseStoragePath: z.string().min(1),
 });
 

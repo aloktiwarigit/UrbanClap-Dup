@@ -31,7 +31,12 @@ export async function submitAadhaar(
     return { status: 422, jsonBody: { error: parsed.error.flatten() } };
   }
 
-  const { technicianId, authCode, redirectUri } = parsed.data;
+  const { authCode, redirectUri } = parsed.data;
+  // E21-S05a: the technician-app client sends no technicianId in the body — default to the
+  // verified token's uid. An explicitly-supplied technicianId that differs from the token's
+  // uid still trips the IDOR guard below; the guard is a no-op only when the value was
+  // defaulted, never when it was supplied and mismatched.
+  const technicianId = parsed.data.technicianId ?? decoded.uid;
 
   // P0: caller may only update their own KYC record (IDOR guard)
   if (decoded.uid !== technicianId) {

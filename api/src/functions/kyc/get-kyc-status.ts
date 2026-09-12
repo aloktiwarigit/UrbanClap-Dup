@@ -14,10 +14,11 @@ export async function getKycStatus(
     return { status: 401, jsonBody: { error: 'Unauthorized' } };
   }
 
-  const technicianId = req.query.get('technicianId');
-  if (!technicianId) {
-    return { status: 400, jsonBody: { error: 'technicianId query param required' } };
-  }
+  // E21-S05a: the technician-app client sends no technicianId query param — default to the
+  // verified token's uid, which every caller unambiguously owns. The IDOR guard below still
+  // rejects an explicitly-supplied technicianId that differs from the token's uid; it only
+  // becomes a no-op when the value was defaulted, never when it was supplied and mismatched.
+  const technicianId = req.query.get('technicianId') ?? decodedToken.uid;
 
   // P1-B: caller may only read their own KYC record
   if (decodedToken.uid !== technicianId) {

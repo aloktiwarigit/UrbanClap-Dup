@@ -32,7 +32,12 @@ export async function submitPanOcr(
     return { status: 422, jsonBody: { error: parsed.error.flatten() } };
   }
 
-  const { technicianId, firebaseStoragePath } = parsed.data;
+  const { firebaseStoragePath } = parsed.data;
+  // E21-S05a: the technician-app client sends no technicianId in the body — default to the
+  // verified token's uid. An explicitly-supplied technicianId that differs from the token's
+  // uid still trips the IDOR guard below; the guard is a no-op only when the value was
+  // defaulted, never when it was supplied and mismatched.
+  const technicianId = parsed.data.technicianId ?? decodedToken.uid;
 
   // P1-C: caller may only update their own KYC record
   if (decodedToken.uid !== technicianId) {

@@ -59,6 +59,38 @@ describe('POST /v1/kyc/pan-ocr', () => {
     expect(JSON.stringify(body)).not.toContain('ABCDE1234F');
   });
 
+  it('[E21-S05a] omitting technicianId in the body defaults to the token uid (client sends none)', async () => {
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+    const { extractPanFromStoragePath } = await import('../../src/services/formRecognizer.service.js');
+    const { getKycByTechnicianId, upsertKycStepAndDeriveStatus } = await import('../../src/cosmos/technician-repository.js');
+    vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
+    vi.mocked(getKycByTechnicianId).mockResolvedValue({ aadhaarVerified: true, panHash: null } as never);
+    vi.mocked(extractPanFromStoragePath).mockResolvedValue({
+      status: 'PAN_DONE',
+      panMaskedNumber: 'XXXXX1234F',
+      panHash: 'a'.repeat(64),
+    });
+    vi.mocked(upsertKycStepAndDeriveStatus).mockResolvedValue('COMPLETE');
+
+    // No technicianId in the body — matches the real client's PanOcrRequest(firebaseStoragePath).
+    const req = new HttpRequest({
+      method: 'POST',
+      url: 'http://localhost/v1/kyc/pan-ocr',
+      headers: { Authorization: 'Bearer valid-token' },
+      body: { string: JSON.stringify({ firebaseStoragePath: 'technicians/tech-001/pan.jpg' }) },
+    });
+
+    const res = await handler(req, new InvocationContext());
+    expect(res.status).toBe(200);
+    const body = res.jsonBody as { kycStatus: string };
+    expect(body.kycStatus).toBe('COMPLETE');
+    expect(vi.mocked(getKycByTechnicianId)).toHaveBeenCalledWith('tech-001');
+    expect(vi.mocked(upsertKycStepAndDeriveStatus)).toHaveBeenCalledWith(
+      'tech-001',
+      expect.objectContaining({ panHash: 'a'.repeat(64) }),
+    );
+  });
+
   it('returns 200 with MANUAL_REVIEW on OCR failure', async () => {
     const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
     const { extractPanFromStoragePath } = await import('../../src/services/formRecognizer.service.js');
