@@ -47,8 +47,15 @@ public class KycScreenPaparazziTest {
         }
     }
 
+    // Renders KycStepReview's non-error ("Current status: <status>") branch. NOT a "complete"
+    // state — the KYC-complete render is KycStepComplete(), covered by snapshot_kyc_complete_*
+    // below. This argument pair (a non-null status, no error message) is unreachable from
+    // KycScreen's only production call site, which always passes status = null with a non-null
+    // errorMessage (the KycUiState.Error branch). Kept as a defensive component-level snapshot
+    // of KycStepReview's other branch; renamed off "step3_complete" so it stops claiming a
+    // PAN_DONE render means KYC is done — see E21-S05a final-review finding 4.
     @Test
-    public fun snapshot_step3_complete(): Unit {
+    public fun snapshot_step_review_under_review_status_pan_done(): Unit {
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = false) {
                 KycStepReview(status = KycStatus.PAN_DONE, onRetry = null)
