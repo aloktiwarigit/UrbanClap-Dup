@@ -14,6 +14,7 @@ public object HindiLocaleNames {
             "plumbing" to "प्लंबिंग",
             "electrical" to "इलेक्ट्रिकल",
             "water-purifier" to "आरओ / वाटर प्यूरीफायर",
+            "appliance-repair" to "उपकरण मरम्मत",
         )
 
     public val serviceHindiNames: Map<String, String> =
@@ -32,6 +33,10 @@ public object HindiLocaleNames {
             "electrical-wiring" to "नई पॉइंट वायरिंग",
             "ro-installation" to "आरओ इंस्टॉलेशन",
             "ro-service-amc" to "आरओ सर्विस / फिल्टर बदलाव",
+            "appliance-fridge-repair" to "फ्रिज मरम्मत",
+            "appliance-cooler-service" to "कूलर सर्विस",
+            "appliance-washing-machine-repair" to "वाशिंग मशीन मरम्मत",
+            "electrical-camera-installation" to "सीसीटीवी कैमरा इंस्टॉलेशन",
         )
 
     public val serviceShortDescriptionsHindi: Map<String, String> =
@@ -50,5 +55,9 @@ public object HindiLocaleNames {
             "electrical-wiring" to "नए लाइट / पंखा पॉइंट के लिए वायरिंग।",
             "ro-installation" to "आरओ / वाटर प्यूरीफायर का सेटअप।",
             "ro-service-amc" to "फिल्टर बदलाव और मेंबरेन रिप्लेसमेंट।",
+            "appliance-fridge-repair" to "कूलिंग, कंप्रेसर या आवाज़ की समस्या की जांच और मरम्मत।",
+            "appliance-cooler-service" to "एयर कूलर के पंप, मोटर और कूलिंग पैड की सर्विस।",
+            "appliance-washing-machine-repair" to "मोटर, ड्रम या ड्रेनेज की समस्या की जांच और मरम्मत।",
+            "electrical-camera-installation" to "सीसीटीवी कैमरा लगाना, वायरिंग और मोबाइल ऐप सेटअप।",
         )
 }
