@@ -44,6 +44,12 @@ export async function getKycStatus(
   const effectiveKycStatus =
     hasPanData && panMaskedValue === null ? ('MANUAL_REVIEW' as const) : kyc.kycStatus;
 
+  // The same fact the dispatch predicate reads (`IS_DEFINED(panHash) AND NOT IS_NULL(panHash)`),
+  // surfaced as a boolean so the client never has to infer completion from a masked string or
+  // from kycStatus. Deliberately keyed on the hash, not on panMaskedNumber: a rejected
+  // re-submission nulls the hash, and that must revoke an earlier pass.
+  const panVerified = kyc.panHash != null && kyc.panHash !== '';
+
   return {
     status: 200,
     jsonBody: {
@@ -53,6 +59,7 @@ export async function getKycStatus(
       aadhaarMaskedNumber: kyc.aadhaarMaskedNumber,
       panMaskedNumber: panMaskedValue,
       panNumber: panMaskedValue, // legacy alias — technician-app KycStatusResponse reads panNumber (migration window)
+      panVerified,
     },
   };
 }

@@ -54,6 +54,7 @@ export const GetKycStatusResponseSchema = z.object({
   aadhaarVerified: z.boolean(),
   aadhaarMaskedNumber: z.string().nullable(),
   panMaskedNumber: z.string().nullable(),
+  panVerified: z.boolean(),
 });
 
 export type EncryptedPan = z.infer<typeof EncryptedPanSchema>;
