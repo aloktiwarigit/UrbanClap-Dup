@@ -92,6 +92,47 @@ export function deriveKycStatus(facts: {
   return 'PENDING';
 }
 
+/**
+ * Writes one KYC step's fields and the status derived from the resulting merged document, in a
+ * single read-modify-write. Deriving inside the merge callback is what makes the status atomic
+ * with the facts it describes — a read-back after the write would cost a second round-trip and
+ * reopen the window this function exists to close.
+ *
+ * Rejection paths do NOT use this function: they call `upsertKycStatus` directly to force
+ * PENDING_MANUAL / MANUAL_REVIEW, which deliberately override any derivation.
+ */
+export async function upsertKycStepAndDeriveStatus(
+  technicianId: string,
+  patch: Partial<TechnicianKyc>
+): Promise<KycStatus> {
+  // `readModifyWrite` may invoke the callback more than once (ETag precondition retry). Only the
+  // invocation belonging to the write that actually succeeded is the one whose value we return,
+  // and that is always the last one to run before it returns.
+  let derived: KycStatus = 'PENDING';
+  await readModifyWrite<TechnicianDoc>(technicianId, (existing) => {
+    const base: TechnicianDoc = existing ?? { id: technicianId };
+    const mergedKyc = {
+      aadhaarVerified: false,
+      aadhaarMaskedNumber: null,
+      panNumber: null,
+      panMaskedNumber: null,
+      panHash: null,
+      panImagePath: null,
+      ...(base.kyc ?? {}),
+      ...patch,
+    };
+    derived = deriveKycStatus({
+      aadhaarVerified: mergedKyc.aadhaarVerified === true,
+      panHash: mergedKyc.panHash,
+    });
+    return {
+      ...base,
+      kyc: { ...mergedKyc, kycStatus: derived, updatedAt: new Date().toISOString() },
+    };
+  });
+  return derived;
+}
+
 export async function getKycByTechnicianId(
   technicianId: string
 ): Promise<TechnicianKyc | null> {
