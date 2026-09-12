@@ -74,6 +74,8 @@ internal fun KycScreen(
             is KycUiState.AadhaarDone -> Unit
             is KycUiState.PanReady -> Unit
             is KycUiState.PanUploading -> Unit
+            is KycUiState.PanDone -> Unit
+            is KycUiState.AadhaarRequired -> Unit
             is KycUiState.Error -> Unit
         }
     }
@@ -109,7 +111,16 @@ internal fun KycScreen(
                     )
                 }
                 is KycUiState.PanUploading -> KycLoadingContent(message = "Uploading PAN card")
-                is KycUiState.Complete -> KycStepReview(status = state.status, onRetry = null)
+                // Minimal interim mapping — Task 9 owns the real gated-PAN-step UI treatment
+                // for PanDone/AadhaarRequired and the parameterless Complete.
+                is KycUiState.PanDone -> KycStepReview(status = KycStatus.PAN_DONE, onRetry = null)
+                is KycUiState.AadhaarRequired -> {
+                    KycStepAadhaar(
+                        onStartKyc = { viewModel.startKyc() },
+                        onSkip = onComplete,
+                    )
+                }
+                is KycUiState.Complete -> KycStepReview(status = KycStatus.COMPLETE, onRetry = null)
                 is KycUiState.Error -> {
                     KycStepReview(
                         status = null,

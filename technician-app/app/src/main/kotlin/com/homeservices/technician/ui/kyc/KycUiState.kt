@@ -1,7 +1,5 @@
 package com.homeservices.technician.ui.kyc
 
-import com.homeservices.technician.domain.kyc.model.KycStatus
-
 public sealed class KycUiState {
     public data object Idle : KycUiState()
 
@@ -19,9 +17,18 @@ public sealed class KycUiState {
 
     public data object PanUploading : KycUiState()
 
-    public data class Complete(
-        val status: KycStatus,
-    ) : KycUiState()
+    /** Exactly one step remains: the PAN landed but Aadhaar has not been verified. */
+    public data object PanDone : KycUiState()
+
+    /** The PAN step was attempted before Aadhaar; the technician must complete Aadhaar first. */
+    public data object AadhaarRequired : KycUiState()
+
+    /**
+     * Both KYC steps have succeeded. Reachable only when `aadhaarVerified && panVerified` —
+     * never from a single step's success. Carries no status scalar: the two facts are the
+     * completion contract, and a scalar here is what produced the false-complete bug.
+     */
+    public data object Complete : KycUiState()
 
     public data class Error(
         val message: String,

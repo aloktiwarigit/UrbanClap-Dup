@@ -15,7 +15,6 @@ import com.homeservices.technician.data.pendingaction.PendingActionStore
 import com.homeservices.technician.domain.auth.model.AuthState
 import com.homeservices.technician.domain.kyc.KycOrchestrator
 import com.homeservices.technician.domain.kyc.model.DigiLockerResult
-import com.homeservices.technician.domain.kyc.model.KycStatus
 import com.homeservices.technician.domain.kyc.model.PanOcrResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -122,7 +121,13 @@ internal class KycViewModel
 
         /**
          * Uploads the chosen PAN card image and submits it for OCR.
-         * On success, emits [KycUiState.Complete] with [KycStatus.PAN_DONE].
+         *
+         * On a result that may have changed the technician's verification facts
+         * (a fresh PAN success, or a manual-review verdict — never trust a hardcoded
+         * terminal state), re-reads authoritative status via
+         * [KycOrchestrator.fetchCurrentStatus] and resolves the UI state from both
+         * `aadhaarVerified` and `panVerified` via [terminalStateFor]. [KycUiState.Complete]
+         * is reachable only when both are true — see [terminalStateFor].
          */
         public fun submitPan(fileUri: Uri): Unit {
             lastSubmittedUri = fileUri
@@ -139,11 +144,13 @@ internal class KycViewModel
                         when (result) {
                             is PanOcrResult.Success -> {
                                 clearSubmissionRows(techId)
-                                KycUiState.Complete(status = KycStatus.PAN_DONE)
+                                val state = orchestrator.fetchCurrentStatus()
+                                terminalStateFor(state.aadhaarVerified, state.panVerified)
                             }
                             is PanOcrResult.ManualReview -> {
                                 clearSubmissionRows(techId)
-                                KycUiState.Complete(status = KycStatus.MANUAL_REVIEW)
+                                val state = orchestrator.fetchCurrentStatus()
+                                terminalStateFor(state.aadhaarVerified, state.panVerified)
                             }
                             is PanOcrResult.OcrError ->
                                 KycUiState.Error(result.message)
@@ -152,8 +159,10 @@ internal class KycViewModel
                                 KycUiState.Error("Failed to upload PAN image. Please try again.")
                             }
                             is PanOcrResult.AadhaarRequired -> {
+                                // Retrying the PAN upload cannot help — Aadhaar must be
+                                // completed first. Deliberately no persistPhotoUploadRetry() row.
                                 clearSubmissionRows(techId)
-                                KycUiState.AadhaarPending(consentUrl = DIGILOCKER_CONSENT_URL)
+                                KycUiState.AadhaarRequired
                             }
                         }
                 }
@@ -174,7 +183,7 @@ internal class KycViewModel
             }
         }
 
-        private fun handleKycStatusEvent(event: KycStatusEvent) {
+        private suspend fun handleKycStatusEvent(event: KycStatusEvent) {
             // Ignore stale verdicts for previous technicians (multi-account device,
             // delayed delivery, FCM replays). Anchor the verdict to the currently
             // authenticated session.
@@ -190,11 +199,31 @@ internal class KycViewModel
 
             _uiState.value =
                 if (event.verified) {
-                    KycUiState.Complete(status = KycStatus.PAN_DONE)
+                    // No HTTP response is in hand on this FCM-driven path, so — same as
+                    // submitPan() — re-read authoritative status and resolve from both
+                    // facts rather than assuming this single verdict means Complete.
+                    val state = orchestrator.fetchCurrentStatus()
+                    terminalStateFor(state.aadhaarVerified, state.panVerified)
                 } else {
                     KycUiState.Error(event.rejectionReason ?: DEFAULT_REJECTION_MESSAGE)
                 }
         }
+
+        /**
+         * Resolves the terminal KYC UI state from the two independent verification
+         * facts. [KycUiState.Complete] is reachable if and only if both are true —
+         * this is the single choke point that enforces that invariant.
+         */
+        private fun terminalStateFor(
+            aadhaarVerified: Boolean,
+            panVerified: Boolean,
+        ): KycUiState =
+            when {
+                aadhaarVerified && panVerified -> KycUiState.Complete
+                panVerified -> KycUiState.PanDone
+                aadhaarVerified -> KycUiState.AadhaarDone
+                else -> KycUiState.Idle
+            }
 
         private fun currentTechnicianId(): String = (sessionManager.authState.value as? AuthState.Authenticated)?.uid ?: ""
 

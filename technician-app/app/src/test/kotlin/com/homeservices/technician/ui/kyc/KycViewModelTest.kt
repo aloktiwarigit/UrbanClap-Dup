@@ -3,14 +3,17 @@ package com.homeservices.technician.ui.kyc
 import android.net.Uri
 import com.homeservices.technician.data.auth.SessionManager
 import com.homeservices.technician.data.kyc.DigiLockerCallbackBus
+import com.homeservices.technician.data.kyc.KycStatusEvent
 import com.homeservices.technician.data.kyc.KycStatusEventBus
 import com.homeservices.technician.data.pendingaction.PendingActionStore
 import com.homeservices.technician.domain.auth.model.AuthProvider
 import com.homeservices.technician.domain.auth.model.AuthState
 import com.homeservices.technician.domain.kyc.KycOrchestrator
 import com.homeservices.technician.domain.kyc.model.DigiLockerResult
+import com.homeservices.technician.domain.kyc.model.KycState
 import com.homeservices.technician.domain.kyc.model.KycStatus
 import com.homeservices.technician.domain.kyc.model.PanOcrResult
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -71,6 +74,39 @@ public class KycViewModelTest {
     @AfterEach
     public fun tearDown(): Unit {
         Dispatchers.resetMain()
+    }
+
+    private fun aUri(): Uri = mockk()
+
+    private fun aKycState(
+        aadhaarVerified: Boolean,
+        panVerified: Boolean,
+    ): KycState =
+        KycState(
+            status = KycStatus.PENDING,
+            aadhaarVerified = aadhaarVerified,
+            panVerified = panVerified,
+            aadhaarMaskedNumber = null,
+            panNumber = null,
+        )
+
+    /**
+     * Builds a fresh [KycViewModel] against the shared [orchestrator], stubbing
+     * [KycOrchestrator.fetchCurrentStatus] to return the given verification facts —
+     * the authoritative source `terminalStateFor` resolves against.
+     */
+    private fun createViewModel(
+        aadhaarVerified: Boolean,
+        panVerified: Boolean,
+    ): KycViewModel {
+        coEvery { orchestrator.fetchCurrentStatus() } returns aKycState(aadhaarVerified, panVerified)
+        return KycViewModel(
+            orchestrator = orchestrator,
+            callbackBus = callbackBus,
+            kycStatusEventBus = kycStatusEventBus,
+            pendingActionStore = pendingActionStore,
+            sessionManager = sessionManager,
+        )
     }
 
     @Test
@@ -144,18 +180,62 @@ public class KycViewModelTest {
         }
 
     @Test
-    public fun `submitPan emits Complete on PanOcrResult Success`(): Unit =
+    public fun `PAN success while Aadhaar unverified does NOT render Complete`(): Unit =
         runTest {
-            val uri = mockk<Uri>()
-            every {
-                orchestrator.submitPan(uri, any())
-            } returns flowOf(PanOcrResult.Success("ABCDE1234F"))
+            val vm = createViewModel(aadhaarVerified = false, panVerified = true)
+            every { orchestrator.submitPan(any(), any()) } returns flowOf(PanOcrResult.Success("ABCDE1234F"))
 
-            viewModel.submitPan(uri)
+            vm.submitPan(aUri())
 
-            val state = viewModel.uiState.value
-            assertThat(state).isInstanceOf(KycUiState.Complete::class.java)
-            assertThat((state as KycUiState.Complete).status).isEqualTo(KycStatus.PAN_DONE)
+            assertThat(vm.uiState.value).isNotInstanceOf(KycUiState.Complete::class.java)
+            assertThat(vm.uiState.value).isInstanceOf(KycUiState.PanDone::class.java)
+        }
+
+    @Test
+    public fun `PAN success with Aadhaar verified renders Complete`(): Unit =
+        runTest {
+            val vm = createViewModel(aadhaarVerified = true, panVerified = true)
+            every { orchestrator.submitPan(any(), any()) } returns flowOf(PanOcrResult.Success("ABCDE1234F"))
+
+            vm.submitPan(aUri())
+
+            assertThat(vm.uiState.value).isInstanceOf(KycUiState.Complete::class.java)
+        }
+
+    @Test
+    public fun `AadhaarRequired result routes back to the Aadhaar step`(): Unit =
+        runTest {
+            val vm = createViewModel(aadhaarVerified = false, panVerified = false)
+            every { orchestrator.submitPan(any(), any()) } returns flowOf(PanOcrResult.AadhaarRequired)
+
+            vm.submitPan(aUri())
+
+            assertThat(vm.uiState.value).isInstanceOf(KycUiState.AadhaarRequired::class.java)
+        }
+
+    @Test
+    public fun `KYC status event verified while Aadhaar unverified does NOT render Complete`(): Unit =
+        runTest {
+            val vm = createViewModel(aadhaarVerified = false, panVerified = true)
+
+            kycStatusEventBus.post(
+                KycStatusEvent(technicianId = techId, verified = true),
+            )
+
+            assertThat(vm.uiState.value).isNotInstanceOf(KycUiState.Complete::class.java)
+            assertThat(vm.uiState.value).isInstanceOf(KycUiState.PanDone::class.java)
+        }
+
+    @Test
+    public fun `KYC status event verified with both facts true renders Complete`(): Unit =
+        runTest {
+            val vm = createViewModel(aadhaarVerified = true, panVerified = true)
+
+            kycStatusEventBus.post(
+                KycStatusEvent(technicianId = techId, verified = true),
+            )
+
+            assertThat(vm.uiState.value).isInstanceOf(KycUiState.Complete::class.java)
         }
 
     @Test
