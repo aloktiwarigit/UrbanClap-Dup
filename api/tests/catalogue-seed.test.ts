@@ -2,14 +2,15 @@ import { describe, it, expect } from 'vitest';
 import { CATEGORIES, SERVICES } from '../src/cosmos/seeds/catalogue.js';
 import { PRICE_IN_PROSE } from '../src/schemas/service.js';
 
-describe('catalogue seed canonical 5-category set (Ayodhya pilot)', () => {
-  it('contains the 5 categories in expected sortOrder', () => {
+describe('catalogue seed canonical category set (Ayodhya pilot)', () => {
+  it('contains the 6 categories in expected sortOrder', () => {
     expect(CATEGORIES.map(c => c.id)).toEqual([
       'ac-repair',
       'water-pump',
       'plumbing',
       'electrical',
       'water-purifier',
+      'appliance-repair',
     ]);
   });
 
@@ -42,6 +43,16 @@ describe('catalogue seed canonical 5-category set (Ayodhya pilot)', () => {
     const ids = new Set(SERVICES.map(s => s.id));
     expect(ids.has('ro-installation')).toBe(true);
     expect(ids.has('ro-service-amc')).toBe(true);
+  });
+
+  it('contains the new appliance-repair services, inactive pending technician coverage', () => {
+    const byId = new Map(SERVICES.map(s => [s.id, s]));
+    for (const id of ['appliance-fridge-repair', 'appliance-cooler-service', 'appliance-washing-machine-repair', 'electrical-camera-installation']) {
+      expect(byId.has(id), id).toBe(true);
+      expect(byId.get(id)!.isActive, `${id} must stay inactive until a technician holds this skill`).toBe(false);
+    }
+    const applianceCategory = CATEGORIES.find(c => c.id === 'appliance-repair');
+    expect(applianceCategory?.isActive, 'appliance-repair category must stay inactive until coverage exists').toBe(false);
   });
 });
 
