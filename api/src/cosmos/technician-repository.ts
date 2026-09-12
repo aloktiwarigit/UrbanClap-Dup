@@ -327,8 +327,13 @@ const HOLD_NOT_BLOCKED_PREDICATE =
  * marker for a two-step process that is completable in either order*, and a single scalar cannot
  * express "both done". `submit-aadhaar.ts` sets it to `AADHAAR_DONE`; `submit-pan-ocr.ts` sets it
  * to `PAN_DONE`; whichever runs LAST wins, and neither endpoint checks that the other has run.
- * `COMPLETE` — the one value in `KycStatusSchema` that could mean "both done" — has no writer
- * anywhere in this codebase. So:
+ * `COMPLETE` — the one value in `KycStatusSchema` that could mean "both done" — had no writer
+ * anywhere in this codebase when this predicate was written. `deriveKycStatus()` (below) is now
+ * that single writer, and it derives `COMPLETE` from the same two independent facts this
+ * predicate reads. But this predicate does not depend on `deriveKycStatus()` to be correct: it
+ * asserts `aadhaarVerified` and `panHash` directly rather than trusting a mirrored scalar, so
+ * dispatch stays right even if `kycStatus` itself is ever wrong, stale, or written some other
+ * way. Historically, before `deriveKycStatus()` existed:
  *   - `kycStatus = 'PAN_DONE'`  admits PAN-only (Aadhaar never done)          → too loose
  *   - `kycStatus = 'AADHAAR_DONE'` is reached by a fully-verified technician who did PAN first
  *     and Aadhaar second, because the Aadhaar write overwrote the marker      → too strict
@@ -363,13 +368,16 @@ const HOLD_NOT_BLOCKED_PREDICATE =
  *
  * ── Fail-open boundary ───────────────────────────────────────────────────────────────────────
  * The disjunct is `NOT IS_DEFINED(c.kyc)` — the absence of the WHOLE `kyc` sub-object, not the
- * absence of the two fields. `upsertKycStatus()` is the only writer of `c.kyc` in the codebase,
- * and it reconstructs from defaults that always include `aadhaarVerified: false` and
- * `panHash: null`; so any document the KYC flow has ever touched carries both keys, and the two
- * choices differ only for a document with a `kyc` object written some other way — i.e. a legacy
- * doc holding, say, `panNumberEncrypted` and nothing else. Such a document carries PARTIAL KYC
- * information (one step's worth), and partial information must fail CLOSED once the flag is on:
- * keying on the whole object excludes it, keying on the two fields would wrongly admit it.
+ * absence of the two fields. Two functions write `c.kyc`: `upsertKycStatus()` and
+ * `upsertKycStepAndDeriveStatus()` (above). Both reconstruct the full `kyc` object the same way —
+ * `defaults → ...(base.kyc ?? {}) → ...patch`, with defaults that always include
+ * `aadhaarVerified: false` and `panHash: null` — so the fail-open argument holds regardless of
+ * which of the two last wrote the document: any document the KYC flow has ever touched carries
+ * both keys. The two choices differ only for a document with a `kyc` object written some other
+ * way — i.e. a legacy doc holding, say, `panNumberEncrypted` and nothing else. Such a document
+ * carries PARTIAL KYC information (one step's worth), and partial information must fail CLOSED
+ * once the flag is on: keying on the whole object excludes it, keying on the two fields would
+ * wrongly admit it.
  * A technician with no KYC information at all is still dispatched, exactly like the suspended
  * and hold predicates above. `docs/runbook.md` carries the precondition query that checks a
  * target environment for such legacy documents before `enforceKycInDispatch` is switched on.
@@ -389,9 +397,11 @@ const HOLD_NOT_BLOCKED_PREDICATE =
  * EXCLUDED whichever side the engine evaluates first — but `false OR undefined` would be
  * `undefined`, which also drops the row. Both routes exclude; neither admits.)
  *
- * This predicate still does not depend on the KYC endpoints enforcing step order — it does not
- * need to, because it asserts the two outcomes directly rather than inferring them from a
- * sequence. Adding step-order enforcement to `submit-pan-ocr.ts` remains a separate follow-up.
+ * Step-order enforcement now exists in `submit-pan-ocr.ts` — it 409s with `AADHAAR_REQUIRED_FIRST`
+ * when PAN is submitted before Aadhaar has been verified. This predicate does not depend on that
+ * check to be correct, and never did: it asserts the two outcomes directly rather than inferring
+ * them from a submission sequence, so it stays right even if that ordering guard is ever removed,
+ * bypassed, or found to have a gap.
  * See `docs/adr/0032-commission-hold-is-an-eligibility-gate.md` (Consequences — negative) for why
  * dispatch is the component that ends up defining "KYC verified" for this system at all.
  */
