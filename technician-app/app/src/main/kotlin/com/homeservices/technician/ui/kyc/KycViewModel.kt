@@ -3,12 +3,10 @@ package com.homeservices.technician.ui.kyc
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.homeservices.corenav.PendingAction
-import com.homeservices.corenav.PendingActionPriority
-import com.homeservices.corenav.PendingActionStatus
 import com.homeservices.corenav.PendingActionType
 import com.homeservices.technician.data.auth.SessionManager
 import com.homeservices.technician.data.kyc.DigiLockerCallbackBus
+import com.homeservices.technician.data.kyc.KycPendingActionCoordinator
 import com.homeservices.technician.data.kyc.KycStatusEvent
 import com.homeservices.technician.data.kyc.KycStatusEventBus
 import com.homeservices.technician.data.pendingaction.PendingActionStore
@@ -52,6 +50,7 @@ internal class KycViewModel
         private val callbackBus: DigiLockerCallbackBus,
         private val kycStatusEventBus: KycStatusEventBus,
         private val pendingActionStore: PendingActionStore,
+        private val pendingActionCoordinator: KycPendingActionCoordinator,
         private val sessionManager: SessionManager,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow<KycUiState>(KycUiState.Idle)
@@ -142,13 +141,13 @@ internal class KycViewModel
                 // Optimistic durability marker: the submission is in flight and may be
                 // interrupted by process death or network loss. OnboardingViewModel
                 // observes this so the offline chip surfaces immediately.
-                persistKycSubmitPending(techId)
+                pendingActionCoordinator.persistKycSubmitPending(techId)
 
                 orchestrator.submitPan(fileUri, technicianId = techId).collect { result ->
                     _uiState.value =
                         when (result) {
                             is PanOcrResult.Success -> {
-                                clearSubmissionRows(techId)
+                                pendingActionCoordinator.clearSubmissionRows(techId)
                                 terminalStateForOrError()
                             }
                             is PanOcrResult.ManualReview -> {
@@ -158,19 +157,19 @@ internal class KycViewModel
                                 // own contract) return AadhaarDone/Idle — indistinguishable from
                                 // "never submitted a PAN". No status re-read is needed here:
                                 // this outcome is authoritative from the OCR response itself.
-                                clearSubmissionRows(techId)
+                                pendingActionCoordinator.clearSubmissionRows(techId)
                                 KycUiState.ManualReview
                             }
                             is PanOcrResult.OcrError ->
                                 KycUiState.Error(result.message)
                             is PanOcrResult.UploadError -> {
-                                persistPhotoUploadRetry(fileUri, techId)
+                                pendingActionCoordinator.persistPhotoUploadRetry(fileUri, techId)
                                 KycUiState.Error("Failed to upload PAN image. Please try again.")
                             }
                             is PanOcrResult.AadhaarRequired -> {
                                 // Retrying the PAN upload cannot help — Aadhaar must be
                                 // completed first. Deliberately no persistPhotoUploadRetry() row.
-                                clearSubmissionRows(techId)
+                                pendingActionCoordinator.clearSubmissionRows(techId)
                                 KycUiState.AadhaarRequired
                             }
                         }
@@ -252,66 +251,4 @@ internal class KycViewModel
                 )
 
         private fun currentTechnicianId(): String = (sessionManager.authState.value as? AuthState.Authenticated)?.uid ?: ""
-
-        private suspend fun clearSubmissionRows(techId: String) {
-            if (techId.isBlank()) return
-            runCatching { pendingActionStore.clearPhotoRetry(techId) }
-            runCatching { pendingActionStore.clearKycSubmitPending(techId) }
-            runCatching { pendingActionStore.clearKycResume(techId) }
-        }
-
-        private suspend fun persistKycSubmitPending(techId: String) {
-            if (techId.isBlank()) return
-            val nowMs = System.currentTimeMillis()
-            runCatching {
-                pendingActionStore.upsert(
-                    PendingAction(
-                        id = "KYC_SUBMIT_PENDING:technician:$techId:kyc:$techId",
-                        userId = techId,
-                        role = "technician",
-                        type = PendingActionType.KYC_SUBMIT_PENDING,
-                        entityType = "kyc",
-                        entityId = techId,
-                        routeUri = "homeservices://kyc",
-                        priority = PendingActionPriority.NORMAL,
-                        status = PendingActionStatus.ACTIVE,
-                        sourceStatus = null,
-                        version = 1L,
-                        createdAt = nowMs,
-                        updatedAt = nowMs,
-                        expiresAt = null,
-                        resolvedAt = null,
-                    ),
-                )
-            }
-        }
-
-        private suspend fun persistPhotoUploadRetry(
-            fileUri: Uri,
-            techId: String,
-        ) {
-            if (techId.isBlank()) return
-            val nowMs = System.currentTimeMillis()
-            runCatching {
-                pendingActionStore.upsert(
-                    PendingAction(
-                        id = "PHOTO_UPLOAD_RETRY:technician:$techId:kyc:$techId",
-                        userId = techId,
-                        role = "technician",
-                        type = PendingActionType.PHOTO_UPLOAD_RETRY,
-                        entityType = "kyc",
-                        entityId = techId,
-                        routeUri = fileUri.toString(),
-                        priority = PendingActionPriority.HIGH,
-                        status = PendingActionStatus.ACTIVE,
-                        sourceStatus = null,
-                        version = 1L,
-                        createdAt = nowMs,
-                        updatedAt = nowMs,
-                        expiresAt = null,
-                        resolvedAt = null,
-                    ),
-                )
-            }
-        }
     }

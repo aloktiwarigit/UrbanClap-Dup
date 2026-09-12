@@ -7,6 +7,7 @@ import com.homeservices.corenav.PendingActionStatus
 import com.homeservices.corenav.PendingActionType
 import com.homeservices.technician.data.auth.SessionManager
 import com.homeservices.technician.data.kyc.DigiLockerCallbackBus
+import com.homeservices.technician.data.kyc.KycPendingActionCoordinator
 import com.homeservices.technician.data.kyc.KycStatusEvent
 import com.homeservices.technician.data.kyc.KycStatusEventBus
 import com.homeservices.technician.data.pendingaction.PendingActionStore
@@ -53,6 +54,7 @@ public class KycViewModelKycStatusTest {
     private lateinit var callbackBus: DigiLockerCallbackBus
     private lateinit var kycStatusEventBus: KycStatusEventBus
     private lateinit var pendingActionStore: PendingActionStore
+    private lateinit var pendingActionCoordinator: KycPendingActionCoordinator
     private lateinit var sessionManager: SessionManager
     private lateinit var pendingActionsFlow: MutableStateFlow<List<PendingAction>>
     private val testDispatcher = UnconfinedTestDispatcher()
@@ -65,6 +67,7 @@ public class KycViewModelKycStatusTest {
         callbackBus = DigiLockerCallbackBus()
         kycStatusEventBus = KycStatusEventBus()
         pendingActionStore = mockk(relaxed = true)
+        pendingActionCoordinator = KycPendingActionCoordinator(pendingActionStore)
         sessionManager = mockk(relaxed = true)
 
         every { sessionManager.authState } returns
@@ -93,6 +96,7 @@ public class KycViewModelKycStatusTest {
             callbackBus = callbackBus,
             kycStatusEventBus = kycStatusEventBus,
             pendingActionStore = pendingActionStore,
+            pendingActionCoordinator = pendingActionCoordinator,
             sessionManager = sessionManager,
         )
 

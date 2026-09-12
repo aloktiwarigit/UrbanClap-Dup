@@ -3,6 +3,7 @@ package com.homeservices.technician.ui.kyc
 import android.net.Uri
 import com.homeservices.technician.data.auth.SessionManager
 import com.homeservices.technician.data.kyc.DigiLockerCallbackBus
+import com.homeservices.technician.data.kyc.KycPendingActionCoordinator
 import com.homeservices.technician.data.kyc.KycStatusEvent
 import com.homeservices.technician.data.kyc.KycStatusEventBus
 import com.homeservices.technician.data.pendingaction.PendingActionStore
@@ -35,6 +36,7 @@ public class KycViewModelTest {
     private lateinit var callbackBus: DigiLockerCallbackBus
     private lateinit var kycStatusEventBus: KycStatusEventBus
     private lateinit var pendingActionStore: PendingActionStore
+    private lateinit var pendingActionCoordinator: KycPendingActionCoordinator
     private lateinit var sessionManager: SessionManager
     private lateinit var viewModel: KycViewModel
     private val testDispatcher = UnconfinedTestDispatcher()
@@ -47,6 +49,7 @@ public class KycViewModelTest {
         callbackBus = DigiLockerCallbackBus()
         kycStatusEventBus = KycStatusEventBus()
         pendingActionStore = mockk(relaxed = true)
+        pendingActionCoordinator = KycPendingActionCoordinator(pendingActionStore)
         sessionManager = mockk(relaxed = true)
 
         every { sessionManager.authState } returns
@@ -67,6 +70,7 @@ public class KycViewModelTest {
                 callbackBus = callbackBus,
                 kycStatusEventBus = kycStatusEventBus,
                 pendingActionStore = pendingActionStore,
+                pendingActionCoordinator = pendingActionCoordinator,
                 sessionManager = sessionManager,
             )
     }
@@ -105,6 +109,7 @@ public class KycViewModelTest {
             callbackBus = callbackBus,
             kycStatusEventBus = kycStatusEventBus,
             pendingActionStore = pendingActionStore,
+            pendingActionCoordinator = pendingActionCoordinator,
             sessionManager = sessionManager,
         )
     }
