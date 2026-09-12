@@ -821,6 +821,9 @@ dependencies {
     implementation(libs.androidx.browser)
     implementation(libs.firebase.storage)
 
+    // On-device UPI QR generation (E24-S01) — offline, no network call
+    implementation(libs.zxing.core)
+
     // CameraX — on-device photo capture for job stage evidence (E06-S02)
     implementation(libs.camera.core)
     implementation(libs.camera.camera2)

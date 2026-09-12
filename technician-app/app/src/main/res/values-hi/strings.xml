@@ -141,6 +141,13 @@
     <string name="payout_when_question">पेमेंट कब चाहिए?</string>
     <string name="service_finding_area">आपका वर्तमान क्षेत्र ढूंढ रहे हैं</string>
 
+    <!-- UPI settings (E24-S01) -->
+    <string name="upi_settings_title">यूपीआई पेमेंट सेटिंग</string>
+    <string name="upi_settings_vpa_label">आपकी यूपीआई आईडी</string>
+    <string name="upi_settings_warning">भुगतान सीधे इस यूपीआई आईडी में आएगा — सेव करने से पहले जांच लें कि यह सही है।</string>
+    <string name="upi_settings_save_cta">यूपीआई आईडी सेव करें</string>
+    <string name="earnings_upi_settings">यूपीआई सेटिंग</string>
+
     <!-- Auth screen -->
     <string name="auth_back_to_sign_in">साइन-इन विकल्पों पर वापस जाएं</string>
     <string name="auth_email_label">ईमेल</string>
