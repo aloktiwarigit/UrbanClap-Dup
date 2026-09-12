@@ -553,6 +553,35 @@ describe('P1-3: KYC projector reads kyc.kycStatus from TechnicianDoc', () => {
 
     expect(upsertAction).not.toHaveBeenCalled();
   });
+
+  it('keeps the KYC_RESUME reminder active on AADHAAR_DONE', async () => {
+    await processKycChangeFeedDoc({
+      id: 't1',
+      kyc: { kycStatus: 'AADHAAR_DONE', updatedAt: '2026-09-12T00:00:00.000Z' },
+    });
+
+    expect(upsertAction).toHaveBeenCalled();
+    expect(resolveAction).not.toHaveBeenCalled();
+  });
+
+  it('keeps the KYC_RESUME reminder active on PAN_DONE', async () => {
+    await processKycChangeFeedDoc({
+      id: 't1',
+      kyc: { kycStatus: 'PAN_DONE', updatedAt: '2026-09-12T00:00:00.000Z' },
+    });
+
+    expect(upsertAction).toHaveBeenCalled();
+    expect(resolveAction).not.toHaveBeenCalled();
+  });
+
+  it('resolves the reminder only on the terminal COMPLETE state', async () => {
+    await processKycChangeFeedDoc({
+      id: 't1',
+      kyc: { kycStatus: 'COMPLETE', updatedAt: '2026-09-12T00:00:00.000Z' },
+    });
+
+    expect(resolveAction).toHaveBeenCalled();
+  });
 });
 
 // ── P2-4: expireAction retry propagation ─────────────────────────────────────

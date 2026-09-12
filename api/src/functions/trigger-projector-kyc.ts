@@ -45,10 +45,22 @@ function stableExpiryFrom(sourceIso: string | undefined, windowMs: number): stri
   return new Date(base + windowMs).toISOString();
 }
 
-/** KYC statuses that require technician action */
-const ACTION_REQUIRED_STATUSES = new Set(['PENDING', 'PENDING_MANUAL', 'MANUAL_REVIEW']);
-/** KYC statuses that indicate completion — resolve the pending action */
-const COMPLETE_STATUSES = new Set(['COMPLETE', 'AADHAAR_DONE', 'PAN_DONE']);
+/**
+ * KYC statuses that require technician action.
+ *
+ * AADHAAR_DONE and PAN_DONE live here, not in COMPLETE_STATUSES: each means exactly one of the two
+ * required steps has landed, so the "finish your KYC" reminder must stay up. They were previously
+ * treated as complete, which cleared the reminder for a technician who still had a step to do.
+ */
+const ACTION_REQUIRED_STATUSES = new Set([
+  'PENDING',
+  'PENDING_MANUAL',
+  'MANUAL_REVIEW',
+  'AADHAAR_DONE',
+  'PAN_DONE',
+]);
+/** The only status meaning both KYC steps succeeded — written solely by `deriveKycStatus`. */
+const COMPLETE_STATUSES = new Set(['COMPLETE']);
 
 /**
  * Exported for unit testing without Azure Functions runtime.
