@@ -54,6 +54,43 @@ describe('catalogue seed canonical category set (Ayodhya pilot)', () => {
     const applianceCategory = CATEGORIES.find(c => c.id === 'appliance-repair');
     expect(applianceCategory?.isActive, 'appliance-repair category must stay inactive until coverage exists').toBe(false);
   });
+
+  it('contains the new inverter service, inactive pending technician coverage', () => {
+    const byId = new Map(SERVICES.map(s => [s.id, s]));
+    expect(byId.has('appliance-inverter-service')).toBe(true);
+    const inverter = byId.get('appliance-inverter-service')!;
+    expect(inverter.categoryId).toBe('appliance-repair');
+    expect(inverter.basePrice).toBe(49900);
+    expect(inverter.isActive, 'appliance-inverter-service must stay inactive until a technician holds this skill').toBe(false);
+  });
+
+  it('E22-S02: appliance-repair category and its services point at the real Storage bucket with alt=media', () => {
+    const APPLIANCE_SERVICE_IDS = [
+      'appliance-fridge-repair',
+      'appliance-cooler-service',
+      'appliance-washing-machine-repair',
+      'electrical-camera-installation',
+      'appliance-inverter-service',
+    ];
+    const applianceCategory = CATEGORIES.find(c => c.id === 'appliance-repair')!;
+    expect(applianceCategory.heroImageUrl).toMatch(/^https:\/\/firebasestorage\.googleapis\.com\/v0\/b\/homeservices-prod-001\.firebasestorage\.app\/o\/.+\?alt=media$/);
+    expect(applianceCategory.heroImageUrl).not.toContain('homeservices-mvp');
+
+    const byId = new Map(SERVICES.map(s => [s.id, s]));
+    for (const id of APPLIANCE_SERVICE_IDS) {
+      const svc = byId.get(id)!;
+      expect(svc.heroImageUrl, `${id} heroImageUrl`).toMatch(/^https:\/\/firebasestorage\.googleapis\.com\/v0\/b\/homeservices-prod-001\.firebasestorage\.app\/o\/.+\?alt=media$/);
+      expect(svc.heroImageUrl, `${id} heroImageUrl must not use the dead homeservices-mvp bucket`).not.toContain('homeservices-mvp');
+    }
+
+    // Each service must point at its OWN storage path, not a borrowed sibling's —
+    // this was the exact PR #346 gap for electrical-camera-installation, which
+    // pointed at services%2Felectrical-switchboard-fix.jpg instead of its own id.
+    for (const id of ['appliance-fridge-repair', 'appliance-cooler-service', 'appliance-washing-machine-repair', 'electrical-camera-installation', 'appliance-inverter-service']) {
+      const svc = byId.get(id)!;
+      expect(svc.heroImageUrl, `${id} must reference its own object path`).toContain(encodeURIComponent(`services/${id}.jpg`));
+    }
+  });
 });
 
 describe('E22-S01 — reprice', () => {

@@ -17,9 +17,13 @@ export const CATEGORIES: ServiceCategory[] = [
   // 2026-09-12: isActive:false — tests/scripts/seed-technicians.test.ts enforces a
   // >=2-online-technician launch gate per active category/service, and no technician
   // can hold an appliance-repair skill until technician-app ships ServiceCatalogue.kt
-  // self-select. heroImageUrl reuses categories/ac-repair.jpg as a placeholder — no
-  // dedicated photo shot yet.
-  { id: 'appliance-repair', name: 'Appliance Repair', nameHi: 'उपकरण मरम्मत', heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/categories%2Fac-repair.jpg', sortOrder: 6, isActive: false, updatedBy: SYSTEM, createdAt: NOW, updatedAt: NOW },
+  // self-select.
+  // 2026-09-12 (E22-S02): heroImageUrl corrected from the dead `homeservices-mvp`
+  // bucket (never existed — see docs/superpowers/plans/2026-09-12-e22-s02-catalogue-categories.md)
+  // to the real `homeservices-prod-001.firebasestorage.app` bucket, with the
+  // required `?alt=media` suffix Firebase Storage needs to serve raw image bytes
+  // instead of JSON object metadata.
+  { id: 'appliance-repair', name: 'Appliance Repair', nameHi: 'उपकरण मरम्मत', heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-prod-001.firebasestorage.app/o/categories%2Fappliance-repair.jpg?alt=media', sortOrder: 6, isActive: false, updatedBy: SYSTEM, createdAt: NOW, updatedAt: NOW },
 ];
 
 export const SERVICES: Service[] = [
@@ -322,7 +326,7 @@ export const SERVICES: Service[] = [
     nameHi: 'फ्रिज मरम्मत',
     shortDescription: 'Diagnosis and repair for cooling, compressor, or noise issues.',
     shortDescriptionHi: 'कूलिंग, कंप्रेसर या आवाज़ की समस्या की जांच और मरम्मत।',
-    heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/services%2Fac-deep-clean.jpg',
+    heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-prod-001.firebasestorage.app/o/services%2Fappliance-fridge-repair.jpg?alt=media',
     basePrice: 49900,
     commissionBps: 2250,
     durationMinutes: 60,
@@ -342,7 +346,11 @@ export const SERVICES: Service[] = [
     nameHi: 'कूलर सर्विस',
     shortDescription: 'Pump, motor, and cooling pad service for air coolers.',
     shortDescriptionHi: 'एयर कूलर के पंप, मोटर और कूलिंग पैड की सर्विस।',
-    heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/services%2Fac-deep-clean.jpg',
+    // E22-S02: no free-license photo of an Indian desert/room air cooler exists on
+    // Pexels or Unsplash's non-paid tiers (searched both) — reuses the category's
+    // generic appliance-service photo rather than an unrelated one. Real cooler
+    // photography is a candidate for the Task 7 backlog item.
+    heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-prod-001.firebasestorage.app/o/services%2Fappliance-cooler-service.jpg?alt=media',
     basePrice: 49900,
     commissionBps: 2250,
     durationMinutes: 60,
@@ -362,7 +370,7 @@ export const SERVICES: Service[] = [
     nameHi: 'वाशिंग मशीन मरम्मत',
     shortDescription: 'Diagnosis and repair for motor, drum, or drainage issues.',
     shortDescriptionHi: 'मोटर, ड्रम या ड्रेनेज की समस्या की जांच और मरम्मत।',
-    heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/services%2Fac-deep-clean.jpg',
+    heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-prod-001.firebasestorage.app/o/services%2Fappliance-washing-machine-repair.jpg?alt=media',
     basePrice: 49900,
     commissionBps: 2250,
     durationMinutes: 60,
@@ -382,7 +390,9 @@ export const SERVICES: Service[] = [
     nameHi: 'सीसीटीवी कैमरा इंस्टॉलेशन',
     shortDescription: 'Mount, wire, and set up a CCTV camera with mobile app access.',
     shortDescriptionHi: 'सीसीटीवी कैमरा लगाना, वायरिंग और मोबाइल ऐप सेटअप।',
-    heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/services%2Felectrical-switchboard-fix.jpg',
+    // E22-S02: PR #346 pointed this at the borrowed services%2Felectrical-switchboard-fix.jpg
+    // path. Corrected to its own object.
+    heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-prod-001.firebasestorage.app/o/services%2Felectrical-camera-installation.jpg?alt=media',
     basePrice: 79900,
     commissionBps: 2250,
     durationMinutes: 90,
@@ -390,6 +400,26 @@ export const SERVICES: Service[] = [
     faq: [{ question: 'Is the camera itself included?', answer: 'No — bring your own. We install whatever camera/DVR you provide.' }],
     addOns: [{ id: 'extra-camera', name: 'Additional camera on same visit', price: 59900, triggerCondition: 'per extra camera installed in the same visit' }],
     photoStages: [{ id: 'camera-before', label: 'Mounting point before installation', required: true }, { id: 'camera-after', label: 'Installed + live feed test', required: true }],
+    isActive: false,
+    updatedBy: SYSTEM,
+    createdAt: NOW,
+    updatedAt: NOW,
+  },
+  {
+    id: 'appliance-inverter-service',
+    categoryId: 'appliance-repair',
+    name: 'Inverter Install & Service',
+    nameHi: 'इन्वर्टर इंस्टॉलेशन और सर्विस',
+    shortDescription: 'Installation, battery check, and servicing for home inverters and UPS units.',
+    shortDescriptionHi: 'घरेलू इन्वर्टर और यूपीएस की इंस्टॉलेशन, बैटरी जांच और सर्विसिंग।',
+    heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-prod-001.firebasestorage.app/o/services%2Fappliance-inverter-service.jpg?alt=media',
+    basePrice: 49900,
+    commissionBps: 2250,
+    durationMinutes: 60,
+    includes: ['Inverter + battery inspection', 'Wiring and connection check', 'Test run under load'],
+    faq: [{ question: 'Is a new battery included?', answer: 'No — a replacement battery is a separate add-on if the existing one fails the load test.' }],
+    addOns: [{ id: 'battery-replacement', name: 'Battery replacement', price: 350000, triggerCondition: 'if the existing battery fails the load test' }],
+    photoStages: [{ id: 'inverter-before', label: 'Inverter/battery before service', required: true }, { id: 'inverter-after', label: 'After service', required: true }],
     isActive: false,
     updatedBy: SYSTEM,
     createdAt: NOW,
