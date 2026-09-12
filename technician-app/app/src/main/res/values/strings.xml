@@ -170,7 +170,6 @@
     <string name="upi_settings_vpa_label">Your UPI ID</string>
     <string name="upi_settings_warning">Payments go directly to this UPI ID — double-check it\'s correct before saving.</string>
     <string name="upi_settings_save_cta">Save UPI ID</string>
-    <string name="earnings_upi_settings">UPI settings</string>
 
     <!-- Auth screen -->
     <string name="auth_back_to_sign_in">Back to sign-in options</string>

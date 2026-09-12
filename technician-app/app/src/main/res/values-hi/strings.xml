@@ -146,7 +146,6 @@
     <string name="upi_settings_vpa_label">आपकी यूपीआई आईडी</string>
     <string name="upi_settings_warning">भुगतान सीधे इस यूपीआई आईडी में आएगा — सेव करने से पहले जांच लें कि यह सही है।</string>
     <string name="upi_settings_save_cta">यूपीआई आईडी सेव करें</string>
-    <string name="earnings_upi_settings">यूपीआई सेटिंग</string>
 
     <!-- Auth screen -->
     <string name="auth_back_to_sign_in">साइन-इन विकल्पों पर वापस जाएं</string>

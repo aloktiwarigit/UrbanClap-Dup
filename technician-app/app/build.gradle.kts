@@ -735,6 +735,27 @@ kover {
                     // ErasureRepository$DefaultImpls — Kotlin compiler-generated delegation stubs
                     // for interface default parameters; same rationale as Hilt-generated exclusions.
                     "*.ErasureRepository\$DefaultImpls",
+                    // UpiSettingsScreen generates Compose *Kt wrapper classes — same rationale
+                    // as PayoutCadenceScreenKt / RatingScreenKt: recomposition guards + slot-table
+                    // ops only exercisable via Compose instrumented tests. Paparazzi covers rendering.
+                    "*.UpiSettingsScreenKt",
+                    "*.UpiSettingsScreenKt\$*",
+                    // Payment-profile Hilt DI module and Retrofit interface are framework wiring,
+                    // same rationale as data.payout.di.* / PayoutApiService.
+                    "*.data.paymentprofile.di.*",
+                    "*.PaymentProfileApiService",
+                    "*.PaymentProfileApiService\$*",
+                    // UpiSettingsViewModel.save$1 — viewModelScope.launch lambda containing the
+                    // biometric gate + PATCH call, same rationale as PayoutCadenceViewModel.saveCadence$1:
+                    // only exercisable via instrumented tests (real FragmentActivity needed for
+                    // BiometricPrompt). Business-logic paths are covered by ViewModel unit tests using mockk.
+                    "*.UpiSettingsViewModel\$save\$1",
+                    "*.UpiSettingsViewModel\$save\$1\$*",
+                    // QrBitmapGenerator wraps android.graphics.Bitmap/Color — requires a real Android
+                    // runtime, not exercisable in JVM unit tests. The QR content it encodes is pinned
+                    // byte-for-byte via UpiQrUriBuilderTest; visual rendering is covered by Paparazzi.
+                    "*.QrBitmapGenerator",
+                    "*.QrBitmapGenerator\$*",
                 )
             }
         }

@@ -32,19 +32,21 @@ public class ActiveJobRepositoryImplTest {
     private lateinit var currentLocationProvider: CurrentLocationProvider
     private lateinit var repo: ActiveJobRepositoryImpl
 
-    private fun aResponse(status: String = "ASSIGNED", amountPaise: Int = 65000) =
-        ActiveJobResponse(
-            id = "bk-1",
-            customerId = "c-1",
-            serviceId = "svc-1",
-            serviceName = "AC Repair",
-            addressText = "12 Main St",
-            addressLatLng = LatLngDto(lat = 12.9, lng = 77.6),
-            status = status,
-            slotDate = "2026-05-01",
-            slotWindow = "10:00-12:00",
-            amountPaise = amountPaise,
-        )
+    private fun aResponse(
+        status: String = "ASSIGNED",
+        amountPaise: Int = 65000,
+    ) = ActiveJobResponse(
+        id = "bk-1",
+        customerId = "c-1",
+        serviceId = "svc-1",
+        serviceName = "AC Repair",
+        addressText = "12 Main St",
+        addressLatLng = LatLngDto(lat = 12.9, lng = 77.6),
+        status = status,
+        slotDate = "2026-05-01",
+        slotWindow = "10:00-12:00",
+        amountPaise = amountPaise,
+    )
 
     @BeforeEach
     public fun setUp() {

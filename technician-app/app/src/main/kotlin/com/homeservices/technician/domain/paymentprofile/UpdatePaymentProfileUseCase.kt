@@ -7,6 +7,5 @@ public class UpdatePaymentProfileUseCase
     constructor(
         private val repository: PaymentProfileRepository,
     ) {
-        public suspend fun invoke(upiVpa: String): Result<PaymentProfileResult> =
-            repository.updatePaymentProfile(upiVpa)
+        public suspend fun invoke(upiVpa: String): Result<PaymentProfileResult> = repository.updatePaymentProfile(upiVpa)
     }

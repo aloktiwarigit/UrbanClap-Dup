@@ -8,7 +8,7 @@ import javax.inject.Singleton
 @Singleton
 public class PaymentProfileRepositoryImpl
     @Inject
-    constructor(
+    internal constructor(
         private val api: PaymentProfileApiService,
     ) : PaymentProfileRepository {
         public override suspend fun updatePaymentProfile(upiVpa: String): Result<PaymentProfileResult> =
