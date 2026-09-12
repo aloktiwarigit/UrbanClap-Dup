@@ -427,3 +427,128 @@ rules:
       - pattern: $X.remainingPaise -= $Y
       - pattern: $X.outstandingPaise += $Y
       - pattern: $X.commissionHold.outstandingPaise = $X.commissionHold.outstandingPaise + $Y
+
+  # E23-S01 / ADR-0035 — incentives are CREDIT-ONLY.
+  #
+  # An incentive award offsets commission the technician owes. It is never a payment TO the
+  # technician. That is enforced in three independent layers:
+  #   1. IncentiveAwardWriteSchema is `.strict()` — an unknown field cannot be persisted.
+  #   2. api/tests/static/incentives-credit-only.test.ts (the portable gate; runs in the smoke
+  #      gate and CI, and is proven against injected violations — see the story doc).
+  #   3. These two rules.
+  #
+  # Two rule ids, not one, because a single rule cannot carry two `paths` blocks and the two
+  # failure directions need different file sets. Merging them would flag `netPayable` inside
+  # payout-queue.ts, where it is correct, and become a permanent false positive.
+  # Round-2 fix (Codex review): a bare `pattern: payoutPaise` etc. matches only VALUE-position
+  # identifier expressions (declarations, reads) — it does NOT match the same token as an
+  # object-literal PROPERTY KEY, e.g. `{ payoutPaise: z.number().int() }` inside `awardShape`.
+  # That is precisely the shape spec §7.8 names ("no payout* field on award docs"). Verified
+  # against real Semgrep 1.159.0 via Docker: the bare-identifier-only rule produced 0 findings
+  # against an injected `payoutPaise: z.number().int(),` object-literal key; adding the
+  # `{ <field>: $X, ... }` object-pattern form (AST-based, so it does not also match the
+  # existing legitimate docstring comment naming these same tokens at
+  # api/src/schemas/incentive.ts, unlike a naive text/regex scan would) fixed it. See the round-2
+  # fix report in .superpowers/sdd/e23-s01-incentive-engine/task-17-report.md for the exact
+  # before/after Semgrep output.
+  - id: incentives-credit-only
+    message: |
+      Payout-shaped identifier in the incentive module. An incentive award is a CREDIT against
+      commission owed, never a payment to the technician (ADR-0035, spec §7.8). If money must
+      genuinely leave the platform for a technician, that is a payout story, not this one.
+    severity: ERROR
+    languages: [typescript]
+    paths:
+      include:
+        - "api/src/services/incentive.service.ts"
+        - "api/src/schemas/incentive.ts"
+        - "api/src/cosmos/incentive-repository.ts"
+        - "api/src/functions/trigger-incentive-weekly.ts"
+        - "api/src/functions/admin/incentives/*.ts"
+    pattern-either:
+      - pattern: payoutPaise
+      - pattern: payoutAmount
+      - pattern: payablePaise
+      - pattern: netPayable
+      - pattern: transferPaise
+      - pattern: razorpayTransferId
+      - pattern: new RazorpayRouteService()
+      - pattern: $X["payoutPaise"]
+      - pattern: $X['payoutPaise']
+      - pattern: $X["netPayable"]
+      - pattern: $X['netPayable']
+      - pattern: |
+          { payoutPaise: $X, ... }
+      - pattern: |
+          { payoutAmount: $X, ... }
+      - pattern: |
+          { payablePaise: $X, ... }
+      - pattern: |
+          { netPayable: $X, ... }
+      - pattern: |
+          { transferPaise: $X, ... }
+      - pattern: |
+          { razorpayTransferId: $X, ... }
+
+  # E23-S01 / ADR-0035 — the mirror direction: no payout path may read an incentive award.
+  #
+  # Round-2 fix (Codex review): a bare `pattern: IncentiveAwardDoc` matches only VALUE-position
+  # reads. It does NOT match the same identifier in TYPE position — an `as IncentiveAwardDoc`
+  # cast, an `import type { IncentiveAwardDoc }` / `import { type IncentiveAwardDoc }`
+  # statement, or a typed variable/parameter/return-type annotation. Verified against real
+  # Semgrep 1.159.0 via Docker: the bare-identifier-only rule produced 0 findings against a
+  # `null as unknown as IncentiveAwardDoc` cast injected into approve-payouts.ts. The patterns
+  # below were each verified independently (isolated scratch files) before being combined here.
+  # `IncentiveAwardDoc` is the only guarded token here that is also an exported TS *type*
+  # (`export type IncentiveAwardDoc = z.infer<...>` in schemas/incentive.ts) — the others
+  # (IncentiveAwardWriteSchema, incentiveAwardId, applyAward, incentiveRepo) are values with no
+  # matching type export, so a type-position reference to them is not a distinct evasion shape.
+  # Residual gap, not covered below and not claimed to be: a generic-wrapped type reference
+  # (`Promise<IncentiveAwardDoc>`, `IncentiveAwardDoc[]`, `IncentiveAwardDoc | null`) — Semgrep's
+  # expression-based pattern parser does not accept bare type-level fragments like `X | $T` as a
+  # standalone pattern (verified: parses without error but matches nothing), and enumerating
+  # every generic-wrapper shape was judged not worth the added rule complexity for a file set
+  # this narrow. See the round-2 fix report for the exact commands and Docker output.
+  - id: incentives-not-in-payout-path
+    message: |
+      Incentive award identifier inside a file that moves money OUT of the platform. An award
+      must never reach a transfer, payout queue or settlement path (ADR-0035). The award's cost
+      belongs on the P&L (cosmos/incentive-repository.ts#sumAppliedByIstDay), nowhere else.
+    severity: ERROR
+    languages: [typescript]
+    paths:
+      include:
+        - "api/src/functions/admin/finance/approve-payouts.ts"
+        - "api/src/functions/admin/finance/payout-queue.ts"
+        - "api/src/functions/admin/finance/weekly-aggregate.ts"
+        - "api/src/functions/trigger-next-day-payout.ts"
+        - "api/src/services/razorpayRoute.service.ts"
+    pattern-either:
+      - pattern: IncentiveAwardDoc
+      - pattern: IncentiveAwardWriteSchema
+      - pattern: incentiveAwardId
+      - pattern: applyAward
+      - pattern: incentiveRepo
+      - pattern: $X.docType == "INCENTIVE_AWARD"
+      - pattern: $X.docType === "INCENTIVE_AWARD"
+      - pattern: $X as IncentiveAwardDoc
+      - pattern: |
+          import type { IncentiveAwardDoc } from "..."
+      - pattern: |
+          import { type IncentiveAwardDoc } from "..."
+      - pattern: |
+          const $X : IncentiveAwardDoc = $Y
+      - pattern: |
+          let $X : IncentiveAwardDoc = $Y
+      - pattern: |
+          var $X : IncentiveAwardDoc = $Y
+      - pattern: |
+          function $F(..., $X : IncentiveAwardDoc, ...) { ... }
+      - pattern: |
+          (..., $X : IncentiveAwardDoc, ...) => ...
+      - pattern: |
+          class $C { $M(..., $X : IncentiveAwardDoc, ...) { ... } }
+      - pattern: |
+          function $F(...) : IncentiveAwardDoc { ... }
+      - pattern: |
+          (...) : IncentiveAwardDoc => ...

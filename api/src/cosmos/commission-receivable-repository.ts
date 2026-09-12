@@ -6,6 +6,7 @@ import {
   type CommissionReceivableCreateInput,
 } from '../schemas/commission-receivable.js';
 import type { RemittanceDoc, CreditDoc } from '../schemas/commission-ledger.js';
+import type { IncentiveAwardDoc } from '../schemas/incentive.js';
 import { mergeAllocation, type OutstandingRow } from '../services/commission-allocator.service.js';
 
 const RECEIVABLE_FILTER = `(NOT IS_DEFINED(c.docType) OR c.docType = 'RECEIVABLE')`;
@@ -117,6 +118,7 @@ export const commissionReceivableRepo = {
     receivables: CommissionReceivableEntry[];
     remittances: RemittanceDoc[];
     credits: CreditDoc[];
+    awards: IncentiveAwardDoc[];
   }> {
     const { resources } = await getCommissionReceivablesContainer()
       .items.query<Record<string, unknown>>(
@@ -127,13 +129,15 @@ export const commissionReceivableRepo = {
     const receivables: CommissionReceivableEntry[] = [];
     const remittances: RemittanceDoc[] = [];
     const credits: CreditDoc[] = [];
+    const awards: IncentiveAwardDoc[] = [];
     for (const d of resources) {
       const t = (d['docType'] as string | undefined) ?? 'RECEIVABLE';
       if (t === 'RECEIVABLE') receivables.push(d as unknown as CommissionReceivableEntry);
       else if (t === 'REMITTANCE') remittances.push(d as unknown as RemittanceDoc);
       else if (t === 'CREDIT') credits.push(d as unknown as CreditDoc);
+      else if (t === 'INCENTIVE_AWARD') awards.push(d as unknown as IncentiveAwardDoc);
     }
-    return { receivables, remittances, credits };
+    return { receivables, remittances, credits, awards };
   },
 
   async getRemittance(technicianId: string, id: string): Promise<RemittanceDoc | null> {
@@ -236,6 +240,38 @@ export const commissionReceivableRepo = {
     // while hasMoreResults() stays true. Spreading it unguarded threw
     // "TypeError: page.resources is not iterable" against the real container, which took out
     // the admin commission dashboard and sweepAllHolds({ scope: 'FULL' }). Guard every page.
+    while (iterator.hasMoreResults()) {
+      const page = await iterator.fetchNext();
+      groups.push(...(page.resources ?? []));
+    }
+    return groups;
+  },
+
+  /**
+   * Every technician who booked at least one receivable in `[fromIso, toIsoExclusive)` — the
+   * roster the weekly incentive run iterates. Same drain-the-iterator shape, and the same
+   * `resources ?? []` guard, as `sumDueGroupedByTechnician` above: Cosmos cannot page a
+   * cross-partition GROUP BY with continuation tokens, and its pages come back with
+   * `resources: undefined` rather than `[]` while `hasMoreResults()` stays true.
+   */
+  // SEMGREP-JUSTIFIED: cross-partition GROUP BY by design — the weekly incentive roster.
+  // Callers are the requireAdmin run handler and the app.timer; both bounds are server-derived
+  // from a regex-validated ISO week key and bound as query parameters.
+  async listTechnicianIdsWithReceivablesInWindow(
+    fromIso: string, toIsoExclusive: string,
+  ): Promise<Array<{ technicianId: string; receivableCount: number }>> {
+    const iterator = getCommissionReceivablesContainer()
+      .items.query<{ technicianId: string; receivableCount: number }>(
+        {
+          query:
+            `SELECT c.technicianId, COUNT(1) AS receivableCount FROM c ` +
+            `WHERE ${RECEIVABLE_FILTER} AND c.createdAt >= @from AND c.createdAt < @to ` +
+            `GROUP BY c.technicianId`,
+          parameters: [{ name: '@from', value: fromIso }, { name: '@to', value: toIsoExclusive }],
+        },
+        { maxItemCount: 100 },
+      );
+    const groups: Array<{ technicianId: string; receivableCount: number }> = [];
     while (iterator.hasMoreResults()) {
       const page = await iterator.fetchNext();
       groups.push(...(page.resources ?? []));

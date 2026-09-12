@@ -262,6 +262,7 @@ describe('adminCommissionReceivablesPerTechHandler', () => {
       receivables: [receivableDue, receivableWithIncentive],
       remittances: [remittance],
       credits: [],
+      awards: [],
     });
     vi.mocked(techRepo.readCommissionHold).mockResolvedValue({ hold, exists: true });
 
@@ -313,6 +314,7 @@ describe('adminCommissionReceivablesPerTechHandler', () => {
       receivables: [receivableWithCashOverride, receivableNoCashOverride],
       remittances: [unrelatedRemittance],
       credits: [],
+      awards: [],
     });
     vi.mocked(techRepo.readCommissionHold).mockResolvedValue({ hold, exists: true });
 
@@ -352,6 +354,7 @@ describe('adminCommissionReceivablesPerTechHandler', () => {
       receivables: [receivableDue, receivableWithIncentive, receivableWaived, receivablePartial],
       remittances: [remittance],
       credits: [],
+      awards: [],
     });
     vi.mocked(techRepo.readCommissionHold).mockResolvedValue({ hold, exists: true });
 
@@ -402,6 +405,54 @@ describe('adminCommissionReceivablesPerTechHandler', () => {
     )) as HttpResponseInit;
 
     expect(res.status).toBe(502);
+  });
+
+  it('passes awards through and keeps credit applied separate from cash collected', async () => {
+    // Arrange listLedger (mocked as the sibling cases in this file already do) to return one
+    // award plus a receivable carrying a 30_000 INCENTIVE allocation.
+    // Real IncentiveAwardDoc shape (api/src/schemas/incentive.ts) -- the field names below
+    // (awardPaise/appliedAt/periodStart/periodEnd) never existed on this schema and only
+    // compiled here because this file's own tsc run doesn't include tsconfig.tests.json;
+    // the smoke gate does. This test's assertions only care about awards.length and the
+    // separately-tracked credit/cash figures, so any well-formed award doc is fine.
+    const awardDoc = {
+      id: 'award-1', docType: 'INCENTIVE_AWARD' as const, technicianId: 'tech-1', partitionKey: 'tech-1',
+      weekKey: '2026-W35', weekStart: '2026-08-24', weekEnd: '2026-08-30',
+      countedJobs: 10, countedCommissionPaise: 220_000,
+      milestoneSnapshot: [{ jobs: 10, bonusPaise: 5000 }],
+      capFractionBpsSnapshot: 6000, minCountableBookingPaiseSnapshot: 24_900,
+      grossBonusPaise: 5000, capPaise: 132_000, awardedPaise: 5000, appliedPaise: 5000,
+      status: 'APPLIED' as const, computedAt: '2026-09-01T00:00:00.000Z',
+    };
+    const receivableWithIncentive = {
+      ...receivableDue,
+      id: 'booking-2', bookingId: 'booking-2', bookingAmount: 50000,
+      createdAt: '2026-06-01T00:00:00.000Z',
+      allocations: [
+        { id: 'incentive-1:booking-2', source: 'INCENTIVE' as const, refId: 'incentive-1', paise: 30000, appliedAt: '2026-06-01T00:00:00.000Z', byId: 'system:credit' },
+      ],
+    };
+    vi.mocked(commissionReceivableRepo.listLedger).mockResolvedValue({
+      receivables: [receivableWithIncentive],
+      remittances: [],
+      credits: [],
+      awards: [awardDoc],
+    });
+    vi.mocked(techRepo.readCommissionHold).mockResolvedValue({ hold, exists: true });
+
+    const res = (await adminCommissionReceivablesPerTechHandler(
+      makeTechReq('tech-1'),
+      {} as never,
+      ctx,
+    )) as HttpResponseInit;
+
+    const body = res.jsonBody as { awards: unknown[]; creditAppliedPaise: number; cashCollectedPaise: number };
+    expect(res.status).toBe(200);
+    expect(body.awards).toHaveLength(1);
+    expect(body.creditAppliedPaise).toBe(30000);
+    // Never summed with cash: cash changed hands at the door, credit is commission offset.
+    expect(body.cashCollectedPaise).toBe(50000);
+    expect(body.cashCollectedPaise).not.toBe(body.creditAppliedPaise);
   });
 });
 

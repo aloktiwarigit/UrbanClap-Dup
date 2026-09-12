@@ -11,9 +11,6 @@ import {
   type TechnicianFeatureFlags,
 } from '../../schemas/technician-client-config.js';
 
-/** Dark-launch defaults for the milestone-incentive program (E23) — off until that story ships. */
-const DEFAULT_INCENTIVE = { enabled: false, milestones: [], capFractionBps: 6000 } as const;
-
 /** In-process cache TTL: 60 s. The response has no per-technician content, so one entry covers
  *  every caller — cheap to keep hot without a per-uid cache key. */
 const CACHE_TTL_MS = 60_000;
@@ -28,10 +25,19 @@ export function _resetTechnicianConfigCacheForTest(): void {
 }
 
 async function buildTechnicianConfigResponse(): Promise<TechnicianConfigResponse> {
-  const [doc, cfg, incentiveDoc] = await Promise.all([
+  const [doc, cfg, effectiveIncentive] = await Promise.all([
     systemDocsRepo.getTechnicianClientConfig(),
     getCommissionConfig(),
-    systemDocsRepo.getIncentiveConfig(),
+    // Codex P2: getIncentiveConfig() is a raw point read with no per-field defaulting. A
+    // partial first write (e.g. `PUT {"enabled":true}` before milestones/capFractionBps are
+    // ever set) produced a stored doc missing required fields, and this response schema's
+    // `incentive` object requires all three -- every technician's config fetch 502'd.
+    // getEffectiveIncentiveConfig() (E23-S01, api/src/cosmos/system-docs-repository.ts) already
+    // applies the same per-field defaults `incentive.service.ts` relies on; it never 404s and
+    // never returns a partially-populated shape. TechnicianConfigResponseSchema's `incentive`
+    // field is a plain z.object (not .strict()), so the extra fields it carries
+    // (minCountableBookingPaise, updatedBy, updatedAt) are stripped harmlessly.
+    systemDocsRepo.getEffectiveIncentiveConfig(),
   ]);
 
   const overrides = doc?.features ?? {};
@@ -47,7 +53,7 @@ async function buildTechnicianConfigResponse(): Promise<TechnicianConfigResponse
     features,
     thresholds: { warnPaise: cfg.warnThresholdPaise, blockPaise: cfg.blockThresholdPaise },
     holdEnforcementEnabled: cfg.holdEnforcementEnabled,
-    incentive: incentiveDoc ?? { ...DEFAULT_INCENTIVE, milestones: [...DEFAULT_INCENTIVE.milestones] },
+    incentive: effectiveIncentive,
     minSupportedVersionCode: doc?.minSupportedVersionCode ?? 0,
     serverTime: new Date().toISOString(),
   };

@@ -182,7 +182,7 @@ export const adminCommissionReceivablesPerTechHandler: AdminHttpHandler = async 
   if (!technicianId) return { status: 400, jsonBody: { code: 'MISSING_TECHNICIAN_ID' } };
 
   try {
-    const [{ receivables, remittances, credits }, { hold }] = await Promise.all([
+    const [{ receivables, remittances, credits, awards }, { hold }] = await Promise.all([
       commissionReceivableRepo.listLedger(technicianId),
       readCommissionHold(technicianId),
     ]);
@@ -216,6 +216,7 @@ export const adminCommissionReceivablesPerTechHandler: AdminHttpHandler = async 
         receivables: receivablesOut,
         remittances: remittancesOut,
         credits,
+        awards,
         cashCollectedPaise,
         creditAppliedPaise,
       },

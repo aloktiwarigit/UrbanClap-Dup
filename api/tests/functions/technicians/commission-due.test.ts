@@ -71,6 +71,7 @@ describe('techCommissionDueHandler', () => {
       receivables: [dueEntry, entry2, waivedEntry],
       remittances: [],
       credits: [],
+      awards: [],
     });
 
     const res = (await techCommissionDueHandler(req, {} as never)) as HttpResponseInit;
@@ -89,6 +90,7 @@ describe('techCommissionDueHandler', () => {
       receivables: [dueEntry], // no allocations, no remittedAmount — legacy E21-S01 shape
       remittances: [],
       credits: [],
+      awards: [],
     });
 
     const res = (await techCommissionDueHandler(req, {} as never)) as HttpResponseInit;
@@ -103,6 +105,7 @@ describe('techCommissionDueHandler', () => {
       receivables: [],
       remittances: [],
       credits: [],
+      awards: [],
     });
 
     const res = (await techCommissionDueHandler(req, {} as never)) as HttpResponseInit;
@@ -119,6 +122,7 @@ describe('techCommissionDueHandler', () => {
       receivables: [],
       remittances: [],
       credits: [],
+      awards: [],
     });
     vi.mocked(readCommissionHold).mockResolvedValue({ hold: null, exists: true });
 

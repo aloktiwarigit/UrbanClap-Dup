@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { extendZodWithOpenApi } from '@asteasolutions/zod-to-openapi';
 import { CommissionReceivableEntrySchema } from './commission-receivable.js';
+import { IncentiveAwardDocSchema } from './incentive.js';
 extendZodWithOpenApi(z);
 
 export const LedgerDocTypeSchema = z.enum(['RECEIVABLE', 'REMITTANCE', 'CREDIT', 'INCENTIVE_AWARD']);
@@ -47,7 +48,7 @@ export const LedgerDocSchema = z.preprocess(
     CommissionReceivableEntrySchema.extend({ docType: z.literal('RECEIVABLE') }),
     RemittanceDocSchema,
     CreditDocSchema,
-    z.object({ docType: z.literal('INCENTIVE_AWARD') }).passthrough(), // E23 defines the body
+    IncentiveAwardDocSchema.extend({ docType: z.literal('INCENTIVE_AWARD') }),
   ]),
 );
 export type LedgerDoc = z.infer<typeof LedgerDocSchema>;

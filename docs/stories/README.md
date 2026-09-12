@@ -296,4 +296,12 @@ An epic is "done" when:
 
 ---
 
+## E23 — Technician Incentives
+
+| ID | Story | FR / owner req | Notes |
+|---|---|---|---|
+| **E23-S01** | Weekly technician incentive engine — milestone bonus, credit-only against commission owed, capped at `capFractionBps` of the week's counted commission with a `minCountableBookingPaise` floor; admin config + awards routes, super-admin manual run, technician-facing progress endpoint, owner P&L line | Owner req R5 | ✅ done — `docs/stories/E23-S01-incentive-engine.md`, `docs/adr/0035-incentives-are-credit-only-and-capped.md`. **The shipped anti-gaming cap does not close the strongest margin-gaming case at its default setting — see the ADR before assuming it does.** `admin-web` UI for this is a separate, not-yet-built story (E23-S02). |
+
+---
+
 **Epics & Stories v1.0 complete.** Ready for Phase 5.5 readiness gate and per-story execution.

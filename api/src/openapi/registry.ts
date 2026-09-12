@@ -59,6 +59,13 @@ import {
 } from '../schemas/commission-ledger.js';
 import { CommissionHoldSchema, HoldStateSchema } from '../schemas/technician.js';
 import { TechnicianConfigResponseSchema } from '../schemas/technician-client-config.js';
+import {
+  EffectiveIncentiveConfigSchema,
+  UpdateIncentiveConfigBodySchema,
+  IncentiveAwardDocSchema,
+  MilestoneSchema,
+  TechnicianIncentivesResponseSchema,
+} from '../schemas/incentive.js';
 
 extendZodWithOpenApi(z);
 
@@ -817,6 +824,95 @@ registry.registerPath({
   security: [{ bearerAuth: [] }],
   responses: {
     200: { description: 'Technician client config (60s in-process cache)', content: { 'application/json': { schema: TechnicianConfigResponseSchema } } },
+    401: { description: 'Unauthenticated' },
+  },
+});
+
+// ── E23-S01: Weekly technician incentives ──────────────────────────────────────
+
+registry.register('Milestone', MilestoneSchema.openapi('Milestone'));
+registry.register('EffectiveIncentiveConfig', EffectiveIncentiveConfigSchema.openapi('EffectiveIncentiveConfig'));
+registry.register('UpdateIncentiveConfigBody', UpdateIncentiveConfigBodySchema.openapi('UpdateIncentiveConfigBody'));
+registry.register('IncentiveAwardDoc', IncentiveAwardDocSchema.openapi('IncentiveAwardDoc'));
+registry.register('TechnicianIncentivesResponse', TechnicianIncentivesResponseSchema.openapi('TechnicianIncentivesResponse'));
+
+const IncentiveAwardsPageSchema = z.object({
+  awards: z.array(IncentiveAwardDocSchema),
+  continuationToken: z.string().optional(),
+}).openapi('IncentiveAwardsPage');
+
+const IncentiveRunSummarySchema = z.object({
+  weekKey: z.string(), enabled: z.boolean(),
+  technicianCount: z.number().int().nonnegative(),
+  awarded: z.number().int().nonnegative(),
+  replayed: z.number().int().nonnegative(),
+  noAward: z.number().int().nonnegative(),
+  failed: z.number().int().nonnegative(),
+  totalAwardedPaise: z.number().int().nonnegative(),
+}).openapi('IncentiveRunSummary');
+
+registry.registerPath({
+  method: 'get', path: '/v1/admin/incentives/config', operationId: 'getIncentiveConfig',
+  tags: ['admin-incentives'], summary: 'Get the effective weekly incentive config (defaults applied, never 404)',
+  security: [{ cookieAuth: [] }],
+  responses: {
+    200: { description: 'Effective incentive config', content: { 'application/json': { schema: EffectiveIncentiveConfigSchema } } },
+    401: { description: 'Unauthenticated' }, 403: { description: 'Forbidden' },
+  },
+});
+
+registry.registerPath({
+  method: 'put', path: '/v1/admin/incentives/config', operationId: 'putIncentiveConfig',
+  tags: ['admin-incentives'], summary: 'Update the incentive milestones, cap and minimum countable booking (super-admin only)',
+  security: [{ cookieAuth: [] }],
+  request: { body: { content: { 'application/json': { schema: UpdateIncentiveConfigBodySchema } } } },
+  responses: {
+    200: { description: 'Updated config', content: { 'application/json': { schema: EffectiveIncentiveConfigSchema } } },
+    400: { description: 'Validation error (empty patch, unknown field, cap outside 0–10000, or non-ascending milestones)' },
+    401: { description: 'Unauthenticated' }, 403: { description: 'Forbidden (requires super-admin)' },
+  },
+});
+
+registry.registerPath({
+  method: 'get', path: '/v1/admin/incentives/awards', operationId: 'listIncentiveAwards',
+  tags: ['admin-incentives'], summary: 'List incentive awards, optionally filtered by IST week and technician',
+  security: [{ cookieAuth: [] }],
+  request: { query: z.object({
+    week: z.string().optional().openapi({ example: '2026-W37' }),
+    technicianId: z.string().optional(),
+    continuationToken: z.string().optional(),
+  }) },
+  responses: {
+    200: { description: 'One page of awards', content: { 'application/json': { schema: IncentiveAwardsPageSchema } } },
+    400: { description: 'Validation error (week must be YYYY-Www)' },
+    401: { description: 'Unauthenticated' }, 403: { description: 'Forbidden' },
+  },
+});
+
+registry.registerPath({
+  method: 'post', path: '/v1/admin/incentives/run', operationId: 'runIncentives',
+  tags: ['admin-incentives'], summary: 'Run the weekly incentive award for one IST week (super-admin only)',
+  description:
+    'Idempotent. Award ids are deterministic (`inc:<technicianId>:<weekKey>`), so re-running a ' +
+    'week that already awarded replays per technician and grants nothing twice — the response ' +
+    "`replayed` count reports how much was already done. Defaults to the previous IST week, so " +
+    'an argument-less call can never award a week still in progress. Returns `enabled: false` ' +
+    'with zeroed counts when the programme is dark; that is a 200, not an error.',
+  security: [{ cookieAuth: [] }],
+  request: { query: z.object({ week: z.string().optional().openapi({ example: '2026-W37' }) }) },
+  responses: {
+    200: { description: 'Run summary', content: { 'application/json': { schema: IncentiveRunSummarySchema } } },
+    400: { description: 'Validation error (week must be YYYY-Www)' },
+    401: { description: 'Unauthenticated' }, 403: { description: 'Forbidden (requires super-admin)' },
+  },
+});
+
+registry.registerPath({
+  method: 'get', path: '/v1/technicians/me/incentives', operationId: 'getTechnicianIncentives',
+  tags: ['technicians'], summary: 'Live current-week milestone progress plus the technician\'s last 8 awards',
+  security: [{ bearerAuth: [] }],
+  responses: {
+    200: { description: 'Progress and recent awards', content: { 'application/json': { schema: TechnicianIncentivesResponseSchema } } },
     401: { description: 'Unauthenticated' },
   },
 });
