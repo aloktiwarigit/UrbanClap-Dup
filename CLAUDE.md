@@ -46,7 +46,7 @@ Each sub-project has its own `CLAUDE.md` with stack-specific rules. **This root 
 
 **No `src/` or `app/src/` edits in any sub-project** until ALL of the following exist and are committed:
 
-- the 8 BMAD artifacts + the `.bmad-readiness-passed` marker — full list in `docs/rules/project-constraints.md`
+- the BMAD artifact list, ending with the `.bmad-readiness-passed` marker — enumerated in `docs/rules/project-constraints.md`
 
 Per-sub-project hooks in `.claude/settings.json` enforce this. Root also enforces it.
 
@@ -66,13 +66,13 @@ Dispatch subagents in parallel whenever tasks are independent (e.g. 3 epics bein
 
 Every architectural decision across all sub-projects must preserve ₹0/month operational cost at pilot scale (≤5,000 bookings/mo). See `docs/architecture.md` for the service-by-service free-tier budget.
 
-Free-tier ceiling table (13 services): `docs/rules/project-constraints.md`.
+Per-service free-tier ceiling table: `docs/rules/project-constraints.md`.
 
 **Any PR that introduces a paid SaaS dependency must create an ADR and get explicit user approval.**
 
 ## Enterprise floor (ships with every template)
 
-Component list (6 items): `docs/rules/project-constraints.md`.
+Component list: `docs/rules/project-constraints.md`.
 
 **Do not remove any of these without an ADR.**
 
