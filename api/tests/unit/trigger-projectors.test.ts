@@ -556,7 +556,7 @@ describe('P1-3: KYC projector reads kyc.kycStatus from TechnicianDoc', () => {
     expect(upsertAction).not.toHaveBeenCalled();
   });
 
-  it('keeps the KYC_RESUME reminder active on AADHAAR_DONE but does not push FCM', async () => {
+  it('keeps the KYC_RESUME reminder active on AADHAAR_DONE and emits the data-only FCM', async () => {
     await processKycChangeFeedDoc({
       id: 't1',
       kyc: { kycStatus: 'AADHAAR_DONE', updatedAt: '2026-09-12T00:00:00.000Z' },
@@ -564,12 +564,15 @@ describe('P1-3: KYC projector reads kyc.kycStatus from TechnicianDoc', () => {
 
     expect(upsertAction).toHaveBeenCalled();
     expect(resolveAction).not.toHaveBeenCalled();
-    // Forward progress, not an attention state: no "finish your KYC" push seconds after
-    // the technician just finished step 1 and is sitting on the PAN screen.
-    expect(emitFcmForAction).not.toHaveBeenCalled();
+    // emitFcmForAction sends a data-only FCM message (no `notification` block) — it is the
+    // delivery mechanism that carries the pending action to the device, where
+    // TechnicianNotificationRouter/PendingActionIngestor persist it into the local Room store
+    // so it can surface as an in-app reminder card. Suppressing it does not remove a
+    // user-visible push; it means the server holds a reminder the device never learns about.
+    expect(emitFcmForAction).toHaveBeenCalled();
   });
 
-  it('keeps the KYC_RESUME reminder active on PAN_DONE but does not push FCM', async () => {
+  it('keeps the KYC_RESUME reminder active on PAN_DONE and emits the data-only FCM', async () => {
     await processKycChangeFeedDoc({
       id: 't1',
       kyc: { kycStatus: 'PAN_DONE', updatedAt: '2026-09-12T00:00:00.000Z' },
@@ -577,7 +580,7 @@ describe('P1-3: KYC projector reads kyc.kycStatus from TechnicianDoc', () => {
 
     expect(upsertAction).toHaveBeenCalled();
     expect(resolveAction).not.toHaveBeenCalled();
-    expect(emitFcmForAction).not.toHaveBeenCalled();
+    expect(emitFcmForAction).toHaveBeenCalled();
   });
 
   it('still pushes FCM for the PENDING_MANUAL attention state (behaviour unchanged)', async () => {
