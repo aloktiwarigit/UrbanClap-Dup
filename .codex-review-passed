@@ -1,1 +1,1 @@
-{"timestamp":"2026-09-14T21:28:37Z","commit":"e1d26db6e4dcb7ec900a3e2856ef108a7066d447","reviewer":"codex","summary":"context-engineering relocation of root CLAUDE.md into docs/rules; round 1 P3 (stale item count) fixed, round 2 clean"}
+{"timestamp":"2026-09-12T16:16:34Z","commit":"8c00bb3435a40eb4992ceee30a3430d9571439cf","reviewer":"codex","summary":"E24-S01c: 2 P2s fixed (rounds 1-2: stale-refresh gap, stale-null-overwrite bug); round 3 P2 (redundant flow subscriptions) accepted as documented trade-off, tracked in #351"}

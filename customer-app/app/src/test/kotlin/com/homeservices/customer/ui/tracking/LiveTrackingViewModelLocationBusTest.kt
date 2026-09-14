@@ -5,6 +5,7 @@ import com.homeservices.customer.data.tracking.LocationUpdateEvent
 import com.homeservices.customer.data.tracking.LocationUpdateEventBus
 import com.homeservices.customer.domain.tracking.GetLiveLocationUseCase
 import com.homeservices.customer.domain.tracking.TrackBookingStatusUseCase
+import com.homeservices.customer.domain.tracking.TrackTechnicianUpiUseCase
 import com.homeservices.customer.domain.tracking.model.BookingStatus
 import com.homeservices.customer.domain.tracking.model.LiveLocation
 import io.mockk.every
@@ -28,11 +29,13 @@ public class LiveTrackingViewModelLocationBusTest {
     private val testDispatcher = StandardTestDispatcher()
     private val getLiveLocation: GetLiveLocationUseCase = mockk()
     private val trackStatus: TrackBookingStatusUseCase = mockk()
+    private val trackTechnicianUpi: TrackTechnicianUpiUseCase = mockk()
     private val locationBus = LocationUpdateEventBus()
 
     @Before
     public fun setUp() {
         Dispatchers.setMain(testDispatcher)
+        every { trackTechnicianUpi.execute(any()) } returns flowOf(null)
     }
 
     @After
@@ -42,7 +45,7 @@ public class LiveTrackingViewModelLocationBusTest {
 
     private fun viewModel(bookingId: String = "b1"): LiveTrackingViewModel {
         val handle = SavedStateHandle(mapOf("bookingId" to bookingId))
-        return LiveTrackingViewModel(handle, getLiveLocation, trackStatus, locationBus)
+        return LiveTrackingViewModel(handle, getLiveLocation, trackStatus, trackTechnicianUpi, locationBus)
     }
 
     // ── 1. Bus event matching bookingId → liveLat/liveLng override in uiState ──────
