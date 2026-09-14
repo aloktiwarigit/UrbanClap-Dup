@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,9 +21,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Verified
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -35,7 +43,9 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -46,7 +56,9 @@ import com.homeservices.designsystem.components.HsSecondaryButton
 import com.homeservices.designsystem.components.HsSectionCard
 import com.homeservices.designsystem.components.HsTimelineStep
 import com.homeservices.designsystem.theme.HomeservicesColors
+import com.homeservices.designsystem.theme.LocalHomeservicesExtendedColors
 import com.homeservices.designsystem.theme.LocalHomeservicesSpacing
+import com.homeservices.technician.R
 import com.homeservices.technician.domain.kyc.model.KycStatus
 
 private val KycHeroStart = HomeservicesColors.Brand.primaryHover
@@ -74,7 +86,11 @@ internal fun KycScreen(
             is KycUiState.AadhaarDone -> Unit
             is KycUiState.PanReady -> Unit
             is KycUiState.PanUploading -> Unit
+            is KycUiState.PanDone -> Unit
+            is KycUiState.AadhaarRequired -> Unit
+            is KycUiState.ManualReview -> Unit
             is KycUiState.Error -> Unit
+            is KycUiState.ConfirmationFailed -> Unit
         }
     }
 
@@ -93,11 +109,16 @@ internal fun KycScreen(
                 is KycUiState.Loading -> KycLoadingContent(message = "Processing verification")
                 is KycUiState.AadhaarPending -> KycLoadingContent(message = "Opening DigiLocker")
                 is KycUiState.AadhaarDone -> {
+                    // Reachable only once Aadhaar has actually verified (see
+                    // KycViewModel.terminalStateFor) — aadhaarVerified is passed explicitly
+                    // rather than defaulted so the PAN control's lock is driven by the
+                    // observed state, not an assumption baked into KycStepPan.
                     KycStepPan(
                         selectedUri = null,
                         onUriSelected = { uri ->
                             if (uri != null) viewModel.submitPan(uri)
                         },
+                        aadhaarVerified = true,
                     )
                 }
                 is KycUiState.PanReady -> {
@@ -106,16 +127,46 @@ internal fun KycScreen(
                         onUriSelected = { uri ->
                             if (uri != null) viewModel.submitPan(uri)
                         },
+                        aadhaarVerified = true,
                     )
                 }
                 is KycUiState.PanUploading -> KycLoadingContent(message = "Uploading PAN card")
-                is KycUiState.Complete -> KycStepReview(status = state.status, onRetry = null)
+                // Exactly one step remains and it is Aadhaar, not PAN — never render this as
+                // "done" or invite another PAN upload. CTA re-enters the Aadhaar step directly.
+                is KycUiState.PanDone -> {
+                    KycStepPanDone(onVerifyAadhaar = { viewModel.startKyc() })
+                }
+                // Distinct from PanDone/AadhaarDone/Idle so a technician whose PAN is
+                // pending human review is never told "pick a PAN photo" or "start KYC".
+                is KycUiState.ManualReview -> KycStepManualReview()
+                // The PAN attempt was refused because Aadhaar isn't verified yet (409).
+                // Bounced back to the Aadhaar step with the same "complete Aadhaar first"
+                // reason shown on the locked PAN control, so the message is consistent
+                // wherever the technician encounters this constraint.
+                is KycUiState.AadhaarRequired -> {
+                    KycStepAadhaar(
+                        onStartKyc = { viewModel.startKyc() },
+                        onSkip = onComplete,
+                        noticeTitle = stringResource(R.string.kyc_step_pan_locked_title),
+                        noticeBody = stringResource(R.string.kyc_step_pan_locked_body),
+                    )
+                }
+                // Reachable only when aadhaarVerified && panVerified — see
+                // KycViewModel.terminalStateFor. The only state allowed to say KYC is done.
+                is KycUiState.Complete -> KycStepComplete()
                 is KycUiState.Error -> {
                     KycStepReview(
                         status = null,
                         onRetry = { viewModel.startKyc() },
                         errorMessage = state.message,
                     )
+                }
+                // The submission already succeeded (or an FCM verdict already confirmed it);
+                // only the confirming status read failed. Retry re-reads status — it must NOT
+                // restart KYC via startKyc(), which would send an already-submitted technician
+                // back to redo Aadhaar. See KycViewModel.retryStatusConfirmation.
+                is KycUiState.ConfirmationFailed -> {
+                    KycStepConfirmationFailed(onRetry = viewModel::retryStatusConfirmation)
                 }
             }
             if (retryPending) {
@@ -228,11 +279,19 @@ private fun KycFrame(
     }
 }
 
+/**
+ * @param noticeTitle When paired with [noticeBody], renders a warning banner above the timeline —
+ *   used for [KycUiState.AadhaarRequired], where the technician is bounced back here after a PAN
+ *   attempt the server refused. `null` (the default) renders the plain first-visit step, so
+ *   existing callers are unaffected.
+ */
 @Composable
 internal fun KycStepAadhaar(
     onStartKyc: () -> Unit,
     onSkip: () -> Unit,
     modifier: Modifier = Modifier,
+    noticeTitle: String? = null,
+    noticeBody: String? = null,
 ) {
     KycFrame(
         eyebrow = "Step 1 of 2",
@@ -240,6 +299,14 @@ internal fun KycStepAadhaar(
         body = "Complete Aadhaar verification through DigiLocker before you can receive live jobs.",
         modifier = modifier,
     ) {
+        if (noticeTitle != null && noticeBody != null) {
+            KycNoticeBanner(
+                title = noticeTitle,
+                body = noticeBody,
+                tone = KycNoticeTone.ACTION_NEEDED,
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+        }
         HsTimelineStep(
             title = "DigiLocker consent",
             body = "You approve access directly with DigiLocker. We only store the verification outcome.",
@@ -264,11 +331,21 @@ internal fun KycStepAadhaar(
     }
 }
 
+/**
+ * @param aadhaarVerified Gates the upload control itself. `false` renders the whole step as
+ *   locked — a reason banner plus a disabled upload button, and the photo picker is never
+ *   launched — so a technician can never start a PAN submission the server would refuse for
+ *   want of Aadhaar. Defaults to `false`: this is a LOCK parameter, so an omitted argument must
+ *   fail closed (locked) rather than unlocked. Both reachable callers today (see [KycScreen]'s
+ *   `AadhaarDone`/`PanReady` branches) pass `aadhaarVerified = true` explicitly, so this default
+ *   is never exercised by them; it only protects a future call site that forgets the argument.
+ */
 @Composable
 internal fun KycStepPan(
     selectedUri: Uri?,
     onUriSelected: (Uri?) -> Unit,
     modifier: Modifier = Modifier,
+    aadhaarVerified: Boolean = false,
 ) {
     val launcher =
         rememberLauncherForActivityResult(
@@ -281,6 +358,7 @@ internal fun KycStepPan(
         onChoosePhoto = { launcher.launch("image/*") },
         onSubmit = { onUriSelected(selectedUri) },
         modifier = modifier,
+        aadhaarVerified = aadhaarVerified,
     )
 }
 
@@ -290,6 +368,7 @@ internal fun KycPanContent(
     onChoosePhoto: () -> Unit,
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier,
+    aadhaarVerified: Boolean = false,
 ) {
     KycFrame(
         eyebrow = "Step 2 of 2",
@@ -297,6 +376,21 @@ internal fun KycPanContent(
         body = "Add a clear PAN card image so finance can approve payouts and tax records.",
         modifier = modifier,
     ) {
+        if (!aadhaarVerified) {
+            KycNoticeBanner(
+                title = stringResource(R.string.kyc_step_pan_locked_title),
+                body = stringResource(R.string.kyc_step_pan_locked_body),
+                tone = KycNoticeTone.LOCKED,
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+            HsPrimaryButton(
+                text = "Upload PAN card photo",
+                onClick = onChoosePhoto,
+                enabled = false,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            return@KycFrame
+        }
         HsTimelineStep(
             title = "Photo quality",
             body = "Keep all corners visible, avoid glare, and make sure the PAN number is readable.",
@@ -327,6 +421,208 @@ internal fun KycPanContent(
                 onClick = onSubmit,
                 modifier = Modifier.fillMaxWidth(),
             )
+        }
+    }
+}
+
+/** Visual weight of [KycNoticeBanner] — kept separate from copy so the same strings can be
+ * shown as a neutral default-state notice (a step that simply hasn't unlocked yet) or as a
+ * stronger "your last attempt needs action" banner, without duplicating layout code.
+ */
+private enum class KycNoticeTone {
+    LOCKED,
+    ACTION_NEEDED,
+}
+
+@Composable
+private fun KycNoticeBanner(
+    title: String,
+    body: String,
+    tone: KycNoticeTone,
+    modifier: Modifier = Modifier,
+) {
+    val containerColor =
+        when (tone) {
+            KycNoticeTone.LOCKED -> MaterialTheme.colorScheme.surfaceVariant
+            KycNoticeTone.ACTION_NEEDED -> MaterialTheme.colorScheme.errorContainer
+        }
+    val contentColor =
+        when (tone) {
+            KycNoticeTone.LOCKED -> MaterialTheme.colorScheme.onSurfaceVariant
+            KycNoticeTone.ACTION_NEEDED -> MaterialTheme.colorScheme.onErrorContainer
+        }
+    val icon: ImageVector =
+        when (tone) {
+            KycNoticeTone.LOCKED -> Icons.Filled.Lock
+            KycNoticeTone.ACTION_NEEDED -> Icons.Filled.Warning
+        }
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = containerColor,
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = contentColor,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = contentColor,
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = body,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = contentColor,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * [KycUiState.PanDone]: PAN is verified but Aadhaar is still outstanding. Deliberately keeps the
+ * active hero+card step chrome (matching [KycStepAadhaar]/[KycPanContent]) rather than a terminal
+ * "done" treatment — there is still one action required — and must never claim completion.
+ */
+@Composable
+internal fun KycStepPanDone(
+    onVerifyAadhaar: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    KycFrame(
+        eyebrow = "Step 1 of 2",
+        title = stringResource(R.string.kyc_pan_done_title),
+        body = stringResource(R.string.kyc_pan_done_body),
+        modifier = modifier,
+    ) {
+        HsPrimaryButton(
+            text = "Verify with DigiLocker",
+            onClick = onVerifyAadhaar,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+/**
+ * [KycUiState.ConfirmationFailed]: the submission itself succeeded (or an FCM verdict already
+ * confirmed it) but the confirming status re-read failed. Kept as an active hero+card step
+ * (matching [KycStepPanDone]) rather than the terminal [KycTerminalStatus] treatment used by
+ * [KycStepManualReview]/[KycStepComplete] — this is not a resting state, it needs the technician
+ * to tap retry. The retry wires to [KycViewModel.retryStatusConfirmation] (a status re-read),
+ * deliberately never to `startKyc()` — restarting KYC would send an already-submitted
+ * technician back to redo Aadhaar.
+ */
+@Composable
+internal fun KycStepConfirmationFailed(
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    KycFrame(
+        eyebrow = "Action needed",
+        title = stringResource(R.string.kyc_confirmation_failed_title),
+        body = stringResource(R.string.kyc_confirmation_failed_body),
+        modifier = modifier,
+    ) {
+        HsPrimaryButton(
+            text = stringResource(R.string.kyc_confirmation_failed_retry),
+            onClick = onRetry,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+/**
+ * [KycUiState.ManualReview]: a submitted document was flagged and a human is reviewing it.
+ * Rendered as a passive terminal status (icon + copy, no card/CTA) so it reads as clearly
+ * different from the two active steps and from [KycStepComplete] — a clock, not a checkmark.
+ */
+@Composable
+internal fun KycStepManualReview(modifier: Modifier = Modifier) {
+    KycTerminalStatus(
+        icon = Icons.Filled.Schedule,
+        iconTint = MaterialTheme.colorScheme.primary,
+        title = "KYC under review",
+        body = "Your documents are with the verification team. You will be notified once approved.",
+        modifier = modifier,
+    )
+}
+
+/**
+ * [KycUiState.Complete]: reachable only when both Aadhaar and PAN are verified (see
+ * [KycViewModel.terminalStateFor]). The only screen in this flow allowed to say KYC is finished.
+ */
+@Composable
+internal fun KycStepComplete(modifier: Modifier = Modifier) {
+    KycTerminalStatus(
+        icon = Icons.Filled.Verified,
+        iconTint = LocalHomeservicesExtendedColors.current.verified,
+        title = stringResource(R.string.kyc_complete_title),
+        body = stringResource(R.string.kyc_complete_body),
+        modifier = modifier,
+    )
+}
+
+/**
+ * Shared centered terminal-status layout (icon-in-circle + title + body) for KYC states that
+ * require no further action from the technician right now. Mirrors [KycLoadingContent]'s
+ * Surface/Box/Column skeleton, swapping the spinner for a static state icon.
+ */
+@Composable
+private fun KycTerminalStatus(
+    icon: ImageVector,
+    iconTint: Color,
+    title: String,
+    body: String,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
+    ) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(
+                modifier = Modifier.padding(horizontal = 32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = iconTint.copy(alpha = 0.12f),
+                    modifier = Modifier.size(64.dp),
+                ) {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = iconTint,
+                            modifier = Modifier.size(32.dp),
+                        )
+                    }
+                }
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                )
+                Text(
+                    text = body,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
         }
     }
 }

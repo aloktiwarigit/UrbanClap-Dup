@@ -1,5 +1,6 @@
 package com.homeservices.technician.data.kyc
 
+import com.homeservices.technician.data.network.defaultMoshi
 import com.homeservices.technician.domain.kyc.model.DigiLockerResult
 import com.homeservices.technician.domain.kyc.model.PanOcrResult
 import io.mockk.coEvery
@@ -8,6 +9,7 @@ import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import retrofit2.Response
 
 public class KycRepositoryTest {
     private lateinit var api: KycApiService
@@ -16,7 +18,7 @@ public class KycRepositoryTest {
     @BeforeEach
     public fun setUp(): Unit {
         api = mockk()
-        repo = KycRepositoryImpl(api)
+        repo = KycRepositoryImpl(api, defaultMoshi)
     }
 
     @Test
@@ -45,7 +47,7 @@ public class KycRepositoryTest {
     public fun `submitPanOcr returns ManualReview when status is MANUAL_REVIEW`(): Unit =
         runTest {
             coEvery { api.submitPanOcr(PanOcrRequest("path/pan.jpg")) } returns
-                PanOcrResponse("MANUAL_REVIEW", null)
+                Response.success(PanOcrResponse("MANUAL_REVIEW", null))
 
             val result = repo.submitPanOcr("path/pan.jpg")
 
@@ -56,7 +58,7 @@ public class KycRepositoryTest {
     public fun `submitPanOcr returns Success with masked panNumber`(): Unit =
         runTest {
             coEvery { api.submitPanOcr(PanOcrRequest("path/pan.jpg")) } returns
-                PanOcrResponse("PAN_DONE", "XXXXX1234F")
+                Response.success(PanOcrResponse("PAN_DONE", "XXXXX1234F"))
 
             val result = repo.submitPanOcr("path/pan.jpg")
 
@@ -68,7 +70,7 @@ public class KycRepositoryTest {
     public fun `submitPanOcr returns ManualReview when server sends raw unmasked PAN (S-001 guard)`(): Unit =
         runTest {
             coEvery { api.submitPanOcr(PanOcrRequest("path/pan.jpg")) } returns
-                PanOcrResponse("PAN_DONE", "ABCDE1234F")
+                Response.success(PanOcrResponse("PAN_DONE", "ABCDE1234F"))
 
             val result = repo.submitPanOcr("path/pan.jpg")
 

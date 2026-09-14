@@ -1,7 +1,10 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { verifyTechnicianToken } from '../../middleware/verifyTechnicianToken.js';
 import { exchangeCodeForAadhaar } from '../../services/digilocker.service.js';
-import { upsertKycStatus } from '../../cosmos/technician-repository.js';
+import {
+  upsertKycStatus,
+  upsertKycStepAndDeriveStatus,
+} from '../../cosmos/technician-repository.js';
 import { SubmitAadhaarRequestSchema } from '../../schemas/kyc.js';
 import { kycAuditEntry } from '../../services/kycAudit.service.js';
 
@@ -28,7 +31,12 @@ export async function submitAadhaar(
     return { status: 422, jsonBody: { error: parsed.error.flatten() } };
   }
 
-  const { technicianId, authCode, redirectUri } = parsed.data;
+  const { authCode, redirectUri } = parsed.data;
+  // E21-S05a: the technician-app client sends no technicianId in the body — default to the
+  // verified token's uid. An explicitly-supplied technicianId that differs from the token's
+  // uid still trips the IDOR guard below; the guard is a no-op only when the value was
+  // defaulted, never when it was supplied and mismatched.
+  const technicianId = parsed.data.technicianId ?? decoded.uid;
 
   // P0: caller may only update their own KYC record (IDOR guard)
   if (decoded.uid !== technicianId) {
@@ -49,17 +57,16 @@ export async function submitAadhaar(
     };
   }
 
-  await upsertKycStatus(technicianId, {
+  const derivedStatus = await upsertKycStepAndDeriveStatus(technicianId, {
     aadhaarVerified: true,
     aadhaarMaskedNumber: aadhaarResult.maskedNumber,
-    kycStatus: 'AADHAAR_DONE',
   });
   void kycAuditEntry(technicianId, 'AADHAAR', 'VERIFIED');
 
   return {
     status: 200,
     jsonBody: {
-      kycStatus: 'AADHAAR_DONE',
+      kycStatus: derivedStatus,
       aadhaarVerified: true,
       aadhaarMaskedNumber: aadhaarResult.maskedNumber,
     },

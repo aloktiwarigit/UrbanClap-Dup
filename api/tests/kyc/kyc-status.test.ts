@@ -74,6 +74,33 @@ describe('GET /v1/kyc/status', () => {
     expect(res.status).toBe(401);
   });
 
+  it('[E21-S05a] omitting technicianId defaults to the token uid and succeeds (client sends no query param)', async () => {
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+    const { getKycByTechnicianId } = await import('../../src/cosmos/technician-repository.js');
+    vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
+    vi.mocked(getKycByTechnicianId).mockResolvedValue({
+      aadhaarVerified: true,
+      aadhaarMaskedNumber: 'XXXX-XXXX-1234',
+      panNumber: null,
+      panImagePath: null,
+      kycStatus: 'AADHAAR_DONE',
+      updatedAt: '2026-04-19T10:00:00Z',
+    });
+
+    // No ?technicianId= query param — matches the real Retrofit client, which sends none.
+    const req = new HttpRequest({
+      method: 'GET',
+      url: 'http://localhost/v1/kyc/status',
+      headers: { Authorization: 'Bearer valid' },
+    });
+    const res = await handler(req, new InvocationContext());
+
+    expect(res.status).toBe(200);
+    const body = res.jsonBody as Record<string, unknown>;
+    expect(body['technicianId']).toBe('tech-001');
+    expect(vi.mocked(getKycByTechnicianId)).toHaveBeenCalledWith('tech-001');
+  });
+
   it('[P1-B] returns 403 when token uid does not match requested technicianId (IDOR guard)', async () => {
     const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
     vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
@@ -224,5 +251,59 @@ describe('GET /v1/kyc/status', () => {
     const body = res.jsonBody as Record<string, unknown>;
     expect(body['panMaskedNumber']).toBe('XXXXX1234F');
     expect(body['panMaskedNumber']).not.toBe('ABCDE1234F');  // raw PAN must never appear
+  });
+
+  it('reports panVerified true only when a non-null panHash is on file', async () => {
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+    const { getKycByTechnicianId } = await import('../../src/cosmos/technician-repository.js');
+    vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
+    vi.mocked(getKycByTechnicianId).mockResolvedValue({
+      aadhaarVerified: true,
+      aadhaarMaskedNumber: 'XXXXXXXX1234',
+      panMaskedNumber: 'XXXXX1234F',
+      panHash: 'f'.repeat(64),
+      panNumber: null,
+      panImagePath: null,
+      kycStatus: 'COMPLETE',
+      updatedAt: '2026-04-19T10:00:00Z',
+    });
+
+    const req = new HttpRequest({
+      method: 'GET',
+      url: 'http://localhost/v1/kyc/status?technicianId=tech-001',
+      headers: { Authorization: 'Bearer valid' },
+    });
+    const res = await handler(req, new InvocationContext());
+
+    const body = res.jsonBody as Record<string, unknown>;
+    expect(body['panVerified']).toBe(true);
+  });
+
+  it('reports panVerified false when panHash is null even though a masked number exists', async () => {
+    // A rejected re-submission nulls panHash but an earlier panMaskedNumber can still be present
+    // in legacy documents. panVerified must follow the hash, which is what dispatch reads.
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+    const { getKycByTechnicianId } = await import('../../src/cosmos/technician-repository.js');
+    vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
+    vi.mocked(getKycByTechnicianId).mockResolvedValue({
+      aadhaarVerified: true,
+      aadhaarMaskedNumber: 'XXXXXXXX1234',
+      panMaskedNumber: 'XXXXX1234F',
+      panHash: null,
+      panNumber: null,
+      panImagePath: null,
+      kycStatus: 'AADHAAR_DONE',
+      updatedAt: '2026-04-19T10:00:00Z',
+    });
+
+    const req = new HttpRequest({
+      method: 'GET',
+      url: 'http://localhost/v1/kyc/status?technicianId=tech-001',
+      headers: { Authorization: 'Bearer valid' },
+    });
+    const res = await handler(req, new InvocationContext());
+
+    const body = res.jsonBody as Record<string, unknown>;
+    expect(body['panVerified']).toBe(false);
   });
 });
