@@ -260,6 +260,9 @@ public class KycViewModelTest {
     @Test
     public fun `submitPan Success does NOT render Complete when the status re-fetch throws`(): Unit =
         runTest {
+            // [Codex r4] The submission already succeeded — only the confirming re-read failed.
+            // That must land on ConfirmationFailed (retry re-reads status), never the generic
+            // Error (retry restarts KYC from Aadhaar) and never Complete.
             val vm = createViewModel(aadhaarVerified = true, panVerified = true)
             coEvery { orchestrator.fetchCurrentStatus() } throws java.io.IOException("network down")
             every { orchestrator.submitPan(any(), any()) } returns flowOf(PanOcrResult.Success("ABCDE1234F"))
@@ -267,7 +270,7 @@ public class KycViewModelTest {
             vm.submitPan(aUri())
 
             assertThat(vm.uiState.value).isNotInstanceOf(KycUiState.Complete::class.java)
-            assertThat(vm.uiState.value).isInstanceOf(KycUiState.Error::class.java)
+            assertThat(vm.uiState.value).isEqualTo(KycUiState.ConfirmationFailed)
         }
 
     @Test
@@ -279,7 +282,59 @@ public class KycViewModelTest {
             kycStatusEventBus.post(KycStatusEvent(technicianId = techId, verified = true))
 
             assertThat(vm.uiState.value).isNotInstanceOf(KycUiState.Complete::class.java)
-            assertThat(vm.uiState.value).isInstanceOf(KycUiState.Error::class.java)
+            assertThat(vm.uiState.value).isEqualTo(KycUiState.ConfirmationFailed)
+        }
+
+    @Test
+    public fun `retryStatusConfirmation after a failed re-read recovers to Complete once both facts are true`(): Unit =
+        runTest {
+            // First read fails (submission succeeded, confirmation did not) -> ConfirmationFailed.
+            val vm = createViewModel(aadhaarVerified = true, panVerified = true)
+            coEvery { orchestrator.fetchCurrentStatus() } throws java.io.IOException("network down")
+            every { orchestrator.submitPan(any(), any()) } returns flowOf(PanOcrResult.Success("ABCDE1234F"))
+            vm.submitPan(aUri())
+            assertThat(vm.uiState.value).isEqualTo(KycUiState.ConfirmationFailed)
+
+            // Connectivity returns: the retry re-reads status rather than restarting KYC, and
+            // both facts are now confirmed true.
+            coEvery { orchestrator.fetchCurrentStatus() } returns aKycState(aadhaarVerified = true, panVerified = true)
+
+            vm.retryStatusConfirmation()
+
+            assertThat(vm.uiState.value).isInstanceOf(KycUiState.Complete::class.java)
+        }
+
+    @Test
+    public fun `retryStatusConfirmation after a failed re-read recovers to the correct partial state`(): Unit =
+        runTest {
+            val vm = createViewModel(aadhaarVerified = false, panVerified = true)
+            coEvery { orchestrator.fetchCurrentStatus() } throws java.io.IOException("network down")
+            every { orchestrator.submitPan(any(), any()) } returns flowOf(PanOcrResult.Success("ABCDE1234F"))
+            vm.submitPan(aUri())
+            assertThat(vm.uiState.value).isEqualTo(KycUiState.ConfirmationFailed)
+
+            coEvery { orchestrator.fetchCurrentStatus() } returns aKycState(aadhaarVerified = false, panVerified = true)
+
+            vm.retryStatusConfirmation()
+
+            assertThat(vm.uiState.value).isNotInstanceOf(KycUiState.Complete::class.java)
+            assertThat(vm.uiState.value).isInstanceOf(KycUiState.PanDone::class.java)
+        }
+
+    @Test
+    public fun `retryStatusConfirmation on a repeat failure stays ConfirmationFailed, never Complete`(): Unit =
+        runTest {
+            val vm = createViewModel(aadhaarVerified = true, panVerified = true)
+            coEvery { orchestrator.fetchCurrentStatus() } throws java.io.IOException("network down")
+            every { orchestrator.submitPan(any(), any()) } returns flowOf(PanOcrResult.Success("ABCDE1234F"))
+            vm.submitPan(aUri())
+            assertThat(vm.uiState.value).isEqualTo(KycUiState.ConfirmationFailed)
+
+            // Still offline on retry.
+            vm.retryStatusConfirmation()
+
+            assertThat(vm.uiState.value).isNotInstanceOf(KycUiState.Complete::class.java)
+            assertThat(vm.uiState.value).isEqualTo(KycUiState.ConfirmationFailed)
         }
 
     @Test

@@ -217,6 +217,9 @@
     <string name="kyc_pan_done_body">Your PAN is verified. Verify your Aadhaar to finish.</string>
     <string name="kyc_complete_title">KYC complete</string>
     <string name="kyc_complete_body">Both documents are verified. You can receive jobs.</string>
+    <string name="kyc_confirmation_failed_title">Could not confirm your status</string>
+    <string name="kyc_confirmation_failed_body">Your KYC may already be submitted. Check your status again to continue.</string>
+    <string name="kyc_confirmation_failed_retry">Check status again</string>
 
     <!-- Active job location foreground service (E17-S02) -->
     <string name="active_job_location_notification_title">Sharing location with customer</string>

@@ -90,6 +90,7 @@ internal fun KycScreen(
             is KycUiState.AadhaarRequired -> Unit
             is KycUiState.ManualReview -> Unit
             is KycUiState.Error -> Unit
+            is KycUiState.ConfirmationFailed -> Unit
         }
     }
 
@@ -159,6 +160,13 @@ internal fun KycScreen(
                         onRetry = { viewModel.startKyc() },
                         errorMessage = state.message,
                     )
+                }
+                // The submission already succeeded (or an FCM verdict already confirmed it);
+                // only the confirming status read failed. Retry re-reads status — it must NOT
+                // restart KYC via startKyc(), which would send an already-submitted technician
+                // back to redo Aadhaar. See KycViewModel.retryStatusConfirmation.
+                is KycUiState.ConfirmationFailed -> {
+                    KycStepConfirmationFailed(onRetry = viewModel::retryStatusConfirmation)
                 }
             }
             if (retryPending) {
@@ -501,6 +509,34 @@ internal fun KycStepPanDone(
         HsPrimaryButton(
             text = "Verify with DigiLocker",
             onClick = onVerifyAadhaar,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+/**
+ * [KycUiState.ConfirmationFailed]: the submission itself succeeded (or an FCM verdict already
+ * confirmed it) but the confirming status re-read failed. Kept as an active hero+card step
+ * (matching [KycStepPanDone]) rather than the terminal [KycTerminalStatus] treatment used by
+ * [KycStepManualReview]/[KycStepComplete] — this is not a resting state, it needs the technician
+ * to tap retry. The retry wires to [KycViewModel.retryStatusConfirmation] (a status re-read),
+ * deliberately never to `startKyc()` — restarting KYC would send an already-submitted
+ * technician back to redo Aadhaar.
+ */
+@Composable
+internal fun KycStepConfirmationFailed(
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    KycFrame(
+        eyebrow = "Action needed",
+        title = stringResource(R.string.kyc_confirmation_failed_title),
+        body = stringResource(R.string.kyc_confirmation_failed_body),
+        modifier = modifier,
+    ) {
+        HsPrimaryButton(
+            text = stringResource(R.string.kyc_confirmation_failed_retry),
+            onClick = onRetry,
             modifier = Modifier.fillMaxWidth(),
         )
     }

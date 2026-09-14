@@ -193,6 +193,9 @@
     <string name="kyc_pan_done_body">आपका पैन सत्यापित हो गया है। पूरा करने के लिए आधार सत्यापित करें।</string>
     <string name="kyc_complete_title">केवाईसी पूरी हुई</string>
     <string name="kyc_complete_body">दोनों दस्तावेज़ सत्यापित हैं। अब आप काम प्राप्त कर सकते हैं।</string>
+    <string name="kyc_confirmation_failed_title">आपकी स्थिति पता नहीं चली</string>
+    <string name="kyc_confirmation_failed_body">हो सकता है आपकी KYC जमा हो चुकी हो। आगे बढ़ने के लिए दोबारा स्थिति देखें।</string>
+    <string name="kyc_confirmation_failed_retry">दोबारा स्थिति देखें</string>
 
     <!-- Active job location foreground service (E17-S02) -->
     <string name="active_job_location_notification_title">ग्राहक के साथ स्थान साझा कर रहे हैं</string>

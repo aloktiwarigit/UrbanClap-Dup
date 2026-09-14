@@ -177,6 +177,27 @@ public class KycScreenPaparazziTest {
         }
     }
 
+    // KycUiState.ConfirmationFailed: submission succeeded but the confirming status re-read
+    // failed. Active hero+card step (like KycStepPanDone), not a terminal status render.
+
+    @Test
+    public fun snapshot_confirmation_failed_light(): Unit {
+        paparazzi.snapshot {
+            HomeservicesTheme(darkTheme = false) {
+                KycStepConfirmationFailed(onRetry = {})
+            }
+        }
+    }
+
+    @Test
+    public fun snapshot_confirmation_failed_dark(): Unit {
+        paparazzi.snapshot {
+            HomeservicesTheme(darkTheme = true) {
+                KycStepConfirmationFailed(onRetry = {})
+            }
+        }
+    }
+
     // KycPanContent(aadhaarVerified = false): renders the locked PAN control. Future-proofing
     // only — this codebase's two real call sites both pass aadhaarVerified = true by
     // construction, so no user-reachable state currently renders this. The sequential

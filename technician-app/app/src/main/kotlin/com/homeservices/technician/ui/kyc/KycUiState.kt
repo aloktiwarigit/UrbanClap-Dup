@@ -42,4 +42,18 @@ public sealed class KycUiState {
     public data class Error(
         val message: String,
     ) : KycUiState()
+
+    /**
+     * The submission itself already succeeded (or an FCM verdict already confirmed it), but the
+     * confirming status re-read failed — e.g. a transient network blip right after a PAN upload.
+     * By the time this is reached, `submitPan()` has already cleared the pending-submission rows,
+     * so there is no queued retry to fall back on: the only correct recovery is retrying the
+     * status read (see `KycViewModel.retryStatusConfirmation`), never restarting KYC from
+     * Aadhaar — DigiLocker has nothing new to consent to and PAN OCR has nothing new to upload.
+     * Deliberately distinct from [Error]: the genuine pre-submission error cases (Aadhaar
+     * cancelled, DigiLocker network error, PAN upload failure) keep their own restart/retry
+     * affordance via [Error]. Carries no verified facts, so it can never resolve to [Complete] —
+     * only a successful re-read, via [terminalStateFor]-style resolution, may do that.
+     */
+    public data object ConfirmationFailed : KycUiState()
 }

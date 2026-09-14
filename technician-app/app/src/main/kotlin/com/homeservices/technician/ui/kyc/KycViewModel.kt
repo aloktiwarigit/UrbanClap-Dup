@@ -38,10 +38,6 @@ private const val DIGILOCKER_CONSENT_URL =
 
 private const val DEFAULT_REJECTION_MESSAGE = "KYC was rejected. Please contact support."
 
-// Never mapped to Complete: a failed status re-read must not silently claim both KYC
-// facts are verified. See terminalStateForOrError().
-private const val KYC_STATUS_FETCH_ERROR_MESSAGE = "Couldn't confirm your KYC status. Please try again."
-
 @HiltViewModel
 internal class KycViewModel
     @Inject
@@ -247,16 +243,33 @@ internal class KycViewModel
          * /v1/kyc/status`) with no retry of its own, right after a PAN submission or an
          * FCM verdict — exactly when mobile connectivity is most likely to drop. A thrown
          * exception here must never be allowed to fall through to a default that implies
-         * `Complete`: the fallback is an explicit, non-terminal [KycUiState.Error] so the
-         * technician is told to retry rather than shown a false completion or a false
-         * "not started" screen.
+         * `Complete`: the fallback is an explicit, non-terminal [KycUiState.ConfirmationFailed]
+         * so the technician is told to retry the status *read* — not restart KYC — since their
+         * submission may already have succeeded. See [retryStatusConfirmation].
          */
         private suspend fun terminalStateForOrError(): KycUiState =
             runCatching { orchestrator.fetchCurrentStatus() }
                 .fold(
                     onSuccess = { state -> terminalStateFor(state.aadhaarVerified, state.panVerified) },
-                    onFailure = { KycUiState.Error(KYC_STATUS_FETCH_ERROR_MESSAGE) },
+                    onFailure = { KycUiState.ConfirmationFailed },
                 )
+
+        /**
+         * Retries the confirming status read after [terminalStateForOrError] failed and left the
+         * UI on [KycUiState.ConfirmationFailed]. Re-runs the exact same two-fact resolution used
+         * right after submission — it must NOT restart KYC from Aadhaar: a technician reaching
+         * this state has already submitted successfully (or received a KYC_VERIFIED FCM), and
+         * `submitPan()` has already cleared the pending-submission rows, so DigiLocker has
+         * nothing new to consent to and PAN OCR has nothing new to upload. A repeat failure lands
+         * back on [KycUiState.ConfirmationFailed] (never [KycUiState.Error] or
+         * [KycUiState.Complete]); a successful read resolves to the technician's true state.
+         */
+        public fun retryStatusConfirmation(): Unit {
+            _uiState.value = KycUiState.Loading
+            viewModelScope.launch {
+                _uiState.value = terminalStateForOrError()
+            }
+        }
 
         private fun currentTechnicianId(): String = (sessionManager.authState.value as? AuthState.Authenticated)?.uid ?: ""
     }
