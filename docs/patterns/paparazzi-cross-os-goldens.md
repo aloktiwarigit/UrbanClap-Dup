@@ -48,7 +48,20 @@ Protocol for every Android story that touches Compose UI:
    ~/Downloads/paparazzi-snapshots-technician-app.zip`) — `actions/upload-artifact@v4` strips
    the common path prefix, so the archive's entries are relative to `<gradle_root>/`.
 
-5. Commit the extracted goldens and push. Only after this commit is on the branch will
+5. **Before committing, diff the extracted PNGs byte-for-byte against whatever goldens already
+   exist for that app** (`git status` + a checksum compare, or `diff -rq` against a clean
+   checkout of the old `snapshots/` dir). You're looking for: new files (fine — these are the
+   screens this story added or changed), and **zero shared filenames whose bytes differ**. A
+   shared filename with different bytes means either a real visual regression on a screen this
+   story shouldn't have touched, or a non-deterministic render — don't commit it blind.
+   Confirmed 2026-09-14: a re-record produced 67 PNGs against 54 existing; 13 new, 0 missing,
+   0 differing — the Linux re-record reproduced every pre-existing golden byte-identically,
+   which is what makes "commit only the new ones" a provable step rather than a hopeful one.
+   Don't try to "sanity-check" the result by running `verifyPaparazziDebug` locally on Windows
+   first — it will fail against correct Linux goldens for the cross-OS reason this whole
+   pattern exists, and you'll learn nothing except to distrust a good result.
+
+6. Commit the extracted goldens and push. Only after this commit is on the branch will
    `verifyPaparazziDebug` pass in `customer-ship.yml` / `technician-ship.yml`.
 
 ## The Tests
