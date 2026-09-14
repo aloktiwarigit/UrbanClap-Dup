@@ -38,5 +38,16 @@ service firebase.storage {
       // generates a short-lived signed URL via the Admin SDK (bypasses Storage rules).
       // Direct client reads are intentionally blocked to keep all access on the audited path.
     }
+
+    // Catalogue hero images — category and service photos shown to every customer
+    // on the home screen and service list. No PII, so these are the only two
+    // public-read paths in this ruleset. Writes go through the Admin SDK / gcloud
+    // (bypasses rules) during catalogue seeding, never from a client.
+    match /categories/{file} {
+      allow read: if true;
+    }
+    match /services/{file} {
+      allow read: if true;
+    }
   }
 }

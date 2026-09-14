@@ -241,6 +241,49 @@ private fun TrackingBody(
                         .padding(bottom = 16.dp),
             )
         }
+        if (state.status == BookingStatus.Completed && state.technicianUpiMasked != null) {
+            PaymentDeclarationCard(
+                technicianUpiMasked = state.technicianUpiMasked,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 16.dp),
+            )
+        }
+    }
+}
+
+/**
+ * Shows the technician's masked registered UPI ID once a job is complete — a swap-detection
+ * mitigation for E24-S01's UPI QR feature (a technician could otherwise show a personal QR
+ * instead of their registered one). Explicitly not phrased as "payment verified": there is no
+ * PSP webhook backing this, only the technician's own declaration.
+ */
+@Composable
+private fun PaymentDeclarationCard(
+    technicianUpiMasked: String,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier,
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 1.dp,
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                text = stringResource(R.string.tracking_payment_declaration_label),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(text = technicianUpiMasked, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                text = stringResource(R.string.tracking_payment_declaration_disclaimer),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 

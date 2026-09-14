@@ -35,4 +35,26 @@ public class LiveTrackingScreenTest {
             }
         }
     }
+
+    @Ignore("Paparazzi goldens recorded on CI Linux only — see paparazzi-cross-os-goldens.md")
+    @Test
+    public fun liveTrackingCompletedWithPaymentDeclaration(): Unit {
+        paparazzi.snapshot {
+            HomeservicesTheme(darkTheme = false) {
+                LiveTrackingContent(
+                    uiState =
+                        LiveTrackingUiState.Tracking(
+                            bookingId = "bk-1",
+                            location = null,
+                            status = BookingStatus.Completed,
+                            techName = "Ravi Kumar",
+                            techPhotoUrl = "",
+                            etaMinutes = null,
+                            technicianUpiMasked = "al••••••@okhdfcbank",
+                        ),
+                    onFileComplaint = {},
+                )
+            }
+        }
+    }
 }
