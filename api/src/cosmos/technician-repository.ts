@@ -366,6 +366,21 @@ const HOLD_NOT_BLOCKED_PREDICATE =
  * halves are load-bearing: `IS_NULL` is false for an *undefined* path too, so `NOT IS_NULL`
  * alone would admit a technician with no `panHash` key at all.
  *
+ * ── The empty-string trap ────────────────────────────────────────────────────────────────────
+ * `c.kyc.panHash != ''` is appended after both null-trap clauses above, never in their place or
+ * ahead of them: at that position `panHash` is already known DEFINED and non-null, so the
+ * "`!=` against an undefined path evaluates to `undefined` and drops the row" trap that motivates
+ * the ordering elsewhere in this predicate cannot fire here. `deriveKycStatus()` (above) treats an
+ * empty-string `panHash` as NOT verified — `facts.panHash != null && facts.panHash !== ''` — on
+ * the reasoning that a hash is never legitimately empty. This clause exists so the dispatch
+ * predicate applies the identical rule: the two definitions of "PAN verified" must never disagree
+ * about the empty-string case, or this predicate repeats the exact drift ADR-0032 blames for three
+ * consecutive wrong predicates, just with a new value instead of a new field. No current writer
+ * ever persists `''` — `upsertKycStatus()`'s defaults and `submit-pan-ocr.ts`'s rejection path
+ * both write `null`, and a successful OCR read writes a SHA-256 hex digest — so this closes a
+ * divergence reachable only by an out-of-band write (an admin script, a migration, a manual Cosmos
+ * edit), not a live bug.
+ *
  * ── Fail-open boundary ───────────────────────────────────────────────────────────────────────
  * The disjunct is `NOT IS_DEFINED(c.kyc)` — the absence of the WHOLE `kyc` sub-object, not the
  * absence of the two fields. Two functions write `c.kyc`: `upsertKycStatus()` and
@@ -392,6 +407,7 @@ const HOLD_NOT_BLOCKED_PREDICATE =
  *   PAN only (aadhaarVerified false)   → false OR (false AND …)        → EXCLUDED
  *   both, either order                 → false OR (true AND true)      → ADMITTED
  *   PAN rejected after a prior success → panHash back to null          → EXCLUDED
+ *   PAN hash is '' (no live writer)    → false OR (true AND true AND false) → EXCLUDED
  *   Aadhaar failed                     → aadhaarVerified false         → EXCLUDED
  * (Cosmos's ternary table gives `undefined AND false` = `false`, so the second row lands on
  * EXCLUDED whichever side the engine evaluates first — but `false OR undefined` would be
@@ -408,7 +424,7 @@ const HOLD_NOT_BLOCKED_PREDICATE =
 const KYC_VERIFIED_PREDICATE =
   `(NOT IS_DEFINED(c.kyc)
     OR (c.kyc.aadhaarVerified = true
-        AND IS_DEFINED(c.kyc.panHash) AND NOT IS_NULL(c.kyc.panHash)))`;
+        AND IS_DEFINED(c.kyc.panHash) AND NOT IS_NULL(c.kyc.panHash) AND c.kyc.panHash != ''))`;
 
 export async function getTechniciansWithinRadius(
   lat: number,

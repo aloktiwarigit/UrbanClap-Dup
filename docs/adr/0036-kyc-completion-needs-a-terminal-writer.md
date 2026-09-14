@@ -56,7 +56,23 @@ story does not relitigate that diagnosis; it finishes the fix ADR-0032 started b
    dispatch predicate and `deriveKycStatus()` both key on (`panHash` present and non-empty), so a
    client can key its own UI off the same fact everything else uses instead of re-deriving
    meaning from `kycStatus` or from a masked string.
-5. **The change-feed projector (`trigger-projector-kyc.ts`) now treats only `COMPLETE` as
+5. **`KYC_VERIFIED_PREDICATE` (ADR-0032, `api/src/cosmos/technician-repository.ts`) was aligned
+   to the same empty-string rule as `deriveKycStatus()`.** An external Codex review of this story
+   found that `deriveKycStatus()` treats an empty-string `panHash` as not verified
+   (`panHash != null && panHash !== ''`) while the dispatch predicate still tested only
+   `IS_DEFINED(c.kyc.panHash) AND NOT IS_NULL(c.kyc.panHash)` — a document with `panHash: ''` would
+   read as unverified via the derived status but as verified via dispatch. That is the exact class
+   of drift ADR-0032 blames for three consecutive wrong predicates, just relocated to a new value
+   instead of a new field, and item 1 above already *claimed* the predicate keyed on "a non-null,
+   non-empty `panHash`" without the predicate actually doing so. The predicate now appends
+   `AND c.kyc.panHash != ''`, after both existing null-trap clauses so the "`!=` against an
+   undefined path drops the row" trap cannot apply, giving both definitions of "PAN verified" one
+   single rule again. **No code path can currently write `''`** — `upsertKycStatus()`'s defaults
+   and `submit-pan-ocr.ts`'s rejection path write `null`, and a successful Form Recognizer read
+   writes a SHA-256 hex digest — so this closes a divergence reachable only by an out-of-band write
+   (an admin script, a migration, a manual Cosmos edit), not a live bug. `enforceKycInDispatch`
+   remains OFF and this change does not touch that flag.
+6. **The change-feed projector (`trigger-projector-kyc.ts`) now treats only `COMPLETE` as
    complete.** `AADHAAR_DONE` and `PAN_DONE` moved into `ACTION_REQUIRED_STATUSES` — previously
    both were absent from `COMPLETE_STATUSES`'s predecessor set in a way that let a single-step
    technician's `KYC_RESUME` reminder resolve early. Now the reminder stays open until
