@@ -36,6 +36,46 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
+  # Required by branch protection alongside quality-gate on every PR. admin-ship.yml
+  # owns the real e2e-and-a11y job (admin-web a11y/e2e coverage, see issue #335); this
+  # job is a no-op fallback so PRs that don't touch admin-web-relevant paths can still
+  # satisfy the check instead of blocking forever on one that never runs for them.
+  #
+  # This workflow's own trigger paths overlap heavily with admin-ship.yml's (globals.css,
+  # figma/**, TOKEN-SYNC.md, tools/check-token-drift.py, tools/tests/**). `admin-relevance`
+  # mirrors admin-ship.yml's `paths:` list exactly — keep both in sync — and skips this
+  # no-op whenever a PR would also make the real job run, so a trivial success here can
+  # never race or shadow-satisfy the required check ahead of admin-ship.yml's actual
+  # a11y/e2e result (Codex P1 finding, PR #354 round 1).
+  admin-relevance:
+    runs-on: ubuntu-latest
+    outputs:
+      admin_relevant: ${{ steps.filter.outputs.admin_relevant }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            admin_relevant:
+              - 'admin-web/**'
+              - 'design-system/src/main/kotlin/com/homeservices/designsystem/theme/Color.kt'
+              - 'figma/variables.json'
+              - 'TOKEN-SYNC.md'
+              - 'tools/check-token-drift.py'
+              - 'tools/tests/test_check_token_drift.py'
+              - 'api/openapi.json'
+              - 'api/src/**'
+
+  e2e-and-a11y:
+    needs: admin-relevance
+    if: needs.admin-relevance.outputs.admin_relevant != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "e2e-and-a11y is admin-web-scoped (admin-ship.yml) — no-op here"
+
   quality-gate:
     runs-on: ubuntu-latest
     timeout-minutes: 30
