@@ -248,7 +248,7 @@ private fun AuthFrame(
                     .align(Alignment.BottomCenter)
                     .fillMaxHeight(AUTH_FORM_FRACTION),
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-            color = Color.White,
+            color = MaterialTheme.colorScheme.surface,
             shadowElevation = 8.dp,
         ) {
             Column(
