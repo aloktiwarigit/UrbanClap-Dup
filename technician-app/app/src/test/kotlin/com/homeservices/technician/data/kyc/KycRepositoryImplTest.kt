@@ -137,6 +137,32 @@ public class KycRepositoryImplTest {
         }
 
     @Test
+    public fun `submitPanOcr maps HTTP 500 to UploadError so the durable retry row is created`(): Unit =
+        runTest {
+            val body =
+                """{"error":"internal"}"""
+                    .toResponseBody("application/json".toMediaType())
+            coEvery { api.submitPanOcr(any()) } returns Response.error(500, body)
+
+            val result = sut.submitPanOcr("kyc/t1/pan.jpg")
+
+            assertThat(result).isInstanceOf(PanOcrResult.UploadError::class.java)
+        }
+
+    @Test
+    public fun `submitPanOcr maps HTTP 429 to UploadError so the durable retry row is created`(): Unit =
+        runTest {
+            val body =
+                """{"error":"rate_limited"}"""
+                    .toResponseBody("application/json".toMediaType())
+            coEvery { api.submitPanOcr(any()) } returns Response.error(429, body)
+
+            val result = sut.submitPanOcr("kyc/t1/pan.jpg")
+
+            assertThat(result).isInstanceOf(PanOcrResult.UploadError::class.java)
+        }
+
+    @Test
     public fun `submitPan maps 409 AADHAAR_REQUIRED_FIRST to AadhaarRequired`(): Unit =
         runTest {
             val body =

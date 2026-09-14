@@ -123,7 +123,14 @@ public class KycRepositoryImpl
             return if (code == AADHAAR_REQUIRED_FIRST) {
                 PanOcrResult.AadhaarRequired
             } else {
-                PanOcrResult.OcrError("PAN submission failed: HTTP ${response.code()}")
+                // Restore pre-existing behaviour: before submitPanOcr's return type became
+                // Response<PanOcrResponse> (to allow reading the 409 AADHAAR_REQUIRED_FIRST body),
+                // Retrofit threw HttpException for ANY non-2xx and the outer catch mapped that to
+                // UploadError, which is the only PanOcrResult that gets a durable
+                // PHOTO_UPLOAD_RETRY row in KycViewModel. A transport/server failure (500, 503,
+                // 429, ...) here must keep producing UploadError, not OcrError, or a technician
+                // whose photo already reached Firebase Storage is stranded with no retry path.
+                PanOcrResult.UploadError(retrofit2.HttpException(response))
             }
         }
 
