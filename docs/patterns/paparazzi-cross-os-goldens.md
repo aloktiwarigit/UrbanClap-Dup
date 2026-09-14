@@ -1,7 +1,7 @@
 # Pattern: Paparazzi Goldens — CI Only, Never Windows
 **Stack:** Android / Kotlin / Compose / Paparazzi
 **Story source:** E02-S01 (customer auth)
-**Last updated:** 2026-04-19
+**Last updated:** 2026-09-14
 **Recurrence risk:** Certain — affects every Android story that adds or changes a Compose screen
 
 ## The Trap
@@ -14,27 +14,61 @@ Result: CI `verifyPaparazziDebug` fails with `Image mismatch for <TestName>` eve
 
 **Never run `recordPaparazziDebug` locally on a Windows machine.**
 
+**`paparazzi-record.yml` uploads an artifact — it does NOT auto-commit anything to the branch.**
+Every step after the CI run is manual. (Corrected 2026-09-14 — this doc previously claimed CI
+"commits the correct goldens back to the branch"; it never has. Caught when a session read a
+green run + an unrelated "Auto-commit regenerated" check in the flat `gh pr checks` list and
+told the owner goldens were done when nothing had landed on the branch.)
+
 Protocol for every Android story that touches Compose UI:
 
 1. Delete any auto-generated goldens before pushing:
    ```bash
-   git rm -r customer-app/src/test/snapshots/images/ 2>/dev/null || true
-   git rm -r technician-app/src/test/snapshots/images/ 2>/dev/null || true
+   git rm -r customer-app/app/src/test/snapshots/images/ 2>/dev/null || true
+   git rm -r technician-app/app/src/test/snapshots/images/ 2>/dev/null || true
    ```
 
 2. Push the branch (without goldens).
 
-3. Trigger the `paparazzi-record.yml` workflow on GitHub Actions via `workflow_dispatch` — this runs on Ubuntu and commits the correct goldens back to the branch.
+3. Trigger `paparazzi-record.yml` on GitHub Actions with **explicit** inputs — `gradle_root`
+   (`customer-app`, `technician-app`, or `design-system`) and `gradle_task`
+   (`:app:recordPaparazziDebug`, or `:recordPaparazziDebug` for `design-system`):
+   ```bash
+   gh workflow run paparazzi-record.yml \
+     -f gradle_root=technician-app \
+     -f gradle_task=:app:recordPaparazziDebug
+   ```
+   **Both inputs default to `customer-app` / `:app:recordPaparazziDebug` if left blank or
+   omitted.** Dispatching with no inputs silently records `customer-app`'s screens regardless
+   of which app you meant — the run still reports success, the artifact is just for the wrong
+   app. Always pass both flags explicitly; never rely on the workflow's own defaults.
 
-4. Pull the CI-generated golden commit locally.
+4. Download the `paparazzi-snapshots-<gradle_root>` artifact from the Actions run, then unzip
+   it **inside the matching `gradle_root` directory** (e.g. `cd technician-app && unzip
+   ~/Downloads/paparazzi-snapshots-technician-app.zip`) — `actions/upload-artifact@v4` strips
+   the common path prefix, so the archive's entries are relative to `<gradle_root>/`.
 
-5. Only after this commit is on the branch will `verifyPaparazziDebug` pass in `customer-ship.yml`.
+5. **Before committing, diff the extracted PNGs byte-for-byte against whatever goldens already
+   exist for that app** (`git status` + a checksum compare, or `diff -rq` against a clean
+   checkout of the old `snapshots/` dir). You're looking for: new files (fine — these are the
+   screens this story added or changed), and **zero shared filenames whose bytes differ**. A
+   shared filename with different bytes means either a real visual regression on a screen this
+   story shouldn't have touched, or a non-deterministic render — don't commit it blind.
+   Confirmed 2026-09-14: a re-record produced 67 PNGs against 54 existing; 13 new, 0 missing,
+   0 differing — the Linux re-record reproduced every pre-existing golden byte-identically,
+   which is what makes "commit only the new ones" a provable step rather than a hopeful one.
+   Don't try to "sanity-check" the result by running `verifyPaparazziDebug` locally on Windows
+   first — it will fail against correct Linux goldens for the cross-OS reason this whole
+   pattern exists, and you'll learn nothing except to distrust a good result.
+
+6. Commit the extracted goldens and push. Only after this commit is on the branch will
+   `verifyPaparazziDebug` pass in `customer-ship.yml` / `technician-ship.yml`.
 
 ## The Tests
 
-After the CI golden commit, verify locally:
+After committing the downloaded goldens, verify locally:
 ```bash
-cd customer-app
+cd customer-app   # or technician-app
 ./gradlew verifyPaparazziDebug
 ```
 Expected: `BUILD SUCCESSFUL` with no image mismatches listed.
