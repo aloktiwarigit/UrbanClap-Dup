@@ -4,7 +4,7 @@
 
 **Goal:** Let a technician set their UPI VPA, and let the completion flow offer collecting payment via an on-device UPI QR, as a second `collectionMethod` alongside the cash-confirm flow `E21-S05` is landing separately.
 
-**Architecture:** One new Android screen (VPA entry), an additive `amount` field on the technician's active-job model, and a small addition to whatever `E21-S05` lands in `CompletionConfirmationDialog.kt` (a `UPI_QR` option next to its cash-confirm UI, not a rebuild of it). QR generation is entirely on-device (`com.google.zxing:core`), no network call, no PSP integration.
+**Architecture:** One new Android screen (VPA entry), an additive `amountPaise` field on the technician's active-job model, and a small addition to whatever `E21-S05` lands in `CompletionConfirmationDialog.kt` (a `UPI_QR` option next to its cash-confirm UI, not a rebuild of it). QR generation is entirely on-device (`com.google.zxing:core`), no network call, no PSP integration.
 
 **Tech Stack:** Retrofit/Moshi + Jetpack Compose + Hilt, `com.google.zxing:core` (new dependency, Apache-2.0, ₹0).
 
@@ -31,7 +31,7 @@
 
 ## Work Stream A — data layer
 
-### Task 1: Add `amount` to `ActiveJob`
+### Task 1: Add `amountPaise` to `ActiveJob`
 
 **Files:**
 - Modify: `technician-app/app/src/main/kotlin/com/homeservices/technician/domain/activeJob/model/ActiveJob.kt`
@@ -39,32 +39,32 @@
 - Modify: `technician-app/app/src/main/kotlin/com/homeservices/technician/data/activeJob/ActiveJobRepositoryImpl.kt` (`toDomain()` only)
 - Test: `technician-app/app/src/test/kotlin/com/homeservices/technician/data/activeJob/ActiveJobRepositoryImplTest.kt` (create if it doesn't exist — check first; if it already exists, add to it)
 
-This task is independent of `E21-S05` — it only reads the `amount` field `E24-S01a` added to `GET`/`PATCH .../active-job` responses. It does **not** touch `TransitionRequest` — the `cashCollected`/`collectedAmount`/`collectionMethod` request fields are `E21-S05`'s to add.
+This task is independent of `E21-S05` — it only reads the `amountPaise` field `E24-S01a` added to `GET`/`PATCH .../active-job` responses. It does **not** touch `TransitionRequest` — the `cashCollected`/`collectedAmount`/`collectionMethod` request fields are `E21-S05`'s to add.
 
 **Interfaces:**
-- Produces: `ActiveJob.amount: Int` (paise) — needed by Task 4/5 for the QR's `am=` parameter.
+- Produces: `ActiveJob.amountPaise: Int` (paise) — needed by Task 4/5 for the QR's `am=` parameter.
 
 - [ ] **Step 1: Write the failing test**
 
 ```kotlin
 @Test
-fun `toDomain maps amount from the response`() = runTest {
+fun `toDomain maps amountPaise from the response`() = runTest {
     val api = mockk<ActiveJobApiService>()
-    coEvery { api.getActiveJob("b1") } returns Response.success(activeJobResponseFixture(amount = 65000))
+    coEvery { api.getActiveJob("b1") } returns Response.success(activeJobResponseFixture(amountPaise = 65000))
     val repo = ActiveJobRepositoryImpl(api, dao, currentLocationProvider)
 
     repo.startObserving("b1")
 
-    assertThat(repo.activeJobState.value?.amount).isEqualTo(65000)
+    assertThat(repo.activeJobState.value?.amountPaise).isEqualTo(65000)
 }
 ```
 
-(Add an `activeJobResponseFixture(amount: Int = 50000, ...)` helper at the top of the test file if one doesn't already exist, filling in the other required `ActiveJobResponse` fields with fixed dummy values.)
+(Add an `activeJobResponseFixture(amountPaise: Int = 50000, ...)` helper at the top of the test file if one doesn't already exist, filling in the other required `ActiveJobResponse` fields with fixed dummy values.)
 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `cd technician-app && ./gradlew testDebugUnitTest --tests "*ActiveJobRepositoryImplTest*"`
-Expected: FAIL — compile error, `amount` unknown on `ActiveJob`/`ActiveJobResponse`.
+Expected: FAIL — compile error, `amountPaise` unknown on `ActiveJob`/`ActiveJobResponse`.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -81,11 +81,11 @@ public data class ActiveJob(
     val status: ActiveJobStatus,
     val slotDate: String,
     val slotWindow: String,
-    val amount: Int,
+    val amountPaise: Int,
 )
 ```
 
-`ActiveJobApiService.kt` — add `amount` to `ActiveJobResponse` only (leave `TransitionRequest` untouched — that's `E21-S05`'s surface):
+`ActiveJobApiService.kt` — add `amountPaise` to `ActiveJobResponse` only (leave `TransitionRequest` untouched — that's `E21-S05`'s surface):
 
 ```kotlin
 @JsonClass(generateAdapter = true)
@@ -99,7 +99,7 @@ internal data class ActiveJobResponse(
     val status: String,
     val slotDate: String,
     val slotWindow: String,
-    val amount: Int,
+    val amountPaise: Int,
 )
 ```
 
@@ -117,14 +117,14 @@ internal data class ActiveJobResponse(
                 status = ActiveJobStatus.valueOf(status),
                 slotDate = slotDate,
                 slotWindow = slotWindow,
-                amount = amount,
+                amountPaise = amountPaise,
             )
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `cd technician-app && ./gradlew testDebugUnitTest --tests "*ActiveJobRepositoryImplTest*"`
-Expected: PASS. Then run the full unit suite once (`./gradlew testDebugUnitTest`) — any other `ActiveJob(...)` construction site (test fixtures) needs `amount` added; `ActiveJobResponse(...)` construction sites likewise.
+Expected: PASS. Then run the full unit suite once (`./gradlew testDebugUnitTest`) — any other `ActiveJob(...)` construction site (test fixtures) needs `amountPaise` added; `ActiveJobResponse(...)` construction sites likewise.
 
 - [ ] **Step 5: Commit**
 
@@ -133,7 +133,7 @@ git add technician-app/app/src/main/kotlin/com/homeservices/technician/domain/ac
         technician-app/app/src/main/kotlin/com/homeservices/technician/data/activeJob/ActiveJobApiService.kt \
         technician-app/app/src/main/kotlin/com/homeservices/technician/data/activeJob/ActiveJobRepositoryImpl.kt \
         technician-app/app/src/test/kotlin/com/homeservices/technician/data/activeJob/ActiveJobRepositoryImplTest.kt
-git commit -m "feat(technician-app): add settled amount to the active-job domain model"
+git commit -m "feat(technician-app): add settled amountPaise to the active-job domain model"
 ```
 
 ### Task 2: Payment-profile repository + use case (technician-app)
@@ -487,7 +487,7 @@ git commit -m "feat(technician-app): add UPI QR URI builder and bitmap generator
 - Modify: `values/strings.xml` and `values-hi/strings.xml`
 
 **Interfaces:**
-- Consumes: `UpiQrUriBuilder.build` and `QrBitmapGenerator.generate` (Task 4); `ActiveJob.amount` (Task 1); whatever `collectionMethod`-carrying request type `E21-S05` added to the transition call.
+- Consumes: `UpiQrUriBuilder.build` and `QrBitmapGenerator.generate` (Task 4); `ActiveJob.amountPaise` (Task 1); whatever `collectionMethod`-carrying request type `E21-S05` added to the transition call.
 
 - [ ] **Step 1: Merge and read the actual shape**
 
@@ -589,7 +589,7 @@ Add strings (`values/strings.xml`):
 
 - [ ] **Step 5: Update the call site**
 
-At wherever `E21-S05` wired `CompletionConfirmationDialog` to `ActiveJobViewModel`/`ActiveJobRepository.transitionStatus`, thread: `upiQrEnabled` from the technician config's `features.upiQr` flag (fetch via whatever use case already wraps `GET /v1/config/technician`; if nothing consumes it yet, add a minimal fetch in the view model constructor following the pattern for similar flags like `duesBanner`), `technicianUpiVpa` from a fetched payment profile (this story does not add a GET for the technician's own profile — the simplest correct option is: after a successful `UpdatePaymentProfileUseCase` call in Task 6's screen, cache the VPA in `SessionManager` or a similar already-injected singleton so `ActiveJobViewModel` can read it; check `SessionManager`'s existing surface first before adding a new field), `technicianDisplayName` from `FirebaseAuth.getInstance().currentUser?.displayName ?: ""`, `bookingId` from the active job, and `amountPaise` from `ActiveJob.amount` (Task 1).
+At wherever `E21-S05` wired `CompletionConfirmationDialog` to `ActiveJobViewModel`/`ActiveJobRepository.transitionStatus`, thread: `upiQrEnabled` from the technician config's `features.upiQr` flag (fetch via whatever use case already wraps `GET /v1/config/technician`; if nothing consumes it yet, add a minimal fetch in the view model constructor following the pattern for similar flags like `duesBanner`), `technicianUpiVpa` from a fetched payment profile (this story does not add a GET for the technician's own profile — the simplest correct option is: after a successful `UpdatePaymentProfileUseCase` call in Task 6's screen, cache the VPA in `SessionManager` or a similar already-injected singleton so `ActiveJobViewModel` can read it; check `SessionManager`'s existing surface first before adding a new field), `technicianDisplayName` from `FirebaseAuth.getInstance().currentUser?.displayName ?: ""`, `bookingId` from the active job, and `amountPaise` from `ActiveJob.amountPaise` (Task 1).
 
 - [ ] **Step 6: Run test to verify it passes**
 
