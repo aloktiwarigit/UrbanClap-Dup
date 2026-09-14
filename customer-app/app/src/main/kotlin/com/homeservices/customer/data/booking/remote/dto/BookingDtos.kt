@@ -78,6 +78,7 @@ public data class GetBookingResponseDto(
     val amount: Int,
     val finalAmount: Int?,
     val pendingAddOns: List<PendingAddOnDto>,
+    val technicianUpiMasked: String? = null,
 )
 
 @JsonClass(generateAdapter = true)
