@@ -94,6 +94,21 @@ public class AuthScreenPaparazziTest {
     }
 
     @Test
+    public fun authScreen_methodSelection_darkTheme() {
+        paparazzi.snapshot {
+            HomeservicesTheme(darkTheme = true) {
+                AuthScreen(
+                    uiState = AuthUiState.MethodSelection,
+                    onPhoneSubmitted = {},
+                    onOtpEntered = {},
+                    onResendRequested = {},
+                    onRetry = {},
+                )
+            }
+        }
+    }
+
+    @Test
     public fun authScreen_otpCodeEntry() {
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = false) {
