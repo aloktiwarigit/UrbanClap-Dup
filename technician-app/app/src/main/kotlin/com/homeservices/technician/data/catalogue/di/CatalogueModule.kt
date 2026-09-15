@@ -20,7 +20,6 @@ internal abstract class CatalogueModule {
     companion object {
         @Provides
         @Singleton
-        fun provideCatalogueApiService(retrofit: Retrofit): CatalogueApiService =
-            retrofit.create(CatalogueApiService::class.java)
+        fun provideCatalogueApiService(retrofit: Retrofit): CatalogueApiService = retrofit.create(CatalogueApiService::class.java)
     }
 }

@@ -14,7 +14,8 @@ public class CatalogueDtoTest {
 
     @Test
     public fun `flattens categories into selectable services tagged with their category name`() {
-        val json = """
+        val json =
+            """
             {"categories":[
               {"id":"appliance-repair","name":"Appliance Repair","sortOrder":6,"services":[
                 {"id":"appliance-fridge-repair","name":"Fridge Repair"}
@@ -24,7 +25,7 @@ public class CatalogueDtoTest {
                 {"id":"ac-gas-refill","name":"AC Gas Refill"}
               ]}
             ]}
-        """.trimIndent()
+            """.trimIndent()
 
         val services = moshi.adapter(CategoriesResponseDto::class.java).fromJson(json)!!.toDomain()
 
