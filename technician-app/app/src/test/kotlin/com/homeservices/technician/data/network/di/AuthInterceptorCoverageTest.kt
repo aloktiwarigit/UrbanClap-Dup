@@ -2,6 +2,7 @@ package com.homeservices.technician.data.network.di
 
 import com.homeservices.technician.data.activeJob.ActiveJobApiService
 import com.homeservices.technician.data.availability.remote.TechnicianAvailabilityApiService
+import com.homeservices.technician.data.catalogue.remote.CatalogueApiService
 import com.homeservices.technician.data.complaint.remote.ComplaintApiService
 import com.homeservices.technician.data.earnings.remote.EarningsApiService
 import com.homeservices.technician.data.erasure.remote.ErasureApiService
@@ -159,6 +160,7 @@ public class AuthInterceptorCoverageTest {
             listOf(
                 ActiveJobApiService::class,
                 TechnicianAvailabilityApiService::class,
+                CatalogueApiService::class,
                 ComplaintApiService::class,
                 EarningsApiService::class,
                 ErasureApiService::class,
