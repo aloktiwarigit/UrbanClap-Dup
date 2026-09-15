@@ -67,4 +67,38 @@ public class OnboardingGateViewModelTest {
 
             assertThat(viewModel.uiState.value).isEqualTo(OnboardingGateUiState.NeedsOnboarding)
         }
+
+    @Test
+    public fun `treats a profile as complete when its only skill is outside the old hardcoded list`(): Unit =
+        runTest {
+            // appliance-fridge-repair was never in the old hardcoded catalogue list. Before
+            // this change such a technician was pushed back through onboarding forever.
+            coEvery { getServiceProfile.invoke() } returns
+                Result.success(
+                    ServiceProfile(
+                        skills = listOf("appliance-fridge-repair"),
+                        location = ServiceLocation(lat = 26.7922, lng = 82.1998),
+                    ),
+                )
+
+            val viewModel = OnboardingGateViewModel(getServiceProfile)
+
+            assertThat(viewModel.uiState.value).isEqualTo(OnboardingGateUiState.Complete)
+        }
+
+    @Test
+    public fun `still treats a skill-less profile as needing onboarding`(): Unit =
+        runTest {
+            coEvery { getServiceProfile.invoke() } returns
+                Result.success(
+                    ServiceProfile(
+                        skills = emptyList(),
+                        location = ServiceLocation(lat = 26.7922, lng = 82.1998),
+                    ),
+                )
+
+            val viewModel = OnboardingGateViewModel(getServiceProfile)
+
+            assertThat(viewModel.uiState.value).isEqualTo(OnboardingGateUiState.NeedsOnboarding)
+        }
 }

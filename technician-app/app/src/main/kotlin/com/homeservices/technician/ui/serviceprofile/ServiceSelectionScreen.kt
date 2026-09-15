@@ -60,6 +60,7 @@ import com.homeservices.designsystem.components.HsTrustBadge
 import com.homeservices.designsystem.theme.LocalHomeservicesSpacing
 import com.homeservices.technician.BuildConfig
 import com.homeservices.technician.R
+import com.homeservices.technician.domain.catalogue.model.SelectableService
 import java.util.Locale
 
 @Composable
@@ -223,28 +224,36 @@ private fun SaveButton(
 
 @Composable
 private fun ServiceListCard(
-    services: List<ServiceCatalogueItem>,
+    services: List<SelectableService>,
     selectedSkillIds: Set<String>,
     onSkillToggle: (String) -> Unit,
     enabled: Boolean,
 ) {
     HsSectionCard(title = "Services you provide") {
-        val grouped = services.groupBy { it.group }
-        grouped.forEach { (group, groupServices) ->
+        if (services.isEmpty()) {
             Text(
-                text = group,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+                text = stringResource(R.string.service_selection_catalogue_unavailable),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            groupServices.forEach { item ->
-                ServiceRow(
-                    item = item,
-                    selected = item.id in selectedSkillIds,
-                    enabled = enabled,
-                    onClick = { onSkillToggle(item.id) },
+        } else {
+            val grouped = services.groupBy { it.group }
+            grouped.forEach { (group, groupServices) ->
+                Text(
+                    text = group,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
                 )
+                groupServices.forEach { item ->
+                    ServiceRow(
+                        item = item,
+                        selected = item.id in selectedSkillIds,
+                        enabled = enabled,
+                        onClick = { onSkillToggle(item.id) },
+                    )
+                }
             }
         }
     }
@@ -252,7 +261,7 @@ private fun ServiceListCard(
 
 @Composable
 private fun ServiceRow(
-    item: ServiceCatalogueItem,
+    item: SelectableService,
     selected: Boolean,
     enabled: Boolean,
     onClick: () -> Unit,

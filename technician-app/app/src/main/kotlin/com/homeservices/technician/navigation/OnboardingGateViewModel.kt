@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.homeservices.technician.domain.serviceprofile.GetServiceProfileUseCase
 import com.homeservices.technician.domain.serviceprofile.model.ServiceLocation
 import com.homeservices.technician.domain.serviceprofile.model.ServiceProfile
-import com.homeservices.technician.ui.serviceprofile.ServiceCatalogue
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,7 +23,6 @@ internal class OnboardingGateViewModel
     constructor(
         private val getServiceProfile: GetServiceProfileUseCase,
     ) : ViewModel() {
-        private val validSkillIds = ServiceCatalogue.items.map { it.id }.toSet()
         private val _uiState = MutableStateFlow<OnboardingGateUiState>(OnboardingGateUiState.Checking)
         val uiState: StateFlow<OnboardingGateUiState> = _uiState.asStateFlow()
 
@@ -45,8 +43,11 @@ internal class OnboardingGateViewModel
             }
         }
 
+        // Completeness means "has at least one skill and a valid location". It
+        // deliberately does not check the skill against a catalogue: the gate must not
+        // make a network call, and a skill the client cannot name is still a skill.
         private fun ServiceProfile.isComplete(): Boolean =
-            skills.any { it in validSkillIds } &&
+            skills.isNotEmpty() &&
                 location?.isValid() == true
 
         private fun ServiceLocation.isValid(): Boolean =

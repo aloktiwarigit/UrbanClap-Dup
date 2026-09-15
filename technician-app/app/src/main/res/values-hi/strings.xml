@@ -140,6 +140,7 @@
     <string name="payout_settings_title">पेमेंट सेटिंग</string>
     <string name="payout_when_question">पेमेंट कब चाहिए?</string>
     <string name="service_finding_area">आपका वर्तमान क्षेत्र ढूंढ रहे हैं</string>
+    <string name="service_selection_catalogue_unavailable">सेवा सूची लोड नहीं हो सकी। कनेक्शन जांचें और रीफ्रेश करें।</string>
 
     <!-- UPI settings (E24-S01) -->
     <string name="upi_settings_title">यूपीआई पेमेंट सेटिंग</string>
