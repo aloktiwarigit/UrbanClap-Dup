@@ -16,12 +16,12 @@ public class CatalogueDtoTest {
     public fun `flattens categories into selectable services tagged with their category name`() {
         val json = """
             {"categories":[
+              {"id":"appliance-repair","name":"Appliance Repair","sortOrder":6,"services":[
+                {"id":"appliance-fridge-repair","name":"Fridge Repair"}
+              ]},
               {"id":"ac-repair","name":"AC Repair","sortOrder":1,"services":[
                 {"id":"ac-deep-clean","name":"AC Deep Clean"},
                 {"id":"ac-gas-refill","name":"AC Gas Refill"}
-              ]},
-              {"id":"appliance-repair","name":"Appliance Repair","sortOrder":6,"services":[
-                {"id":"appliance-fridge-repair","name":"Fridge Repair"}
               ]}
             ]}
         """.trimIndent()
@@ -32,6 +32,9 @@ public class CatalogueDtoTest {
         assertEquals("ac-deep-clean", services[0].id)
         assertEquals("AC Deep Clean", services[0].name)
         assertEquals("AC Repair", services[0].group)
+        assertEquals("ac-gas-refill", services[1].id)
+        assertEquals("AC Repair", services[1].group)
+        assertEquals("appliance-fridge-repair", services[2].id)
         assertEquals("Appliance Repair", services[2].group)
     }
 
