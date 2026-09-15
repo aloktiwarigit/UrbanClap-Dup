@@ -28,6 +28,7 @@ public class ActiveJobScreenHiPaparazziTest {
             status = status,
             slotDate = "2026-05-01",
             slotWindow = "10:00-12:00",
+            amountPaise = 65000,
         )
 
     // Goldens recorded on CI Linux via paparazzi-record.yml; never locally on Windows.

@@ -28,6 +28,7 @@ import com.homeservices.technician.ui.deleteaccount.DeleteAccountScreen
 import com.homeservices.technician.ui.home.TechnicianHomeScreen
 import com.homeservices.technician.ui.home.TechnicianHomeViewModel
 import com.homeservices.technician.ui.myratings.MyRatingsScreen
+import com.homeservices.technician.ui.paymentsettings.UpiSettingsScreen
 import com.homeservices.technician.ui.payoutsettings.PayoutCadenceScreen
 import com.homeservices.technician.ui.rating.RatingRoutes
 import com.homeservices.technician.ui.rating.RatingScreen
@@ -61,6 +62,9 @@ internal fun NavGraphBuilder.homeGraph(
         }
         composable("payout_settings") {
             PayoutCadenceScreen(onBack = { navController.popBackStack() })
+        }
+        composable("upi_settings") {
+            UpiSettingsScreen(onBack = { navController.popBackStack() })
         }
         composable("language_settings") {
             LanguageSettingsScreen(onBack = { navController.popBackStack() })
@@ -150,6 +154,7 @@ private fun HomeDashboardRoute(
         onOpenJob = { bookingId -> navController.navigate("activeJob/$bookingId") },
         onViewRatings = { navController.navigate("ratings_transparency") },
         onPayoutSettings = { navController.navigate("payout_settings") },
+        onUpiSettings = { navController.navigate("upi_settings") },
         onLanguageSettings = { navController.navigate("language_settings") },
         onEditServices = { navController.navigate("edit_services") },
         onDeleteAccount = { navController.navigate("delete_account") },

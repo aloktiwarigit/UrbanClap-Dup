@@ -103,6 +103,7 @@ internal fun TechnicianHomeScreen(
     onOpenJob: (String) -> Unit,
     onViewRatings: () -> Unit,
     onPayoutSettings: () -> Unit,
+    onUpiSettings: () -> Unit,
     onLanguageSettings: () -> Unit,
     onEditServices: () -> Unit,
     onDeleteAccount: () -> Unit,
@@ -177,6 +178,7 @@ internal fun TechnicianHomeScreen(
                         onRetry = earningsViewModel::refresh,
                         onViewRatings = onViewRatings,
                         onPayoutSettings = onPayoutSettings,
+                        onUpiSettings = onUpiSettings,
                     )
                 TechTab.Availability ->
                     AvailabilityScreen(
@@ -195,6 +197,7 @@ internal fun TechnicianHomeScreen(
                         authState = authState,
                         onViewRatings = onViewRatings,
                         onPayoutSettings = onPayoutSettings,
+                        onUpiSettings = onUpiSettings,
                         onLanguageSettings = onLanguageSettings,
                         onEditServices = onEditServices,
                         onDeleteAccount = onDeleteAccount,
@@ -531,6 +534,7 @@ private fun EarningsTabScreen(
     onRetry: () -> Unit,
     onViewRatings: () -> Unit,
     onPayoutSettings: () -> Unit,
+    onUpiSettings: () -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -581,6 +585,14 @@ private fun EarningsTabScreen(
                         title = "Payout settings",
                         subtitle = "Choose weekly, next-day or instant payout",
                         onClick = onPayoutSettings,
+                    )
+                }
+                item {
+                    SettingCard(
+                        icon = Icons.Default.Payments,
+                        title = "UPI settings",
+                        subtitle = "Set your UPI ID to accept UPI QR payments",
+                        onClick = onUpiSettings,
                     )
                 }
             }
@@ -933,6 +945,7 @@ private fun ProfileScreen(
     authState: AuthState,
     onViewRatings: () -> Unit,
     onPayoutSettings: () -> Unit,
+    onUpiSettings: () -> Unit,
     onLanguageSettings: () -> Unit,
     onEditServices: () -> Unit,
     onDeleteAccount: () -> Unit,
@@ -975,6 +988,14 @@ private fun ProfileScreen(
                 title = "Payout settings",
                 subtitle = "Choose weekly, next-day or instant payout",
                 onClick = onPayoutSettings,
+            )
+        }
+        item {
+            SettingCard(
+                icon = Icons.Default.AccountBalanceWallet,
+                title = "UPI settings",
+                subtitle = "Set your UPI ID to accept UPI QR payments",
+                onClick = onUpiSettings,
             )
         }
         item {

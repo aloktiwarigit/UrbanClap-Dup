@@ -10,4 +10,5 @@ public data class ActiveJob(
     val status: ActiveJobStatus,
     val slotDate: String,
     val slotWindow: String,
+    val amountPaise: Int,
 )

@@ -41,6 +41,9 @@ truecallerSdk = "3.2.1"
 # Kotlin serialization
 kotlinxSerialization = "1.7.3"
 
+# UPI QR generation (technician-app only; see libs.versions.toml sync invariant)
+zxingCore = "3.5.3"
+
 # Networking / serialisation / image loading
 retrofit = "2.11.0"
 okhttp = "4.12.0"
@@ -92,6 +95,8 @@ camerax = "1.4.0"
 homeservices-design-system = { module = "com.homeservices:design-system", version = "0.1.0" }
 # Core-nav (Gradle composite-build substitution — version is nominal, ignored)
 homeservices-core-nav = { module = "com.homeservices:core-nav", version = "0.1.0" }
+# UPI QR generation (technician-app only)
+zxing-core = { module = "com.google.zxing:core", version.ref = "zxingCore" }
 
 # AndroidX
 androidx-biometric = { module = "androidx.biometric:biometric", version.ref = "androidxBiometric" }

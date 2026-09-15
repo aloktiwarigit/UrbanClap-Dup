@@ -131,6 +131,7 @@ public class ActiveJobRepositoryImpl
                 status = ActiveJobStatus.valueOf(status),
                 slotDate = slotDate,
                 slotWindow = slotWindow,
+                amountPaise = amountPaise,
             )
 
         private fun LatLng.toDto(): LatLngDto = LatLngDto(lat = lat, lng = lng)

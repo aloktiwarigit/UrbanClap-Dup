@@ -165,6 +165,12 @@
     <string name="payout_when_question">When do you want payment?</string>
     <string name="service_finding_area">Finding your current area</string>
 
+    <!-- UPI settings (E24-S01) -->
+    <string name="upi_settings_title">UPI payment settings</string>
+    <string name="upi_settings_vpa_label">Your UPI ID</string>
+    <string name="upi_settings_warning">Payments go directly to this UPI ID — double-check it\'s correct before saving.</string>
+    <string name="upi_settings_save_cta">Save UPI ID</string>
+
     <!-- Auth screen -->
     <string name="auth_back_to_sign_in">Back to sign-in options</string>
     <string name="auth_email_label">Email</string>

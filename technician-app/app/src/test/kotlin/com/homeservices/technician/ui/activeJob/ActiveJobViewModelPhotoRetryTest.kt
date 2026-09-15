@@ -65,6 +65,7 @@ public class ActiveJobViewModelPhotoRetryTest {
             status = status,
             slotDate = "2026-05-01",
             slotWindow = "10:00-12:00",
+            amountPaise = 65000,
         )
 
     private fun pendingPhotoAction(bookingId: String = "bk-1") =

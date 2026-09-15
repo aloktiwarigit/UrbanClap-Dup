@@ -43,6 +43,7 @@ internal data class ActiveJobResponse(
     val status: String,
     val slotDate: String,
     val slotWindow: String,
+    val amountPaise: Int,
 )
 
 @JsonClass(generateAdapter = true)
