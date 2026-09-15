@@ -28,3 +28,4 @@ Every significant decision is recorded as a numbered, immutable ADR. Use `TEMPLA
 - [0013](0013-audit-log-immutability.md) — Audit-log immutability (multi-layer defensive enforcement)
 - [0031](0031-single-partition-commission-ledger.md) — Commission ledger is a single-partition transactional log with absolute recomputation
 - [0032](0032-commission-hold-is-an-eligibility-gate.md) — Commission hold is a dispatch eligibility filter, never a ranking input
+- [0036](0036-kyc-completion-needs-a-terminal-writer.md) — KYC completion needs a terminal writer, not a status scalar

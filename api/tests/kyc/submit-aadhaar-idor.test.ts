@@ -9,6 +9,7 @@ import { HttpRequest, InvocationContext } from '@azure/functions';
 
 vi.mock('../../src/cosmos/technician-repository.js', () => ({
   upsertKycStatus: vi.fn().mockResolvedValue(undefined),
+  upsertKycStepAndDeriveStatus: vi.fn(),
 }));
 vi.mock('../../src/middleware/verifyTechnicianToken.js', () => ({
   verifyTechnicianToken: vi.fn(),
@@ -57,11 +58,11 @@ describe('POST /v1/kyc/aadhaar — IDOR guard', () => {
   it('proceeds normally when authenticated uid matches body technicianId', async () => {
     const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
     const { exchangeCodeForAadhaar } = await import('../../src/services/digilocker.service.js');
-    const { upsertKycStatus } = await import('../../src/cosmos/technician-repository.js');
+    const { upsertKycStepAndDeriveStatus } = await import('../../src/cosmos/technician-repository.js');
 
     vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-A' });
     vi.mocked(exchangeCodeForAadhaar).mockResolvedValue({ maskedNumber: 'XXXX-XXXX-1234' });
-    vi.mocked(upsertKycStatus).mockResolvedValue(undefined);
+    vi.mocked(upsertKycStepAndDeriveStatus).mockResolvedValue('AADHAAR_DONE');
 
     const req = new HttpRequest({
       method: 'POST',

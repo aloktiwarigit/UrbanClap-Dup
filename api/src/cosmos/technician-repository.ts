@@ -68,6 +68,71 @@ export async function upsertKycStatus(
   });
 }
 
+/**
+ * The single source of truth for "is this technician's KYC finished".
+ *
+ * `kyc.kycStatus` was historically a progress marker for a two-step process completable in either
+ * order, so it could not express "both done" — whichever step ran last won, and `COMPLETE` had no
+ * writer at all. Three consecutive review rounds each produced a wrong predicate over that scalar
+ * (ADR-0032). This function is now the only thing that writes `COMPLETE`, and it derives it from
+ * the same two independent facts the dispatch predicate reads, so the two can never disagree.
+ *
+ * Order-independent by construction: it reads the merged document, not the incoming patch.
+ * An empty-string panHash is treated as absent — a hash is never legitimately empty, and
+ * accepting one would let a blank write satisfy the completion fact.
+ */
+export function deriveKycStatus(facts: {
+  aadhaarVerified: boolean;
+  panHash: string | null | undefined;
+}): KycStatus {
+  const panVerified = facts.panHash != null && facts.panHash !== '';
+  if (facts.aadhaarVerified && panVerified) return 'COMPLETE';
+  if (panVerified) return 'PAN_DONE';
+  if (facts.aadhaarVerified) return 'AADHAAR_DONE';
+  return 'PENDING';
+}
+
+/**
+ * Writes one KYC step's fields and the status derived from the resulting merged document, in a
+ * single read-modify-write. Deriving inside the merge callback is what makes the status atomic
+ * with the facts it describes — a read-back after the write would cost a second round-trip and
+ * reopen the window this function exists to close.
+ *
+ * Rejection paths do NOT use this function: they call `upsertKycStatus` directly to force
+ * PENDING_MANUAL / MANUAL_REVIEW, which deliberately override any derivation.
+ */
+export async function upsertKycStepAndDeriveStatus(
+  technicianId: string,
+  patch: Partial<TechnicianKyc>
+): Promise<KycStatus> {
+  // `readModifyWrite` may invoke the callback more than once (ETag precondition retry). Only the
+  // invocation belonging to the write that actually succeeded is the one whose value we return,
+  // and that is always the last one to run before it returns.
+  let derived: KycStatus = 'PENDING';
+  await readModifyWrite<TechnicianDoc>(technicianId, (existing) => {
+    const base: TechnicianDoc = existing ?? { id: technicianId };
+    const mergedKyc = {
+      aadhaarVerified: false,
+      aadhaarMaskedNumber: null,
+      panNumber: null,
+      panMaskedNumber: null,
+      panHash: null,
+      panImagePath: null,
+      ...(base.kyc ?? {}),
+      ...patch,
+    };
+    derived = deriveKycStatus({
+      aadhaarVerified: mergedKyc.aadhaarVerified === true,
+      panHash: mergedKyc.panHash,
+    });
+    return {
+      ...base,
+      kyc: { ...mergedKyc, kycStatus: derived, updatedAt: new Date().toISOString() },
+    };
+  });
+  return derived;
+}
+
 export async function getKycByTechnicianId(
   technicianId: string
 ): Promise<TechnicianKyc | null> {
@@ -262,8 +327,13 @@ const HOLD_NOT_BLOCKED_PREDICATE =
  * marker for a two-step process that is completable in either order*, and a single scalar cannot
  * express "both done". `submit-aadhaar.ts` sets it to `AADHAAR_DONE`; `submit-pan-ocr.ts` sets it
  * to `PAN_DONE`; whichever runs LAST wins, and neither endpoint checks that the other has run.
- * `COMPLETE` — the one value in `KycStatusSchema` that could mean "both done" — has no writer
- * anywhere in this codebase. So:
+ * `COMPLETE` — the one value in `KycStatusSchema` that could mean "both done" — had no writer
+ * anywhere in this codebase when this predicate was written. `deriveKycStatus()` (below) is now
+ * that single writer, and it derives `COMPLETE` from the same two independent facts this
+ * predicate reads. But this predicate does not depend on `deriveKycStatus()` to be correct: it
+ * asserts `aadhaarVerified` and `panHash` directly rather than trusting a mirrored scalar, so
+ * dispatch stays right even if `kycStatus` itself is ever wrong, stale, or written some other
+ * way. Historically, before `deriveKycStatus()` existed:
  *   - `kycStatus = 'PAN_DONE'`  admits PAN-only (Aadhaar never done)          → too loose
  *   - `kycStatus = 'AADHAAR_DONE'` is reached by a fully-verified technician who did PAN first
  *     and Aadhaar second, because the Aadhaar write overwrote the marker      → too strict
@@ -296,15 +366,33 @@ const HOLD_NOT_BLOCKED_PREDICATE =
  * halves are load-bearing: `IS_NULL` is false for an *undefined* path too, so `NOT IS_NULL`
  * alone would admit a technician with no `panHash` key at all.
  *
+ * ── The empty-string trap ────────────────────────────────────────────────────────────────────
+ * `c.kyc.panHash != ''` is appended after both null-trap clauses above, never in their place or
+ * ahead of them: at that position `panHash` is already known DEFINED and non-null, so the
+ * "`!=` against an undefined path evaluates to `undefined` and drops the row" trap that motivates
+ * the ordering elsewhere in this predicate cannot fire here. `deriveKycStatus()` (above) treats an
+ * empty-string `panHash` as NOT verified — `facts.panHash != null && facts.panHash !== ''` — on
+ * the reasoning that a hash is never legitimately empty. This clause exists so the dispatch
+ * predicate applies the identical rule: the two definitions of "PAN verified" must never disagree
+ * about the empty-string case, or this predicate repeats the exact drift ADR-0032 blames for three
+ * consecutive wrong predicates, just with a new value instead of a new field. No current writer
+ * ever persists `''` — `upsertKycStatus()`'s defaults and `submit-pan-ocr.ts`'s rejection path
+ * both write `null`, and a successful OCR read writes a SHA-256 hex digest — so this closes a
+ * divergence reachable only by an out-of-band write (an admin script, a migration, a manual Cosmos
+ * edit), not a live bug.
+ *
  * ── Fail-open boundary ───────────────────────────────────────────────────────────────────────
  * The disjunct is `NOT IS_DEFINED(c.kyc)` — the absence of the WHOLE `kyc` sub-object, not the
- * absence of the two fields. `upsertKycStatus()` is the only writer of `c.kyc` in the codebase,
- * and it reconstructs from defaults that always include `aadhaarVerified: false` and
- * `panHash: null`; so any document the KYC flow has ever touched carries both keys, and the two
- * choices differ only for a document with a `kyc` object written some other way — i.e. a legacy
- * doc holding, say, `panNumberEncrypted` and nothing else. Such a document carries PARTIAL KYC
- * information (one step's worth), and partial information must fail CLOSED once the flag is on:
- * keying on the whole object excludes it, keying on the two fields would wrongly admit it.
+ * absence of the two fields. Two functions write `c.kyc`: `upsertKycStatus()` and
+ * `upsertKycStepAndDeriveStatus()` (above). Both reconstruct the full `kyc` object the same way —
+ * `defaults → ...(base.kyc ?? {}) → ...patch`, with defaults that always include
+ * `aadhaarVerified: false` and `panHash: null` — so the fail-open argument holds regardless of
+ * which of the two last wrote the document: any document the KYC flow has ever touched carries
+ * both keys. The two choices differ only for a document with a `kyc` object written some other
+ * way — i.e. a legacy doc holding, say, `panNumberEncrypted` and nothing else. Such a document
+ * carries PARTIAL KYC information (one step's worth), and partial information must fail CLOSED
+ * once the flag is on: keying on the whole object excludes it, keying on the two fields would
+ * wrongly admit it.
  * A technician with no KYC information at all is still dispatched, exactly like the suspended
  * and hold predicates above. `docs/runbook.md` carries the precondition query that checks a
  * target environment for such legacy documents before `enforceKycInDispatch` is switched on.
@@ -319,21 +407,24 @@ const HOLD_NOT_BLOCKED_PREDICATE =
  *   PAN only (aadhaarVerified false)   → false OR (false AND …)        → EXCLUDED
  *   both, either order                 → false OR (true AND true)      → ADMITTED
  *   PAN rejected after a prior success → panHash back to null          → EXCLUDED
+ *   PAN hash is '' (no live writer)    → false OR (true AND true AND false) → EXCLUDED
  *   Aadhaar failed                     → aadhaarVerified false         → EXCLUDED
  * (Cosmos's ternary table gives `undefined AND false` = `false`, so the second row lands on
  * EXCLUDED whichever side the engine evaluates first — but `false OR undefined` would be
  * `undefined`, which also drops the row. Both routes exclude; neither admits.)
  *
- * This predicate still does not depend on the KYC endpoints enforcing step order — it does not
- * need to, because it asserts the two outcomes directly rather than inferring them from a
- * sequence. Adding step-order enforcement to `submit-pan-ocr.ts` remains a separate follow-up.
+ * Step-order enforcement now exists in `submit-pan-ocr.ts` — it 409s with `AADHAAR_REQUIRED_FIRST`
+ * when PAN is submitted before Aadhaar has been verified. This predicate does not depend on that
+ * check to be correct, and never did: it asserts the two outcomes directly rather than inferring
+ * them from a submission sequence, so it stays right even if that ordering guard is ever removed,
+ * bypassed, or found to have a gap.
  * See `docs/adr/0032-commission-hold-is-an-eligibility-gate.md` (Consequences — negative) for why
  * dispatch is the component that ends up defining "KYC verified" for this system at all.
  */
 const KYC_VERIFIED_PREDICATE =
   `(NOT IS_DEFINED(c.kyc)
     OR (c.kyc.aadhaarVerified = true
-        AND IS_DEFINED(c.kyc.panHash) AND NOT IS_NULL(c.kyc.panHash)))`;
+        AND IS_DEFINED(c.kyc.panHash) AND NOT IS_NULL(c.kyc.panHash) AND c.kyc.panHash != ''))`;
 
 export async function getTechniciansWithinRadius(
   lat: number,

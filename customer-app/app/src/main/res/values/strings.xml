@@ -220,6 +220,8 @@
     <string name="tracking_map_placeholder_body">We update the technician position as soon as tracking starts.</string>
     <string name="tracking_sos_confirmed">Safety alert sent to owner support.</string>
     <string name="tracking_sos_error">Could not send alert. Please try again.</string>
+    <string name="tracking_payment_declaration_label">Technician\'s registered UPI ID</string>
+    <string name="tracking_payment_declaration_disclaimer">Technician-declared — not verified by a payment provider. Confirm it matches before paying.</string>
     <!-- Status labels for tracking timeline -->
     <string name="status_en_route">En route</string>
     <string name="status_reached">Arrived</string>

@@ -6,6 +6,8 @@ vi.mock('../../src/services/formRecognizer.service.js', () => ({
 }));
 vi.mock('../../src/cosmos/technician-repository.js', () => ({
   upsertKycStatus: vi.fn(),
+  upsertKycStepAndDeriveStatus: vi.fn(),
+  getKycByTechnicianId: vi.fn(),
 }));
 vi.mock('../../src/middleware/verifyTechnicianToken.js', () => ({
   verifyTechnicianToken: vi.fn(),
@@ -22,17 +24,21 @@ describe('POST /v1/kyc/pan-ocr', () => {
     handler = mod.submitPanOcr;
   });
 
-  it('returns 200 with panMaskedNumber on OCR success (cleartext PAN never in response)', async () => {
+  it('returns 200 with derived COMPLETE status on OCR success when Aadhaar already verified (cleartext PAN never in response)', async () => {
+    // [E21-S05a] Updated for the Aadhaar-first precondition: a PAN-only submission can no longer
+    // reach a terminal 'PAN_DONE' state (that state has no route to completion — see ADR-0036).
+    // This test now sets up a verified Aadhaar first, matching the only reachable path to success.
     const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
     const { extractPanFromStoragePath } = await import('../../src/services/formRecognizer.service.js');
-    const { upsertKycStatus } = await import('../../src/cosmos/technician-repository.js');
+    const { getKycByTechnicianId, upsertKycStepAndDeriveStatus } = await import('../../src/cosmos/technician-repository.js');
     vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
+    vi.mocked(getKycByTechnicianId).mockResolvedValue({ aadhaarVerified: true, panHash: null } as never);
     vi.mocked(extractPanFromStoragePath).mockResolvedValue({
       status: 'PAN_DONE',
       panMaskedNumber: 'XXXXX1234F',
       panHash: 'a'.repeat(64),
     });
-    vi.mocked(upsertKycStatus).mockResolvedValue(undefined);
+    vi.mocked(upsertKycStepAndDeriveStatus).mockResolvedValue('COMPLETE');
 
     const req = new HttpRequest({
       method: 'POST',
@@ -45,7 +51,7 @@ describe('POST /v1/kyc/pan-ocr', () => {
     const res = await handler(req, ctx);
     expect(res.status).toBe(200);
     const body = res.jsonBody as { kycStatus: string; panMaskedNumber: string; panNumber: string };
-    expect(body.kycStatus).toBe('PAN_DONE');
+    expect(body.kycStatus).toBe('COMPLETE');
     expect(body.panMaskedNumber).toBe('XXXXX1234F');
     // Legacy alias for technician-app backward compat (migration window)
     expect(body.panNumber).toBe('XXXXX1234F');
@@ -53,11 +59,44 @@ describe('POST /v1/kyc/pan-ocr', () => {
     expect(JSON.stringify(body)).not.toContain('ABCDE1234F');
   });
 
+  it('[E21-S05a] omitting technicianId in the body defaults to the token uid (client sends none)', async () => {
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+    const { extractPanFromStoragePath } = await import('../../src/services/formRecognizer.service.js');
+    const { getKycByTechnicianId, upsertKycStepAndDeriveStatus } = await import('../../src/cosmos/technician-repository.js');
+    vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
+    vi.mocked(getKycByTechnicianId).mockResolvedValue({ aadhaarVerified: true, panHash: null } as never);
+    vi.mocked(extractPanFromStoragePath).mockResolvedValue({
+      status: 'PAN_DONE',
+      panMaskedNumber: 'XXXXX1234F',
+      panHash: 'a'.repeat(64),
+    });
+    vi.mocked(upsertKycStepAndDeriveStatus).mockResolvedValue('COMPLETE');
+
+    // No technicianId in the body — matches the real client's PanOcrRequest(firebaseStoragePath).
+    const req = new HttpRequest({
+      method: 'POST',
+      url: 'http://localhost/v1/kyc/pan-ocr',
+      headers: { Authorization: 'Bearer valid-token' },
+      body: { string: JSON.stringify({ firebaseStoragePath: 'technicians/tech-001/pan.jpg' }) },
+    });
+
+    const res = await handler(req, new InvocationContext());
+    expect(res.status).toBe(200);
+    const body = res.jsonBody as { kycStatus: string };
+    expect(body.kycStatus).toBe('COMPLETE');
+    expect(vi.mocked(getKycByTechnicianId)).toHaveBeenCalledWith('tech-001');
+    expect(vi.mocked(upsertKycStepAndDeriveStatus)).toHaveBeenCalledWith(
+      'tech-001',
+      expect.objectContaining({ panHash: 'a'.repeat(64) }),
+    );
+  });
+
   it('returns 200 with MANUAL_REVIEW on OCR failure', async () => {
     const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
     const { extractPanFromStoragePath } = await import('../../src/services/formRecognizer.service.js');
-    const { upsertKycStatus } = await import('../../src/cosmos/technician-repository.js');
+    const { upsertKycStatus, getKycByTechnicianId } = await import('../../src/cosmos/technician-repository.js');
     vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
+    vi.mocked(getKycByTechnicianId).mockResolvedValue({ aadhaarVerified: true, panHash: null } as never);
     vi.mocked(extractPanFromStoragePath).mockResolvedValue({ status: 'MANUAL_REVIEW', panMaskedNumber: null, panHash: null });
     vi.mocked(upsertKycStatus).mockResolvedValue(undefined);
 
@@ -78,8 +117,9 @@ describe('POST /v1/kyc/pan-ocr', () => {
   it('[E19-S01-P2B] MANUAL_REVIEW clears stale panMaskedNumber + panHash from previous successful scan', async () => {
     const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
     const { extractPanFromStoragePath } = await import('../../src/services/formRecognizer.service.js');
-    const { upsertKycStatus } = await import('../../src/cosmos/technician-repository.js');
+    const { upsertKycStatus, getKycByTechnicianId } = await import('../../src/cosmos/technician-repository.js');
     vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
+    vi.mocked(getKycByTechnicianId).mockResolvedValue({ aadhaarVerified: true, panHash: null } as never);
     vi.mocked(extractPanFromStoragePath).mockResolvedValue({ status: 'MANUAL_REVIEW', panMaskedNumber: null, panHash: null });
     vi.mocked(upsertKycStatus).mockResolvedValue(undefined);
 
@@ -102,15 +142,16 @@ describe('POST /v1/kyc/pan-ocr', () => {
   it('emits KYC_PAN_VERIFIED audit entry on OCR success', async () => {
     const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
     const { extractPanFromStoragePath } = await import('../../src/services/formRecognizer.service.js');
-    const { upsertKycStatus } = await import('../../src/cosmos/technician-repository.js');
+    const { getKycByTechnicianId, upsertKycStepAndDeriveStatus } = await import('../../src/cosmos/technician-repository.js');
     const { kycAuditEntry } = await import('../../src/services/kycAudit.service.js');
     vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
+    vi.mocked(getKycByTechnicianId).mockResolvedValue({ aadhaarVerified: true, panHash: null } as never);
     vi.mocked(extractPanFromStoragePath).mockResolvedValue({
       status: 'PAN_DONE',
       panMaskedNumber: 'XXXXX1234F',
       panHash: 'a'.repeat(64),
     });
-    vi.mocked(upsertKycStatus).mockResolvedValue(undefined);
+    vi.mocked(upsertKycStepAndDeriveStatus).mockResolvedValue('COMPLETE');
 
     const req = new HttpRequest({
       method: 'POST', url: 'http://localhost/v1/kyc/pan-ocr',
@@ -125,8 +166,10 @@ describe('POST /v1/kyc/pan-ocr', () => {
   it('emits KYC_PAN_REJECTED audit entry on OCR failure', async () => {
     const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
     const { extractPanFromStoragePath } = await import('../../src/services/formRecognizer.service.js');
+    const { getKycByTechnicianId } = await import('../../src/cosmos/technician-repository.js');
     const { kycAuditEntry } = await import('../../src/services/kycAudit.service.js');
     vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
+    vi.mocked(getKycByTechnicianId).mockResolvedValue({ aadhaarVerified: true, panHash: null } as never);
     vi.mocked(extractPanFromStoragePath).mockResolvedValue({ status: 'MANUAL_REVIEW', panMaskedNumber: null, panHash: null });
 
     const req = new HttpRequest({
@@ -172,15 +215,16 @@ describe('POST /v1/kyc/pan-ocr', () => {
   it('[E19-S01-T1] successful submit stores panMaskedNumber + panHash, clears panNumber + panNumberEncrypted', async () => {
     const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
     const { extractPanFromStoragePath } = await import('../../src/services/formRecognizer.service.js');
-    const { upsertKycStatus } = await import('../../src/cosmos/technician-repository.js');
+    const { getKycByTechnicianId, upsertKycStepAndDeriveStatus } = await import('../../src/cosmos/technician-repository.js');
     const fakeHash = 'b'.repeat(64);
     vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
+    vi.mocked(getKycByTechnicianId).mockResolvedValue({ aadhaarVerified: true, panHash: null } as never);
     vi.mocked(extractPanFromStoragePath).mockResolvedValue({
       status: 'PAN_DONE',
       panMaskedNumber: 'XXXXX1234F',
       panHash: fakeHash,
     });
-    vi.mocked(upsertKycStatus).mockResolvedValue(undefined);
+    vi.mocked(upsertKycStepAndDeriveStatus).mockResolvedValue('COMPLETE');
 
     const req = new HttpRequest({
       method: 'POST',
@@ -190,7 +234,7 @@ describe('POST /v1/kyc/pan-ocr', () => {
     });
     await handler(req, new InvocationContext());
 
-    const call = vi.mocked(upsertKycStatus).mock.calls[0];
+    const call = vi.mocked(upsertKycStepAndDeriveStatus).mock.calls[0];
     const patch = call?.[1] as Record<string, unknown>;
     expect(patch['panMaskedNumber']).toBe('XXXXX1234F');
     expect(patch['panHash']).toBe(fakeHash);
@@ -201,14 +245,15 @@ describe('POST /v1/kyc/pan-ocr', () => {
   it('[E19-S01-T2] patch written to Cosmos must not contain cleartext PAN', async () => {
     const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
     const { extractPanFromStoragePath } = await import('../../src/services/formRecognizer.service.js');
-    const { upsertKycStatus } = await import('../../src/cosmos/technician-repository.js');
+    const { getKycByTechnicianId, upsertKycStepAndDeriveStatus } = await import('../../src/cosmos/technician-repository.js');
     vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
+    vi.mocked(getKycByTechnicianId).mockResolvedValue({ aadhaarVerified: true, panHash: null } as never);
     vi.mocked(extractPanFromStoragePath).mockResolvedValue({
       status: 'PAN_DONE',
       panMaskedNumber: 'XXXXX1234F',
       panHash: 'c'.repeat(64),
     });
-    vi.mocked(upsertKycStatus).mockResolvedValue(undefined);
+    vi.mocked(upsertKycStepAndDeriveStatus).mockResolvedValue('COMPLETE');
 
     const req = new HttpRequest({
       method: 'POST',
@@ -218,7 +263,7 @@ describe('POST /v1/kyc/pan-ocr', () => {
     });
     await handler(req, new InvocationContext());
 
-    const call = vi.mocked(upsertKycStatus).mock.calls[0];
+    const call = vi.mocked(upsertKycStepAndDeriveStatus).mock.calls[0];
     const patchJson = JSON.stringify(call?.[1]);
     // Raw PAN must never appear in any Cosmos write
     expect(patchJson).not.toContain('ABCDE1234F');

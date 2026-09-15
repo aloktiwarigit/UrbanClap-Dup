@@ -7,13 +7,17 @@ import com.homeservices.corenav.PendingActionStatus
 import com.homeservices.corenav.PendingActionType
 import com.homeservices.technician.data.auth.SessionManager
 import com.homeservices.technician.data.kyc.DigiLockerCallbackBus
+import com.homeservices.technician.data.kyc.KycPendingActionCoordinator
 import com.homeservices.technician.data.kyc.KycStatusEvent
 import com.homeservices.technician.data.kyc.KycStatusEventBus
 import com.homeservices.technician.data.pendingaction.PendingActionStore
 import com.homeservices.technician.domain.auth.model.AuthProvider
 import com.homeservices.technician.domain.auth.model.AuthState
 import com.homeservices.technician.domain.kyc.KycOrchestrator
+import com.homeservices.technician.domain.kyc.model.KycState
+import com.homeservices.technician.domain.kyc.model.KycStatus
 import com.homeservices.technician.domain.kyc.model.PanOcrResult
+import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
@@ -50,6 +54,7 @@ public class KycViewModelKycStatusTest {
     private lateinit var callbackBus: DigiLockerCallbackBus
     private lateinit var kycStatusEventBus: KycStatusEventBus
     private lateinit var pendingActionStore: PendingActionStore
+    private lateinit var pendingActionCoordinator: KycPendingActionCoordinator
     private lateinit var sessionManager: SessionManager
     private lateinit var pendingActionsFlow: MutableStateFlow<List<PendingAction>>
     private val testDispatcher = UnconfinedTestDispatcher()
@@ -62,6 +67,7 @@ public class KycViewModelKycStatusTest {
         callbackBus = DigiLockerCallbackBus()
         kycStatusEventBus = KycStatusEventBus()
         pendingActionStore = mockk(relaxed = true)
+        pendingActionCoordinator = KycPendingActionCoordinator(pendingActionStore)
         sessionManager = mockk(relaxed = true)
 
         every { sessionManager.authState } returns
@@ -90,19 +96,50 @@ public class KycViewModelKycStatusTest {
             callbackBus = callbackBus,
             kycStatusEventBus = kycStatusEventBus,
             pendingActionStore = pendingActionStore,
+            pendingActionCoordinator = pendingActionCoordinator,
             sessionManager = sessionManager,
         )
 
     // ── KYC_VERIFIED / KYC_REJECTED ────────────────────────────────────────────
 
     @Test
-    public fun `KYC_VERIFIED event drives uiState to Complete`(): Unit =
+    public fun `KYC_VERIFIED event with both facts verified drives uiState to Complete`(): Unit =
         runTest {
+            // `Complete` is reachable only when BOTH aadhaarVerified and panVerified are
+            // true — see KycViewModel.terminalStateFor(). This FCM path carries no
+            // booleans of its own, so the ViewModel re-reads authoritative status.
+            coEvery { orchestrator.fetchCurrentStatus() } returns
+                KycState(
+                    status = KycStatus.COMPLETE,
+                    aadhaarVerified = true,
+                    panVerified = true,
+                    aadhaarMaskedNumber = "XXXX-XXXX-1234",
+                    panNumber = "ABCDE1234F",
+                )
             val vm = viewModel()
 
             kycStatusEventBus.post(KycStatusEvent(technicianId = techId, verified = true))
 
             assertThat(vm.uiState.value).isInstanceOf(KycUiState.Complete::class.java)
+        }
+
+    @Test
+    public fun `KYC_VERIFIED event with only PAN verified does NOT drive uiState to Complete`(): Unit =
+        runTest {
+            coEvery { orchestrator.fetchCurrentStatus() } returns
+                KycState(
+                    status = KycStatus.PAN_DONE,
+                    aadhaarVerified = false,
+                    panVerified = true,
+                    aadhaarMaskedNumber = null,
+                    panNumber = "ABCDE1234F",
+                )
+            val vm = viewModel()
+
+            kycStatusEventBus.post(KycStatusEvent(technicianId = techId, verified = true))
+
+            assertThat(vm.uiState.value).isNotInstanceOf(KycUiState.Complete::class.java)
+            assertThat(vm.uiState.value).isInstanceOf(KycUiState.PanDone::class.java)
         }
 
     @Test

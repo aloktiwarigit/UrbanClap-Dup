@@ -14,10 +14,11 @@ export async function getKycStatus(
     return { status: 401, jsonBody: { error: 'Unauthorized' } };
   }
 
-  const technicianId = req.query.get('technicianId');
-  if (!technicianId) {
-    return { status: 400, jsonBody: { error: 'technicianId query param required' } };
-  }
+  // E21-S05a: the technician-app client sends no technicianId query param — default to the
+  // verified token's uid, which every caller unambiguously owns. The IDOR guard below still
+  // rejects an explicitly-supplied technicianId that differs from the token's uid; it only
+  // becomes a no-op when the value was defaulted, never when it was supplied and mismatched.
+  const technicianId = req.query.get('technicianId') ?? decodedToken.uid;
 
   // P1-B: caller may only read their own KYC record
   if (decodedToken.uid !== technicianId) {
@@ -44,6 +45,12 @@ export async function getKycStatus(
   const effectiveKycStatus =
     hasPanData && panMaskedValue === null ? ('MANUAL_REVIEW' as const) : kyc.kycStatus;
 
+  // The same fact the dispatch predicate reads (`IS_DEFINED(panHash) AND NOT IS_NULL(panHash)`),
+  // surfaced as a boolean so the client never has to infer completion from a masked string or
+  // from kycStatus. Deliberately keyed on the hash, not on panMaskedNumber: a rejected
+  // re-submission nulls the hash, and that must revoke an earlier pass.
+  const panVerified = kyc.panHash != null && kyc.panHash !== '';
+
   return {
     status: 200,
     jsonBody: {
@@ -53,6 +60,7 @@ export async function getKycStatus(
       aadhaarMaskedNumber: kyc.aadhaarMaskedNumber,
       panMaskedNumber: panMaskedValue,
       panNumber: panMaskedValue, // legacy alias — technician-app KycStatusResponse reads panNumber (migration window)
+      panVerified,
     },
   };
 }

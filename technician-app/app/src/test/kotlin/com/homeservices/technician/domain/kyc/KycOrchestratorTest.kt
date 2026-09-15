@@ -42,7 +42,7 @@ public class KycOrchestratorTest {
     @Test
     public fun `fetchCurrentStatus returns repo state`(): Unit =
         runTest {
-            val state = KycState(KycStatus.AADHAAR_DONE, true, "XXXX-XXXX-5678", null)
+            val state = KycState(KycStatus.AADHAAR_DONE, true, false, "XXXX-XXXX-5678", null)
             coEvery { repo.getKycStatus() } returns state
 
             val result = orchestrator.fetchCurrentStatus()

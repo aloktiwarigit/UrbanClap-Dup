@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import com.homeservices.customer.data.tracking.LocationUpdateEventBus
 import com.homeservices.customer.domain.tracking.GetLiveLocationUseCase
 import com.homeservices.customer.domain.tracking.TrackBookingStatusUseCase
+import com.homeservices.customer.domain.tracking.TrackTechnicianUpiUseCase
 import com.homeservices.customer.domain.tracking.model.BookingStatus
 import com.homeservices.customer.domain.tracking.model.LiveLocation
 import io.mockk.every
@@ -27,10 +28,12 @@ public class LiveTrackingViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
     private val getLiveLocation: GetLiveLocationUseCase = mockk()
     private val trackStatus: TrackBookingStatusUseCase = mockk()
+    private val trackTechnicianUpi: TrackTechnicianUpiUseCase = mockk()
 
     @Before
     public fun setUp() {
         Dispatchers.setMain(testDispatcher)
+        every { trackTechnicianUpi.execute(any()) } returns flowOf(null)
     }
 
     @After
@@ -40,7 +43,7 @@ public class LiveTrackingViewModelTest {
 
     private fun viewModel(bookingId: String = "b1"): LiveTrackingViewModel {
         val handle = SavedStateHandle(mapOf("bookingId" to bookingId))
-        return LiveTrackingViewModel(handle, getLiveLocation, trackStatus, LocationUpdateEventBus())
+        return LiveTrackingViewModel(handle, getLiveLocation, trackStatus, trackTechnicianUpi, LocationUpdateEventBus())
     }
 
     @Test
@@ -84,6 +87,20 @@ public class LiveTrackingViewModelTest {
             val tracking = vm.uiState.value as LiveTrackingUiState.Tracking
             assertThat(tracking.location).isNull()
             assertThat(tracking.status).isEqualTo(BookingStatus.InProgress)
+            job.cancel()
+        }
+
+    @Test
+    public fun `Tracking state carries technicianUpiMasked from the tracking use case`(): Unit =
+        runTest {
+            every { getLiveLocation.execute("b6") } returns flowOf(null)
+            every { trackStatus.execute("b6") } returns flowOf(BookingStatus.Completed)
+            every { trackTechnicianUpi.execute("b6") } returns flowOf("al••••••@okhdfcbank")
+            val vm = viewModel("b6")
+            val job = vm.uiState.launchIn(this)
+            advanceUntilIdle()
+            val tracking = vm.uiState.value as LiveTrackingUiState.Tracking
+            assertThat(tracking.technicianUpiMasked).isEqualTo("al••••••@okhdfcbank")
             job.cancel()
         }
 

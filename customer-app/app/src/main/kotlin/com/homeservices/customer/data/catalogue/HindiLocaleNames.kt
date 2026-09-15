@@ -37,6 +37,7 @@ public object HindiLocaleNames {
             "appliance-cooler-service" to "कूलर सर्विस",
             "appliance-washing-machine-repair" to "वाशिंग मशीन मरम्मत",
             "electrical-camera-installation" to "सीसीटीवी कैमरा इंस्टॉलेशन",
+            "appliance-inverter-service" to "इन्वर्टर इंस्टॉलेशन और सर्विस",
         )
 
     public val serviceShortDescriptionsHindi: Map<String, String> =
@@ -59,5 +60,6 @@ public object HindiLocaleNames {
             "appliance-cooler-service" to "एयर कूलर के पंप, मोटर और कूलिंग पैड की सर्विस।",
             "appliance-washing-machine-repair" to "मोटर, ड्रम या ड्रेनेज की समस्या की जांच और मरम्मत।",
             "electrical-camera-installation" to "सीसीटीवी कैमरा लगाना, वायरिंग और मोबाइल ऐप सेटअप।",
+            "appliance-inverter-service" to "घरेलू इन्वर्टर और यूपीएस की इंस्टॉलेशन, बैटरी जांच और सर्विसिंग।",
         )
 }

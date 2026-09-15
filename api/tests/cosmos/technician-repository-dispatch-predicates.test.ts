@@ -74,7 +74,13 @@ describe('getTechniciansWithinRadius predicates', () => {
     // defaults `panHash: null` and submit-pan-ocr.ts writes an explicit null on rejection, and
     // Cosmos's IS_DEFINED is true for a null-valued property. NOT IS_NULL alone is insufficient
     // because IS_NULL is false for an undefined path too. Both halves are load-bearing.
-    expect(on.query).toContain('IS_DEFINED(c.kyc.panHash) AND NOT IS_NULL(c.kyc.panHash)');
+    // The `!= ''` clause is appended AFTER both null-trap clauses (never before or in their
+    // place - see the "empty-string trap" comment above the predicate) so it aligns with
+    // deriveKycStatus()'s identical `panHash !== ''` check and the two definitions of "PAN
+    // verified" can never disagree.
+    expect(on.query).toContain(
+      "IS_DEFINED(c.kyc.panHash) AND NOT IS_NULL(c.kyc.panHash) AND c.kyc.panHash != ''",
+    );
 
     // Round-1 regression guard: the dead, unmaintained top-level field.
     expect(on.query).not.toContain("c.kycStatus = 'APPROVED'");
@@ -132,9 +138,12 @@ describe('getTechniciansWithinRadius predicates', () => {
         kyc === undefined || kyc.aadhaarVerified === undefined ? undefined : kyc.aadhaarVerified === true;
       const panDefined: Tri = kyc !== undefined && 'panHash' in kyc;
       const panNotNull: Tri = panDefined === true ? kyc?.panHash !== null : true;
+      // Appended after both null-trap clauses, mirroring the SQL: by this point panHash is
+      // already known defined and non-null, so this can never itself hit the undefined-path drop.
+      const panNotEmpty: Tri = panNotNull === true ? kyc?.panHash !== '' : true;
       const result = or(
         kyc === undefined,
-        () => and(aadhaarEqTrue, () => and(panDefined, () => panNotNull)),
+        () => and(aadhaarEqTrue, () => and(panDefined, () => and(panNotNull, () => panNotEmpty))),
       );
       return result === true;
     }
@@ -187,6 +196,12 @@ describe('getTechniciansWithinRadius predicates', () => {
 
     it('excludes a PAN rejected after a prior success (submit-pan-ocr.ts nulls panHash back out)', () => {
       expect(kycPredicateAdmits(afterUpserts(AADHAAR_OK, PAN_OK, PAN_REJECTED))).toBe(false);
+    });
+
+    it('excludes an empty-string panHash even with Aadhaar verified - aligns with '
+      + 'deriveKycStatus(), which also treats \'\' as not verified; no live writer produces this '
+      + 'value today, so this is reachable only by an out-of-band write', () => {
+      expect(kycPredicateAdmits({ kyc: { aadhaarVerified: true, panHash: '' } })).toBe(false);
     });
 
     it('excludes a failed Aadhaar even with a good PAN already on file', () => {

@@ -3,19 +3,16 @@ package com.homeservices.technician.ui.kyc
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.homeservices.corenav.PendingAction
-import com.homeservices.corenav.PendingActionPriority
-import com.homeservices.corenav.PendingActionStatus
 import com.homeservices.corenav.PendingActionType
 import com.homeservices.technician.data.auth.SessionManager
 import com.homeservices.technician.data.kyc.DigiLockerCallbackBus
+import com.homeservices.technician.data.kyc.KycPendingActionCoordinator
 import com.homeservices.technician.data.kyc.KycStatusEvent
 import com.homeservices.technician.data.kyc.KycStatusEventBus
 import com.homeservices.technician.data.pendingaction.PendingActionStore
 import com.homeservices.technician.domain.auth.model.AuthState
 import com.homeservices.technician.domain.kyc.KycOrchestrator
 import com.homeservices.technician.domain.kyc.model.DigiLockerResult
-import com.homeservices.technician.domain.kyc.model.KycStatus
 import com.homeservices.technician.domain.kyc.model.PanOcrResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -49,6 +46,7 @@ internal class KycViewModel
         private val callbackBus: DigiLockerCallbackBus,
         private val kycStatusEventBus: KycStatusEventBus,
         private val pendingActionStore: PendingActionStore,
+        private val pendingActionCoordinator: KycPendingActionCoordinator,
         private val sessionManager: SessionManager,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow<KycUiState>(KycUiState.Idle)
@@ -101,6 +99,14 @@ internal class KycViewModel
         /**
          * Called when the DigiLocker deep-link redirect delivers the auth code back to the app.
          * Exchanges the code for a verified Aadhaar result.
+         *
+         * On [DigiLockerResult.AadhaarVerified] — a result that may have changed the technician's
+         * verification facts — resolves the UI state via [terminalStateForOrError] rather than
+         * hardcoding [KycUiState.AadhaarDone]: a technician who already has a `panHash` on file
+         * (PAN-first legacy or admin-written data) is COMPLETE server-side the moment Aadhaar
+         * lands, and must not be shown step 2 asking for a PAN they already submitted. The other
+         * [DigiLockerResult] branches are unaffected — they carry no new server-side fact and stay
+         * exactly as before.
          */
         public fun handleDeepLink(authCode: String): Unit {
             _uiState.value = KycUiState.Loading
@@ -108,7 +114,7 @@ internal class KycViewModel
                 orchestrator.startAadhaarConsent(authCode, DIGILOCKER_REDIRECT_URI).collect { result ->
                     _uiState.value =
                         when (result) {
-                            is DigiLockerResult.AadhaarVerified -> KycUiState.AadhaarDone
+                            is DigiLockerResult.AadhaarVerified -> terminalStateForOrError()
                             is DigiLockerResult.UserCancelled ->
                                 KycUiState.Error("Aadhaar verification was cancelled. Please try again.")
                             is DigiLockerResult.NetworkError ->
@@ -122,7 +128,14 @@ internal class KycViewModel
 
         /**
          * Uploads the chosen PAN card image and submits it for OCR.
-         * On success, emits [KycUiState.Complete] with [KycStatus.PAN_DONE].
+         *
+         * On [PanOcrResult.Success] — a result that may have changed the technician's
+         * verification facts — re-reads authoritative status via
+         * [KycOrchestrator.fetchCurrentStatus] and resolves the UI state from both
+         * `aadhaarVerified` and `panVerified` via [terminalStateForOrError].
+         * [KycUiState.Complete] is reachable only when both are true — see
+         * [terminalStateFor]. [PanOcrResult.ManualReview] is handled separately: it is
+         * authoritative on its own and must never be conflated with "not started".
          */
         public fun submitPan(fileUri: Uri): Unit {
             lastSubmittedUri = fileUri
@@ -132,24 +145,36 @@ internal class KycViewModel
                 // Optimistic durability marker: the submission is in flight and may be
                 // interrupted by process death or network loss. OnboardingViewModel
                 // observes this so the offline chip surfaces immediately.
-                persistKycSubmitPending(techId)
+                pendingActionCoordinator.persistKycSubmitPending(techId)
 
                 orchestrator.submitPan(fileUri, technicianId = techId).collect { result ->
                     _uiState.value =
                         when (result) {
                             is PanOcrResult.Success -> {
-                                clearSubmissionRows(techId)
-                                KycUiState.Complete(status = KycStatus.PAN_DONE)
+                                pendingActionCoordinator.clearSubmissionRows(techId)
+                                terminalStateForOrError()
                             }
                             is PanOcrResult.ManualReview -> {
-                                clearSubmissionRows(techId)
-                                KycUiState.Complete(status = KycStatus.MANUAL_REVIEW)
+                                // Distinct terminal state, not derived from the two-fact
+                                // resolver: panVerified stays false while a human review is
+                                // outstanding, so terminalStateFor() would (correctly, per its
+                                // own contract) return AadhaarDone/Idle — indistinguishable from
+                                // "never submitted a PAN". No status re-read is needed here:
+                                // this outcome is authoritative from the OCR response itself.
+                                pendingActionCoordinator.clearSubmissionRows(techId)
+                                KycUiState.ManualReview
                             }
                             is PanOcrResult.OcrError ->
                                 KycUiState.Error(result.message)
                             is PanOcrResult.UploadError -> {
-                                persistPhotoUploadRetry(fileUri, techId)
+                                pendingActionCoordinator.persistPhotoUploadRetry(fileUri, techId)
                                 KycUiState.Error("Failed to upload PAN image. Please try again.")
+                            }
+                            is PanOcrResult.AadhaarRequired -> {
+                                // Retrying the PAN upload cannot help — Aadhaar must be
+                                // completed first. Deliberately no persistPhotoUploadRetry() row.
+                                pendingActionCoordinator.clearSubmissionRows(techId)
+                                KycUiState.AadhaarRequired
                             }
                         }
                 }
@@ -170,7 +195,7 @@ internal class KycViewModel
             }
         }
 
-        private fun handleKycStatusEvent(event: KycStatusEvent) {
+        private suspend fun handleKycStatusEvent(event: KycStatusEvent) {
             // Ignore stale verdicts for previous technicians (multi-account device,
             // delayed delivery, FCM replays). Anchor the verdict to the currently
             // authenticated session.
@@ -186,73 +211,65 @@ internal class KycViewModel
 
             _uiState.value =
                 if (event.verified) {
-                    KycUiState.Complete(status = KycStatus.PAN_DONE)
+                    // No HTTP response is in hand on this FCM-driven path, so — same as
+                    // submitPan() — re-read authoritative status and resolve from both
+                    // facts rather than assuming this single verdict means Complete.
+                    terminalStateForOrError()
                 } else {
                     KycUiState.Error(event.rejectionReason ?: DEFAULT_REJECTION_MESSAGE)
                 }
         }
 
+        /**
+         * Resolves the terminal KYC UI state from the two independent verification
+         * facts. [KycUiState.Complete] is reachable if and only if both are true —
+         * this is the single choke point that enforces that invariant.
+         */
+        private fun terminalStateFor(
+            aadhaarVerified: Boolean,
+            panVerified: Boolean,
+        ): KycUiState =
+            when {
+                aadhaarVerified && panVerified -> KycUiState.Complete
+                panVerified -> KycUiState.PanDone
+                aadhaarVerified -> KycUiState.AadhaarDone
+                else -> KycUiState.Idle
+            }
+
+        /**
+         * [terminalStateFor], guarded against a failed re-read.
+         *
+         * [KycOrchestrator.fetchCurrentStatus] makes a live network call (`GET
+         * /v1/kyc/status`) with no retry of its own, right after a PAN submission or an
+         * FCM verdict — exactly when mobile connectivity is most likely to drop. A thrown
+         * exception here must never be allowed to fall through to a default that implies
+         * `Complete`: the fallback is an explicit, non-terminal [KycUiState.ConfirmationFailed]
+         * so the technician is told to retry the status *read* — not restart KYC — since their
+         * submission may already have succeeded. See [retryStatusConfirmation].
+         */
+        private suspend fun terminalStateForOrError(): KycUiState =
+            runCatching { orchestrator.fetchCurrentStatus() }
+                .fold(
+                    onSuccess = { state -> terminalStateFor(state.aadhaarVerified, state.panVerified) },
+                    onFailure = { KycUiState.ConfirmationFailed },
+                )
+
+        /**
+         * Retries the confirming status read after [terminalStateForOrError] failed and left the
+         * UI on [KycUiState.ConfirmationFailed]. Re-runs the exact same two-fact resolution used
+         * right after submission — it must NOT restart KYC from Aadhaar: a technician reaching
+         * this state has already submitted successfully (or received a KYC_VERIFIED FCM), and
+         * `submitPan()` has already cleared the pending-submission rows, so DigiLocker has
+         * nothing new to consent to and PAN OCR has nothing new to upload. A repeat failure lands
+         * back on [KycUiState.ConfirmationFailed] (never [KycUiState.Error] or
+         * [KycUiState.Complete]); a successful read resolves to the technician's true state.
+         */
+        public fun retryStatusConfirmation(): Unit {
+            _uiState.value = KycUiState.Loading
+            viewModelScope.launch {
+                _uiState.value = terminalStateForOrError()
+            }
+        }
+
         private fun currentTechnicianId(): String = (sessionManager.authState.value as? AuthState.Authenticated)?.uid ?: ""
-
-        private suspend fun clearSubmissionRows(techId: String) {
-            if (techId.isBlank()) return
-            runCatching { pendingActionStore.clearPhotoRetry(techId) }
-            runCatching { pendingActionStore.clearKycSubmitPending(techId) }
-            runCatching { pendingActionStore.clearKycResume(techId) }
-        }
-
-        private suspend fun persistKycSubmitPending(techId: String) {
-            if (techId.isBlank()) return
-            val nowMs = System.currentTimeMillis()
-            runCatching {
-                pendingActionStore.upsert(
-                    PendingAction(
-                        id = "KYC_SUBMIT_PENDING:technician:$techId:kyc:$techId",
-                        userId = techId,
-                        role = "technician",
-                        type = PendingActionType.KYC_SUBMIT_PENDING,
-                        entityType = "kyc",
-                        entityId = techId,
-                        routeUri = "homeservices://kyc",
-                        priority = PendingActionPriority.NORMAL,
-                        status = PendingActionStatus.ACTIVE,
-                        sourceStatus = null,
-                        version = 1L,
-                        createdAt = nowMs,
-                        updatedAt = nowMs,
-                        expiresAt = null,
-                        resolvedAt = null,
-                    ),
-                )
-            }
-        }
-
-        private suspend fun persistPhotoUploadRetry(
-            fileUri: Uri,
-            techId: String,
-        ) {
-            if (techId.isBlank()) return
-            val nowMs = System.currentTimeMillis()
-            runCatching {
-                pendingActionStore.upsert(
-                    PendingAction(
-                        id = "PHOTO_UPLOAD_RETRY:technician:$techId:kyc:$techId",
-                        userId = techId,
-                        role = "technician",
-                        type = PendingActionType.PHOTO_UPLOAD_RETRY,
-                        entityType = "kyc",
-                        entityId = techId,
-                        routeUri = fileUri.toString(),
-                        priority = PendingActionPriority.HIGH,
-                        status = PendingActionStatus.ACTIVE,
-                        sourceStatus = null,
-                        version = 1L,
-                        createdAt = nowMs,
-                        updatedAt = nowMs,
-                        expiresAt = null,
-                        resolvedAt = null,
-                    ),
-                )
-            }
-        }
     }

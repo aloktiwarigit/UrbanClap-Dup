@@ -494,6 +494,8 @@ describe('P1-3: KYC projector reads kyc.kycStatus from TechnicianDoc', () => {
     expect(upsertAction).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'KYC_RESUME', userId: 'tech-kyc-1', role: 'technician' }),
     );
+    // PENDING_MANUAL is a genuine attention state — FCM push is unchanged by this branch.
+    expect(emitFcmForAction).toHaveBeenCalled();
   });
 
   it('emits KYC_RESUME when doc.kyc.kycStatus is MANUAL_REVIEW', async () => {
@@ -552,6 +554,52 @@ describe('P1-3: KYC projector reads kyc.kycStatus from TechnicianDoc', () => {
     await processKycChangeFeedDoc(doc as never);
 
     expect(upsertAction).not.toHaveBeenCalled();
+  });
+
+  it('keeps the KYC_RESUME reminder active on AADHAAR_DONE and emits the data-only FCM', async () => {
+    await processKycChangeFeedDoc({
+      id: 't1',
+      kyc: { kycStatus: 'AADHAAR_DONE', updatedAt: '2026-09-12T00:00:00.000Z' },
+    });
+
+    expect(upsertAction).toHaveBeenCalled();
+    expect(resolveAction).not.toHaveBeenCalled();
+    // emitFcmForAction sends a data-only FCM message (no `notification` block) — it is the
+    // delivery mechanism that carries the pending action to the device, where
+    // TechnicianNotificationRouter/PendingActionIngestor persist it into the local Room store
+    // so it can surface as an in-app reminder card. Suppressing it does not remove a
+    // user-visible push; it means the server holds a reminder the device never learns about.
+    expect(emitFcmForAction).toHaveBeenCalled();
+  });
+
+  it('keeps the KYC_RESUME reminder active on PAN_DONE and emits the data-only FCM', async () => {
+    await processKycChangeFeedDoc({
+      id: 't1',
+      kyc: { kycStatus: 'PAN_DONE', updatedAt: '2026-09-12T00:00:00.000Z' },
+    });
+
+    expect(upsertAction).toHaveBeenCalled();
+    expect(resolveAction).not.toHaveBeenCalled();
+    expect(emitFcmForAction).toHaveBeenCalled();
+  });
+
+  it('still pushes FCM for the PENDING_MANUAL attention state (behaviour unchanged)', async () => {
+    await processKycChangeFeedDoc({
+      id: 't1',
+      kyc: { kycStatus: 'PENDING_MANUAL', updatedAt: '2026-09-12T00:00:00.000Z' },
+    });
+
+    expect(upsertAction).toHaveBeenCalled();
+    expect(emitFcmForAction).toHaveBeenCalled();
+  });
+
+  it('resolves the reminder only on the terminal COMPLETE state', async () => {
+    await processKycChangeFeedDoc({
+      id: 't1',
+      kyc: { kycStatus: 'COMPLETE', updatedAt: '2026-09-12T00:00:00.000Z' },
+    });
+
+    expect(resolveAction).toHaveBeenCalled();
   });
 });
 

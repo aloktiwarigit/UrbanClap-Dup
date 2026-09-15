@@ -26,4 +26,5 @@ export const CATALOGUE_SERVICE_IDS: readonly string[] = [
   'appliance-cooler-service',
   'appliance-washing-machine-repair',
   'electrical-camera-installation',
+  'appliance-inverter-service',
 ] as const;

@@ -216,6 +216,17 @@
     <string name="photo_upload_retry_banner_action">Retry</string>
     <string name="onboarding_kyc_queued_offline">KYC submission will be sent when you go online.</string>
 
+    <!-- KYC sequential-step gating and progress copy (E21-S05a) -->
+    <string name="kyc_step_pan_locked_title">Complete Aadhaar first</string>
+    <string name="kyc_step_pan_locked_body">Verify your Aadhaar before uploading your PAN card.</string>
+    <string name="kyc_pan_done_title">One step left</string>
+    <string name="kyc_pan_done_body">Your PAN is verified. Verify your Aadhaar to finish.</string>
+    <string name="kyc_complete_title">KYC complete</string>
+    <string name="kyc_complete_body">Both documents are verified. You can receive jobs.</string>
+    <string name="kyc_confirmation_failed_title">Could not confirm your status</string>
+    <string name="kyc_confirmation_failed_body">Your KYC may already be submitted. Check your status again to continue.</string>
+    <string name="kyc_confirmation_failed_retry">Check status again</string>
+
     <!-- Active job location foreground service (E17-S02) -->
     <string name="active_job_location_notification_title">Sharing location with customer</string>
     <string name="active_job_location_notification_body">Only during active booking</string>
