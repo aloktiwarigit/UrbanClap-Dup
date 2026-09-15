@@ -1,5 +1,7 @@
 package com.homeservices.technician.ui.serviceprofile
 
+import com.homeservices.technician.domain.catalogue.GetSelectableServicesUseCase
+import com.homeservices.technician.domain.catalogue.model.SelectableService
 import com.homeservices.technician.domain.serviceprofile.GetServiceProfileUseCase
 import com.homeservices.technician.domain.serviceprofile.SaveServiceProfileUseCase
 import com.homeservices.technician.domain.serviceprofile.model.ServiceLocation
@@ -25,10 +27,22 @@ public class ServiceSelectionViewModelTest {
     private val dispatcher = UnconfinedTestDispatcher()
     private val getServiceProfile: GetServiceProfileUseCase = mockk()
     private val saveServiceProfile: SaveServiceProfileUseCase = mockk()
+    private val getSelectableServices: GetSelectableServicesUseCase = mockk()
+
+    // A stand-in for the live catalogue, covering every skill ID the tests below toggle.
+    private val defaultCatalogue =
+        listOf(
+            SelectableService("ac-deep-clean", "AC Deep Clean", "AC"),
+            SelectableService("ro-installation", "RO Installation", "Water Purifier"),
+            SelectableService("water-pump-repair", "Water Pump Repair", "Water Pump"),
+            SelectableService("electrical-wiring", "New Point Wiring", "Electrical"),
+            SelectableService("ac-installation", "AC Installation", "AC"),
+        )
 
     @BeforeEach
     public fun setUp(): Unit {
         Dispatchers.setMain(dispatcher)
+        coEvery { getSelectableServices.invoke() } returns Result.success(defaultCatalogue)
     }
 
     @AfterEach
@@ -47,10 +61,11 @@ public class ServiceSelectionViewModelTest {
                     ),
                 )
 
-            val vm = ServiceSelectionViewModel(getServiceProfile, saveServiceProfile)
+            val vm = ServiceSelectionViewModel(getServiceProfile, saveServiceProfile, getSelectableServices)
 
             assertFalse(vm.uiState.value.isLoading)
             assertEquals(setOf("ac-deep-clean", "ro-installation"), vm.uiState.value.selectedSkillIds)
+            assertEquals(setOf("plumbing"), vm.uiState.value.unlistedSkillIds)
             assertEquals(26.79221, vm.uiState.value.serviceLat)
             assertEquals(82.19982, vm.uiState.value.serviceLng)
             assertEquals("Saved service area", vm.uiState.value.serviceAreaLabel)
@@ -68,7 +83,7 @@ public class ServiceSelectionViewModelTest {
                     ),
                 )
 
-            val vm = ServiceSelectionViewModel(getServiceProfile, saveServiceProfile)
+            val vm = ServiceSelectionViewModel(getServiceProfile, saveServiceProfile, getSelectableServices)
 
             assertFalse(vm.uiState.value.existingCompleteProfileLoaded)
         }
@@ -78,7 +93,7 @@ public class ServiceSelectionViewModelTest {
         runTest {
             coEvery { getServiceProfile.invoke() } returns Result.failure(RuntimeException("network"))
 
-            val vm = ServiceSelectionViewModel(getServiceProfile, saveServiceProfile)
+            val vm = ServiceSelectionViewModel(getServiceProfile, saveServiceProfile, getSelectableServices)
 
             assertFalse(vm.uiState.value.isLoading)
             assertEquals(null, vm.uiState.value.serviceLat)
@@ -93,7 +108,7 @@ public class ServiceSelectionViewModelTest {
     public fun `submit requires at least one selected service`(): Unit =
         runTest {
             coEvery { getServiceProfile.invoke() } returns Result.success(ServiceProfile(emptyList(), null))
-            val vm = ServiceSelectionViewModel(getServiceProfile, saveServiceProfile)
+            val vm = ServiceSelectionViewModel(getServiceProfile, saveServiceProfile, getSelectableServices)
 
             vm.submit()
 
@@ -105,7 +120,7 @@ public class ServiceSelectionViewModelTest {
         runTest {
             coEvery { getServiceProfile.invoke() } returns Result.success(ServiceProfile(emptyList(), null))
             coEvery { saveServiceProfile.invoke(any()) } answers { Result.success(firstArg()) }
-            val vm = ServiceSelectionViewModel(getServiceProfile, saveServiceProfile)
+            val vm = ServiceSelectionViewModel(getServiceProfile, saveServiceProfile, getSelectableServices)
 
             vm.toggleSkill("water-pump-repair")
             vm.toggleSkill("electrical-wiring")
@@ -128,7 +143,7 @@ public class ServiceSelectionViewModelTest {
     public fun `submit requires captured service area`(): Unit =
         runTest {
             coEvery { getServiceProfile.invoke() } returns Result.success(ServiceProfile(emptyList(), null))
-            val vm = ServiceSelectionViewModel(getServiceProfile, saveServiceProfile)
+            val vm = ServiceSelectionViewModel(getServiceProfile, saveServiceProfile, getSelectableServices)
 
             vm.toggleSkill("ac-installation")
             vm.submit()
@@ -140,10 +155,69 @@ public class ServiceSelectionViewModelTest {
     public fun `invalid captured location is rejected`(): Unit =
         runTest {
             coEvery { getServiceProfile.invoke() } returns Result.success(ServiceProfile(emptyList(), null))
-            val vm = ServiceSelectionViewModel(getServiceProfile, saveServiceProfile)
+            val vm = ServiceSelectionViewModel(getServiceProfile, saveServiceProfile, getSelectableServices)
 
             vm.onServiceAreaCaptured(120.0, 82.2)
 
             assertEquals("Location latitude is outside the supported range.", vm.uiState.value.errorMessage)
+        }
+
+    @Test
+    public fun `preserves saved skills that are absent from the fetched catalogue`(): Unit =
+        runTest {
+            // Catalogue offers only ac-deep-clean; the technician has also saved
+            // ac-deep-clean-window, which the fetched catalogue does not list.
+            coEvery { getSelectableServices.invoke() } returns
+                Result.success(listOf(SelectableService("ac-deep-clean", "AC Deep Clean", "AC Repair")))
+            coEvery { getServiceProfile.invoke() } returns
+                Result.success(
+                    ServiceProfile(
+                        skills = listOf("ac-deep-clean", "ac-deep-clean-window"),
+                        location = ServiceLocation(lat = 26.7922, lng = 82.1998),
+                    ),
+                )
+            var savedProfile: ServiceProfile? = null
+            coEvery { saveServiceProfile.invoke(any()) } answers {
+                savedProfile = firstArg()
+                Result.success(firstArg())
+            }
+            val vm = ServiceSelectionViewModel(getServiceProfile, saveServiceProfile, getSelectableServices)
+
+            assertEquals(setOf("ac-deep-clean"), vm.uiState.value.selectedSkillIds)
+            assertEquals(setOf("ac-deep-clean-window"), vm.uiState.value.unlistedSkillIds)
+
+            vm.submit()
+
+            // The saved payload must still contain the unlisted skill.
+            assertEquals(
+                setOf("ac-deep-clean", "ac-deep-clean-window"),
+                savedProfile!!.skills.toSet(),
+            )
+        }
+
+    @Test
+    public fun `keeps every saved skill when the catalogue fetch fails`(): Unit =
+        runTest {
+            coEvery { getSelectableServices.invoke() } returns Result.failure(IllegalStateException("offline"))
+            coEvery { getServiceProfile.invoke() } returns
+                Result.success(
+                    ServiceProfile(
+                        skills = listOf("ac-deep-clean", "appliance-fridge-repair"),
+                        location = ServiceLocation(lat = 26.7922, lng = 82.1998),
+                    ),
+                )
+            var savedProfile: ServiceProfile? = null
+            coEvery { saveServiceProfile.invoke(any()) } answers {
+                savedProfile = firstArg()
+                Result.success(firstArg())
+            }
+            val vm = ServiceSelectionViewModel(getServiceProfile, saveServiceProfile, getSelectableServices)
+
+            vm.submit()
+
+            assertEquals(
+                setOf("ac-deep-clean", "appliance-fridge-repair"),
+                savedProfile!!.skills.toSet(),
+            )
         }
 }

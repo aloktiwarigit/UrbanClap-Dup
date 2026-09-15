@@ -1,8 +1,15 @@
 package com.homeservices.technician.ui.serviceprofile
 
+import com.homeservices.technician.domain.catalogue.model.SelectableService
+
 internal data class ServiceSelectionUiState(
-    val services: List<ServiceCatalogueItem> = ServiceCatalogue.items,
+    val services: List<SelectableService> = emptyList(),
     val selectedSkillIds: Set<String> = emptySet(),
+    // Skills the technician has saved that the fetched catalogue does not list — for
+    // example a service deactivated after they selected it, or any skill at all when
+    // the catalogue fetch fails. Held here and merged back on save so the app can
+    // never silently delete a technician's skill.
+    val unlistedSkillIds: Set<String> = emptySet(),
     val serviceLat: Double? = null,
     val serviceLng: Double? = null,
     val serviceAreaLabel: String = "Service area not set",

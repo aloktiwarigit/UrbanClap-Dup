@@ -2,6 +2,7 @@ package com.homeservices.technician.ui.serviceprofile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.homeservices.technician.domain.catalogue.GetSelectableServicesUseCase
 import com.homeservices.technician.domain.serviceprofile.GetServiceProfileUseCase
 import com.homeservices.technician.domain.serviceprofile.SaveServiceProfileUseCase
 import com.homeservices.technician.domain.serviceprofile.model.ServiceLocation
@@ -24,8 +25,8 @@ internal class ServiceSelectionViewModel
     constructor(
         private val getServiceProfile: GetServiceProfileUseCase,
         private val saveServiceProfile: SaveServiceProfileUseCase,
+        private val getSelectableServices: GetSelectableServicesUseCase,
     ) : ViewModel() {
-        private val validSkillIds = ServiceCatalogue.items.map { it.id }.toSet()
         private val _uiState = MutableStateFlow(ServiceSelectionUiState())
         val uiState: StateFlow<ServiceSelectionUiState> = _uiState.asStateFlow()
 
@@ -36,13 +37,20 @@ internal class ServiceSelectionViewModel
         fun refresh(): Unit {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
             viewModelScope.launch {
+                val services = getSelectableServices().getOrElse { emptyList() }
+                val catalogueIds = services.map { it.id }.toSet()
                 val outcome = getServiceProfile()
                 _uiState.value =
                     outcome.fold(
                         onSuccess = { profile ->
-                            val selectedSkillIds = profile.skills.filter { it in validSkillIds }.toSet()
+                            // Partition rather than filter: skills the catalogue does not
+                            // list are preserved in unlistedSkillIds and merged back on
+                            // save. Filtering them away here is what deleted them before.
+                            val (listed, unlisted) = profile.skills.partition { it in catalogueIds }
                             _uiState.value.copy(
-                                selectedSkillIds = selectedSkillIds,
+                                services = services,
+                                selectedSkillIds = listed.toSet(),
+                                unlistedSkillIds = unlisted.toSet(),
                                 serviceLat = profile.location?.lat,
                                 serviceLng = profile.location?.lng,
                                 serviceAreaLabel =
@@ -52,14 +60,20 @@ internal class ServiceSelectionViewModel
                                         "Saved service area"
                                     },
                                 isLoading = false,
-                                errorMessage = null,
+                                errorMessage =
+                                    if (services.isEmpty()) {
+                                        "Could not load the service list. Pull to retry."
+                                    } else {
+                                        null
+                                    },
                                 existingCompleteProfileLoaded =
-                                    selectedSkillIds.isNotEmpty() &&
+                                    (listed.isNotEmpty() || unlisted.isNotEmpty()) &&
                                         profile.location?.let { validateLocation(it.lat, it.lng) == null } == true,
                             )
                         },
                         onFailure = {
                             _uiState.value.copy(
+                                services = services,
                                 isLoading = false,
                                 errorMessage = "Could not load your saved services. You can still save this form.",
                                 existingCompleteProfileLoaded = false,
@@ -70,8 +84,10 @@ internal class ServiceSelectionViewModel
         }
 
         fun toggleSkill(skillId: String): Unit {
-            if (skillId !in validSkillIds) return
             val current = _uiState.value
+            // Only catalogue-listed services are toggleable; unlisted ones are held
+            // untouched in unlistedSkillIds.
+            if (current.services.none { it.id == skillId }) return
             val selected =
                 if (skillId in current.selectedSkillIds) {
                     current.selectedSkillIds - skillId
@@ -145,15 +161,21 @@ internal class ServiceSelectionViewModel
                 val outcome =
                     saveServiceProfile(
                         ServiceProfile(
-                            skills = current.selectedSkillIds.sorted(),
+                            // Unlisted skills are merged back in so a catalogue fetch
+                            // failure or a deactivated service can never drop a skill
+                            // the technician already saved.
+                            skills = (current.selectedSkillIds + current.unlistedSkillIds).sorted(),
                             location = location,
                         ),
                     )
                 _uiState.value =
                     outcome.fold(
                         onSuccess = {
+                            val catalogueIds = current.services.map { svc -> svc.id }.toSet()
+                            val (listed, unlisted) = it.skills.partition { skill -> skill in catalogueIds }
                             _uiState.value.copy(
-                                selectedSkillIds = it.skills.filter { skill -> skill in validSkillIds }.toSet(),
+                                selectedSkillIds = listed.toSet(),
+                                unlistedSkillIds = unlisted.toSet(),
                                 serviceLat = it.location?.lat ?: location.lat,
                                 serviceLng = it.location?.lng ?: location.lng,
                                 serviceAreaLabel = "Saved service area",
@@ -177,7 +199,10 @@ internal class ServiceSelectionViewModel
             val lat = state.serviceLat
             val lng = state.serviceLng
             return when {
-                state.selectedSkillIds.isEmpty() -> "Select at least one service."
+                // unlistedSkillIds counts too: a catalogue fetch failure or a deactivated
+                // service must never force a technician to lose an already-saved skill
+                // just because nothing is currently toggleable.
+                state.selectedSkillIds.isEmpty() && state.unlistedSkillIds.isEmpty() -> "Select at least one service."
                 lat == null || lng == null -> "Use current location to set your service area."
                 else -> validateLocation(lat, lng)
             }
