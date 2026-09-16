@@ -1,5 +1,32 @@
 # Customer App New-Service Presentation Implementation Plan — Story C
 
+> ## STATUS: SUPERSEDED — most of this plan was unnecessary. Read this before the plan body.
+>
+> **Only Task 1's test shipped.** Tasks 1 (map entries), 2 and 3 were all cancelled after
+> verification against `origin/main`, on 2026-09-15:
+>
+> - **Task 1's map entries already existed.** All seven Hindi entries (six services plus the
+>   `appliance-repair` category) were already in `HindiLocaleNames.kt` on `main`, added by PRs #346
+>   and #350. This plan was written after reading that file from a working directory checked out on
+>   the stale, unmerged `fix/customer-privacy-policy-url` branch, where they are absent. What
+>   shipped is only the *test* that pins them, whose four assertions were each proven non-vacuous by
+>   mutation.
+> - **Tasks 2 and 3 (six hero images + drawable wiring) were cancelled.** `ServiceDetailScreen.kt`
+>   has a three-branch fallback — local drawable, then `service.imageUrl` via `AsyncImage`, then a
+>   branded gradient — and `ServiceDto.kt` maps `imageUrl = heroImageUrl`. All five newly activated
+>   services already have working hero images on the `homeservices-prod-001` bucket (verified 200),
+>   so they render correctly through the remote branch with no local drawable. Adding local copies
+>   would have added roughly 12 MB to a 45 MB bundle, required blind-cropping 2268x4032 portrait
+>   photos to the house 1672x941 standard, and produced the same on-screen result, since both
+>   branches render through the same `aspectRatio(1.18f)` + `ContentScale.Crop`.
+>
+> **Known gap, pre-existing and unchanged:** `ac-deep-clean-window` has no local drawable and its
+> `heroImageUrl` is on the dead `homeservices-mvp` bucket, so it falls through to the branded
+> gradient. The five active *categories* are in the same state. Both belong to the standing
+> dead-bucket backlog, not to this story.
+>
+> The task bodies below are retained as written, for the record.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Give the six services that currently have no client-side presentation — the five being activated by Story A plus `ac-deep-clean-window`, which is already live without either — their Hindi copy and detail-screen hero image.
