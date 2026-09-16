@@ -220,4 +220,23 @@ public class ServiceSelectionViewModelTest {
                 savedProfile!!.skills.toSet(),
             )
         }
+
+    @Test
+    public fun `refuses to save when the profile fetch itself failed`(): Unit =
+        runTest {
+            // The catalogue loads fine, but the profile read fails — so any skills the
+            // technician already has saved are unknown here and cannot be merged back in.
+            // Saving now would PATCH a reduced skills array over their real one server-side
+            // (the backend replaces, it does not merge), so submit() must refuse outright.
+            coEvery { getServiceProfile.invoke() } returns Result.failure(RuntimeException("network"))
+            val vm = ServiceSelectionViewModel(getServiceProfile, saveServiceProfile, getSelectableServices)
+
+            assertTrue(vm.uiState.value.profileLoadFailed)
+
+            vm.toggleSkill("ac-deep-clean")
+            vm.onServiceAreaCaptured(26.8, 82.2)
+            vm.submit()
+
+            coVerify(exactly = 0) { saveServiceProfile.invoke(any()) }
+        }
 }

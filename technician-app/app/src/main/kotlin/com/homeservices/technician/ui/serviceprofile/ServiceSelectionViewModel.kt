@@ -60,23 +60,28 @@ internal class ServiceSelectionViewModel
                                         "Saved service area"
                                     },
                                 isLoading = false,
-                                errorMessage =
-                                    if (services.isEmpty()) {
-                                        "Could not load the service list. Pull to retry."
-                                    } else {
-                                        null
-                                    },
+                                // No separate error copy here: when the catalogue is empty,
+                                // ServiceListCard already shows the bilingual
+                                // service_selection_catalogue_unavailable message itself.
+                                errorMessage = null,
                                 existingCompleteProfileLoaded =
                                     (listed.isNotEmpty() || unlisted.isNotEmpty()) &&
                                         profile.location?.let { validateLocation(it.lat, it.lng) == null } == true,
+                                profileLoadFailed = false,
                             )
                         },
                         onFailure = {
+                            // The profile was never read, so any skills it holds are unknown
+                            // here — they cannot be merged back in. Saving now would PATCH a
+                            // reduced skills array over the technician's real one server-side
+                            // (the backend replaces, it does not merge). profileLoadFailed
+                            // blocks submit() and the Save button until a retry succeeds.
                             _uiState.value.copy(
                                 services = services,
                                 isLoading = false,
-                                errorMessage = "Could not load your saved services. You can still save this form.",
+                                errorMessage = "Could not load your saved services.",
                                 existingCompleteProfileLoaded = false,
+                                profileLoadFailed = true,
                             )
                         },
                     )
@@ -145,6 +150,11 @@ internal class ServiceSelectionViewModel
 
         fun submit(): Unit {
             val current = _uiState.value
+            // Defense in depth: the Save button is disabled while profileLoadFailed is
+            // true, but never trust that alone. Unlisted skills can only be preserved
+            // when the profile was actually read; saving on top of an unread profile
+            // would PATCH a reduced skills array and wipe out everything else server-side.
+            if (current.profileLoadFailed) return
             val validation = validate(current)
             if (validation != null) {
                 _uiState.value = current.copy(errorMessage = validation)

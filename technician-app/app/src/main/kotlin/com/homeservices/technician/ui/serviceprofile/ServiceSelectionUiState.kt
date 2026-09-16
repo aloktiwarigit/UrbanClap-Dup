@@ -19,6 +19,11 @@ internal data class ServiceSelectionUiState(
     val errorMessage: String? = null,
     val saved: Boolean = false,
     val existingCompleteProfileLoaded: Boolean = false,
+    // True when the last profile fetch failed. Unlisted skills can only be preserved if
+    // they were actually read from the profile — when the read itself failed, submit()
+    // must refuse to save, because the backend PATCH replaces the whole skills array and
+    // an unread profile's skills would otherwise be wiped out.
+    val profileLoadFailed: Boolean = false,
 )
 
 internal const val DEFAULT_SERVICE_LAT: Double = 26.7922

@@ -148,6 +148,7 @@ internal fun ServiceSelectionContent(
                     selectedSkillIds = uiState.selectedSkillIds,
                     onSkillToggle = onSkillToggle,
                     enabled = !uiState.isSaving,
+                    isLoading = uiState.isLoading,
                 )
             }
             item {
@@ -157,7 +158,15 @@ internal fun ServiceSelectionContent(
                     enabled = !uiState.isSaving && !uiState.isLoading,
                 )
             }
-            if (uiState.errorMessage != null) {
+            if (uiState.profileLoadFailed) {
+                item {
+                    ErrorCard(
+                        message = stringResource(R.string.service_selection_profile_retry_required),
+                        onRetry = onRetry,
+                        showRetry = !uiState.isSaving,
+                    )
+                }
+            } else if (uiState.errorMessage != null) {
                 item {
                     ErrorCard(
                         message = uiState.errorMessage,
@@ -217,7 +226,7 @@ private fun SaveButton(
                 "Save services"
             },
         onClick = onSubmit,
-        enabled = !uiState.isSaving && !uiState.isLoading && !uiState.isLocating,
+        enabled = !uiState.isSaving && !uiState.isLoading && !uiState.isLocating && !uiState.profileLoadFailed,
         modifier = Modifier.fillMaxWidth(),
     )
 }
@@ -228,14 +237,20 @@ private fun ServiceListCard(
     selectedSkillIds: Set<String>,
     onSkillToggle: (String) -> Unit,
     enabled: Boolean,
+    isLoading: Boolean,
 ) {
     HsSectionCard(title = "Services you provide") {
         if (services.isEmpty()) {
-            Text(
-                text = stringResource(R.string.service_selection_catalogue_unavailable),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            // Only claim the catalogue is unavailable once a load has actually finished
+            // and come back empty — otherwise every cold start briefly shows this message
+            // under the loading spinner before the fetch even returns.
+            if (!isLoading) {
+                Text(
+                    text = stringResource(R.string.service_selection_catalogue_unavailable),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         } else {
             val grouped = services.groupBy { it.group }
             grouped.forEach { (group, groupServices) ->

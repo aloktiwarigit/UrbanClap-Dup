@@ -141,6 +141,7 @@
     <string name="payout_when_question">पेमेंट कब चाहिए?</string>
     <string name="service_finding_area">आपका वर्तमान क्षेत्र ढूंढ रहे हैं</string>
     <string name="service_selection_catalogue_unavailable">सेवा सूची लोड नहीं हो सकी। कनेक्शन जांचें और रीफ्रेश करें।</string>
+    <string name="service_selection_profile_retry_required">आपकी सेव की गई सेवाएं लोड नहीं हो सकीं। उन्हें खोने से बचाने के लिए सेव करने से पहले पुनः प्रयास करें।</string>
 
     <!-- UPI settings (E24-S01) -->
     <string name="upi_settings_title">यूपीआई पेमेंट सेटिंग</string>
