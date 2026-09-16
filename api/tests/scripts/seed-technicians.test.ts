@@ -41,23 +41,37 @@ describe('seed-technicians Ayodhya coords', () => {
     }
   });
 
-  it('every active catalogue serviceId has >=2 online technicians (launch-gate prerequisite)', () => {
-    const eligible = TECHNICIANS.filter(t => t.isOnline);
+  // 2026-09-15 (ADR-0030): owner lowered the launch gate from 2 to 1. A service may
+  // now ship with single-technician coverage; if that technician goes offline the
+  // service has no coverage and bookings stick silently. Accepted by the owner.
+  const MIN_TECHS_PER_ACTIVE_SERVICE = 1;
+
+  // The filter now checks kycStatus as well as isOnline. The previous version's
+  // message promised "KYC-approved + online" but only filtered isOnline, so it
+  // asserted something weaker than it claimed.
+  const eligibleTechnicians = () =>
+    TECHNICIANS.filter(t => t.isOnline && t.kycStatus === 'APPROVED');
+
+  it(`every active catalogue serviceId has >=${MIN_TECHS_PER_ACTIVE_SERVICE} online, KYC-approved technician`, () => {
+    const eligible = eligibleTechnicians();
     for (const svc of SERVICES.filter(s => s.isActive)) {
       const matchCount = eligible.filter(t => t.skills.includes(svc.id)).length;
       expect(
         matchCount,
-        `${svc.id} (${svc.categoryId}) coverage — need >=2 KYC-approved + online techs per umbrella spec sec 2.3`,
-      ).toBeGreaterThanOrEqual(2);
+        `${svc.id} (${svc.categoryId}) coverage — need >=${MIN_TECHS_PER_ACTIVE_SERVICE} online + KYC-approved tech (ADR-0030)`,
+      ).toBeGreaterThanOrEqual(MIN_TECHS_PER_ACTIVE_SERVICE);
     }
   });
 
-  it('every active catalogue category has >=2 techs with at least one of its services', () => {
-    const eligible = TECHNICIANS.filter(t => t.isOnline);
+  it(`every active catalogue category has >=${MIN_TECHS_PER_ACTIVE_SERVICE} tech with at least one of its services`, () => {
+    const eligible = eligibleTechnicians();
     for (const cat of CATEGORIES.filter(c => c.isActive)) {
       const catServiceIds = new Set(SERVICES.filter(s => s.categoryId === cat.id).map(s => s.id));
       const matchCount = eligible.filter(t => t.skills.some(skill => catServiceIds.has(skill))).length;
-      expect(matchCount, `${cat.id} category coverage — need >=2 eligible techs`).toBeGreaterThanOrEqual(2);
+      expect(
+        matchCount,
+        `${cat.id} category coverage — need >=${MIN_TECHS_PER_ACTIVE_SERVICE} eligible tech (ADR-0030)`,
+      ).toBeGreaterThanOrEqual(MIN_TECHS_PER_ACTIVE_SERVICE);
     }
   });
 });

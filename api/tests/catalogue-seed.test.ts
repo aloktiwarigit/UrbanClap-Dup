@@ -45,23 +45,23 @@ describe('catalogue seed canonical category set (Ayodhya pilot)', () => {
     expect(ids.has('ro-service-amc')).toBe(true);
   });
 
-  it('contains the new appliance-repair services, inactive pending technician coverage', () => {
+  it('contains the new appliance-repair services, activated with technician coverage (ADR-0030)', () => {
     const byId = new Map(SERVICES.map(s => [s.id, s]));
     for (const id of ['appliance-fridge-repair', 'appliance-cooler-service', 'appliance-washing-machine-repair', 'electrical-camera-installation']) {
       expect(byId.has(id), id).toBe(true);
-      expect(byId.get(id)!.isActive, `${id} must stay inactive until a technician holds this skill`).toBe(false);
+      expect(byId.get(id)!.isActive, `${id} must be active now that a technician holds this skill (ADR-0030)`).toBe(true);
     }
     const applianceCategory = CATEGORIES.find(c => c.id === 'appliance-repair');
-    expect(applianceCategory?.isActive, 'appliance-repair category must stay inactive until coverage exists').toBe(false);
+    expect(applianceCategory?.isActive, 'appliance-repair category must be active now that coverage exists (ADR-0030)').toBe(true);
   });
 
-  it('contains the new inverter service, inactive pending technician coverage', () => {
+  it('contains the new inverter service, activated with technician coverage (ADR-0030)', () => {
     const byId = new Map(SERVICES.map(s => [s.id, s]));
     expect(byId.has('appliance-inverter-service')).toBe(true);
     const inverter = byId.get('appliance-inverter-service')!;
     expect(inverter.categoryId).toBe('appliance-repair');
     expect(inverter.basePrice).toBe(49900);
-    expect(inverter.isActive, 'appliance-inverter-service must stay inactive until a technician holds this skill').toBe(false);
+    expect(inverter.isActive, 'appliance-inverter-service must be active now that a technician holds this skill (ADR-0030)').toBe(true);
   });
 
   it('E22-S02: appliance-repair category and its services point at the real Storage bucket with alt=media', () => {
