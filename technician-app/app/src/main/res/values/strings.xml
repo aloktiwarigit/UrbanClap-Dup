@@ -164,6 +164,8 @@
     <string name="payout_settings_title">Payment settings</string>
     <string name="payout_when_question">When do you want payment?</string>
     <string name="service_finding_area">Finding your current area</string>
+    <string name="service_selection_catalogue_unavailable">Could not load the service list. Check your connection and pull to retry.</string>
+    <string name="service_selection_profile_retry_required">Could not load your saved services. Retry before saving to avoid losing them.</string>
 
     <!-- UPI settings (E24-S01) -->
     <string name="upi_settings_title">UPI payment settings</string>

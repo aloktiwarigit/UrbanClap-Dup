@@ -60,6 +60,7 @@ import com.homeservices.designsystem.components.HsTrustBadge
 import com.homeservices.designsystem.theme.LocalHomeservicesSpacing
 import com.homeservices.technician.BuildConfig
 import com.homeservices.technician.R
+import com.homeservices.technician.domain.catalogue.model.SelectableService
 import java.util.Locale
 
 @Composable
@@ -147,6 +148,7 @@ internal fun ServiceSelectionContent(
                     selectedSkillIds = uiState.selectedSkillIds,
                     onSkillToggle = onSkillToggle,
                     enabled = !uiState.isSaving,
+                    isLoading = uiState.isLoading,
                 )
             }
             item {
@@ -156,7 +158,23 @@ internal fun ServiceSelectionContent(
                     enabled = !uiState.isSaving && !uiState.isLoading,
                 )
             }
-            if (uiState.errorMessage != null) {
+            if (uiState.profileLoadFailed) {
+                item {
+                    ErrorCard(
+                        message = stringResource(R.string.service_selection_profile_retry_required),
+                        onRetry = onRetry,
+                        showRetry = !uiState.isSaving,
+                    )
+                }
+            } else if (uiState.catalogueLoadFailed) {
+                item {
+                    ErrorCard(
+                        message = stringResource(R.string.service_selection_catalogue_unavailable),
+                        onRetry = onRetry,
+                        showRetry = !uiState.isSaving,
+                    )
+                }
+            } else if (uiState.errorMessage != null) {
                 item {
                     ErrorCard(
                         message = uiState.errorMessage,
@@ -216,35 +234,54 @@ private fun SaveButton(
                 "Save services"
             },
         onClick = onSubmit,
-        enabled = !uiState.isSaving && !uiState.isLoading && !uiState.isLocating,
+        enabled =
+            !uiState.isSaving &&
+                !uiState.isLoading &&
+                !uiState.isLocating &&
+                !uiState.profileLoadFailed &&
+                !uiState.catalogueLoadFailed,
         modifier = Modifier.fillMaxWidth(),
     )
 }
 
 @Composable
 private fun ServiceListCard(
-    services: List<ServiceCatalogueItem>,
+    services: List<SelectableService>,
     selectedSkillIds: Set<String>,
     onSkillToggle: (String) -> Unit,
     enabled: Boolean,
+    isLoading: Boolean,
 ) {
     HsSectionCard(title = "Services you provide") {
-        val grouped = services.groupBy { it.group }
-        grouped.forEach { (group, groupServices) ->
-            Text(
-                text = group,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
-            )
-            groupServices.forEach { item ->
-                ServiceRow(
-                    item = item,
-                    selected = item.id in selectedSkillIds,
-                    enabled = enabled,
-                    onClick = { onSkillToggle(item.id) },
+        if (services.isEmpty()) {
+            // Only claim the catalogue is unavailable once a load has actually finished
+            // and come back empty — otherwise every cold start briefly shows this message
+            // under the loading spinner before the fetch even returns.
+            if (!isLoading) {
+                Text(
+                    text = stringResource(R.string.service_selection_catalogue_unavailable),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+        } else {
+            val grouped = services.groupBy { it.group }
+            grouped.forEach { (group, groupServices) ->
+                Text(
+                    text = group,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+                )
+                groupServices.forEach { item ->
+                    ServiceRow(
+                        item = item,
+                        selected = item.id in selectedSkillIds,
+                        enabled = enabled,
+                        onClick = { onSkillToggle(item.id) },
+                    )
+                }
             }
         }
     }
@@ -252,7 +289,7 @@ private fun ServiceListCard(
 
 @Composable
 private fun ServiceRow(
-    item: ServiceCatalogueItem,
+    item: SelectableService,
     selected: Boolean,
     enabled: Boolean,
     onClick: () -> Unit,
