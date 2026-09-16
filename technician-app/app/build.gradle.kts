@@ -194,7 +194,7 @@ plugins {
 
 android {
     namespace = "com.homeservices.technician"
-    compileSdk = 35
+    compileSdk = 36
 
     if (releaseSigning != null) {
         signingConfigs {
@@ -210,7 +210,7 @@ android {
     defaultConfig {
         applicationId = "in.homeheroo.technician"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 16
         versionName = "0.1.13"
 
@@ -309,7 +309,7 @@ android {
         checkDependencies = false
         abortOnError = true
         checkReleaseBuilds = false
-        // Story E01-S03 pins specific versions (AGP 8.6.0, targetSdk 35, etc.) per architecture
+        // Story E01-S03 pins specific versions (AGP 8.6.0, targetSdk 36, etc.) per architecture
         // decision. Suppress advisory "newer version available" checks to avoid false failures.
         // LintError suppresses internal lint FIR crash (AGP 8.6.0 + K2 known issue on unit-test supertype resolution)
         disable += setOf("OldTargetApi", "AndroidGradlePluginVersion", "GradleDependency", "LintError")
