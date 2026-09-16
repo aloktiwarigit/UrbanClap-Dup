@@ -166,6 +166,14 @@ internal fun ServiceSelectionContent(
                         showRetry = !uiState.isSaving,
                     )
                 }
+            } else if (uiState.catalogueLoadFailed) {
+                item {
+                    ErrorCard(
+                        message = stringResource(R.string.service_selection_catalogue_unavailable),
+                        onRetry = onRetry,
+                        showRetry = !uiState.isSaving,
+                    )
+                }
             } else if (uiState.errorMessage != null) {
                 item {
                     ErrorCard(
@@ -226,7 +234,12 @@ private fun SaveButton(
                 "Save services"
             },
         onClick = onSubmit,
-        enabled = !uiState.isSaving && !uiState.isLoading && !uiState.isLocating && !uiState.profileLoadFailed,
+        enabled =
+            !uiState.isSaving &&
+                !uiState.isLoading &&
+                !uiState.isLocating &&
+                !uiState.profileLoadFailed &&
+                !uiState.catalogueLoadFailed,
         modifier = Modifier.fillMaxWidth(),
     )
 }

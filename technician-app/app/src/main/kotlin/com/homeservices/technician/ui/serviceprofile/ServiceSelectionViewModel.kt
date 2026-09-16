@@ -37,15 +37,21 @@ internal class ServiceSelectionViewModel
         fun refresh(): Unit {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
             viewModelScope.launch {
-                val services = getSelectableServices().getOrElse { emptyList() }
+                val catalogueResult = getSelectableServices()
+                val services = catalogueResult.getOrElse { emptyList() }
+                val catalogueLoadFailed = catalogueResult.isFailure
                 val catalogueIds = services.map { it.id }.toSet()
                 val outcome = getServiceProfile()
                 _uiState.value =
                     outcome.fold(
                         onSuccess = { profile ->
-                            // Partition rather than filter: skills the catalogue does not
-                            // list are preserved in unlistedSkillIds and merged back on
-                            // save. Filtering them away here is what deleted them before.
+                            // Partition rather than filter: a skill the catalogue does not
+                            // list is a service that was deactivated server-side (the
+                            // catalogue and the server's own validation both read from the
+                            // same /v1/categories source now). It is tracked in
+                            // unlistedSkillIds — so the profile is never mistaken for
+                            // empty — but never resubmitted: the server hard-rejects any
+                            // payload containing a deactivated skill.
                             val (listed, unlisted) = profile.skills.partition { it in catalogueIds }
                             _uiState.value.copy(
                                 services = services,
@@ -68,6 +74,7 @@ internal class ServiceSelectionViewModel
                                     (listed.isNotEmpty() || unlisted.isNotEmpty()) &&
                                         profile.location?.let { validateLocation(it.lat, it.lng) == null } == true,
                                 profileLoadFailed = false,
+                                catalogueLoadFailed = catalogueLoadFailed,
                             )
                         },
                         onFailure = {
@@ -82,6 +89,7 @@ internal class ServiceSelectionViewModel
                                 errorMessage = "Could not load your saved services.",
                                 existingCompleteProfileLoaded = false,
                                 profileLoadFailed = true,
+                                catalogueLoadFailed = catalogueLoadFailed,
                             )
                         },
                     )
@@ -150,11 +158,13 @@ internal class ServiceSelectionViewModel
 
         fun submit(): Unit {
             val current = _uiState.value
-            // Defense in depth: the Save button is disabled while profileLoadFailed is
-            // true, but never trust that alone. Unlisted skills can only be preserved
-            // when the profile was actually read; saving on top of an unread profile
-            // would PATCH a reduced skills array and wipe out everything else server-side.
-            if (current.profileLoadFailed) return
+            // Defense in depth: the Save button is disabled while either flag is true,
+            // but never trust that alone. profileLoadFailed: the profile was never read,
+            // so saving now would PATCH a reduced skills array over the technician's real
+            // one server-side (the backend replaces, it does not merge). catalogueLoadFailed:
+            // without the catalogue we cannot tell an active skill from a deactivated one,
+            // so we cannot build a payload the server is guaranteed to accept.
+            if (current.profileLoadFailed || current.catalogueLoadFailed) return
             val validation = validate(current)
             if (validation != null) {
                 _uiState.value = current.copy(errorMessage = validation)
@@ -171,10 +181,14 @@ internal class ServiceSelectionViewModel
                 val outcome =
                     saveServiceProfile(
                         ServiceProfile(
-                            // Unlisted skills are merged back in so a catalogue fetch
-                            // failure or a deactivated service can never drop a skill
-                            // the technician already saved.
-                            skills = (current.selectedSkillIds + current.unlistedSkillIds).sorted(),
+                            // unlistedSkillIds are deliberately NOT included: they are
+                            // deactivated services, and the server hard-rejects any payload
+                            // that references one (VALIDATION_ERROR). Sending only the
+                            // catalogue-listed selection is the only payload guaranteed to
+                            // be writable — submit() already refused above if the catalogue
+                            // itself failed to load, so "unlisted" here always means
+                            // "confirmed deactivated," never "unknown."
+                            skills = current.selectedSkillIds.sorted(),
                             location = location,
                         ),
                     )

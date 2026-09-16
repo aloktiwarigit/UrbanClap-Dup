@@ -163,10 +163,13 @@ public class ServiceSelectionViewModelTest {
         }
 
     @Test
-    public fun `preserves saved skills that are absent from the fetched catalogue`(): Unit =
+    public fun `tracks but never resubmits a saved skill absent from the fetched catalogue`(): Unit =
         runTest {
             // Catalogue offers only ac-deep-clean; the technician has also saved
-            // ac-deep-clean-window, which the fetched catalogue does not list.
+            // ac-deep-clean-window, which the fetched catalogue does not list. That skill's
+            // service was deactivated server-side — the server hard-rejects any payload
+            // that references it, so it must never be resubmitted. It must still show up
+            // in unlistedSkillIds so the profile is not mistaken for empty.
             coEvery { getSelectableServices.invoke() } returns
                 Result.success(listOf(SelectableService("ac-deep-clean", "AC Deep Clean", "AC Repair")))
             coEvery { getServiceProfile.invoke() } returns
@@ -188,16 +191,42 @@ public class ServiceSelectionViewModelTest {
 
             vm.submit()
 
-            // The saved payload must still contain the unlisted skill.
-            assertEquals(
-                setOf("ac-deep-clean", "ac-deep-clean-window"),
-                savedProfile!!.skills.toSet(),
-            )
+            // The saved payload must contain ONLY the selected (catalogue-listed) skill —
+            // never the unlisted/deactivated one, or the server would 400 the whole save.
+            assertEquals(setOf("ac-deep-clean"), savedProfile!!.skills.toSet())
         }
 
     @Test
-    public fun `keeps every saved skill when the catalogue fetch fails`(): Unit =
+    public fun `submit sends exactly the selected skills when the catalogue loads normally`(): Unit =
         runTest {
+            // Guards against over-correcting into blocking valid saves: with the catalogue
+            // loaded normally, a save still goes through with exactly the selection.
+            coEvery { getServiceProfile.invoke() } returns Result.success(ServiceProfile(emptyList(), null))
+            coEvery { saveServiceProfile.invoke(any()) } answers { Result.success(firstArg()) }
+            val vm = ServiceSelectionViewModel(getServiceProfile, saveServiceProfile, getSelectableServices)
+
+            vm.toggleSkill("ac-deep-clean")
+            vm.toggleSkill("ro-installation")
+            vm.onServiceAreaCaptured(26.8, 82.2)
+            vm.submit()
+
+            coVerify {
+                saveServiceProfile.invoke(
+                    ServiceProfile(
+                        skills = listOf("ac-deep-clean", "ro-installation"),
+                        location = ServiceLocation(lat = 26.8, lng = 82.2),
+                    ),
+                )
+            }
+        }
+
+    @Test
+    public fun `refuses to save when the catalogue fetch itself failed`(): Unit =
+        runTest {
+            // Without the catalogue we cannot tell an active skill from a deactivated one,
+            // so we cannot build a payload the server is guaranteed to accept. Block the
+            // save entirely rather than guess and risk a 400 or silently dropping a skill
+            // that was actually still active.
             coEvery { getSelectableServices.invoke() } returns Result.failure(IllegalStateException("offline"))
             coEvery { getServiceProfile.invoke() } returns
                 Result.success(
@@ -206,19 +235,13 @@ public class ServiceSelectionViewModelTest {
                         location = ServiceLocation(lat = 26.7922, lng = 82.1998),
                     ),
                 )
-            var savedProfile: ServiceProfile? = null
-            coEvery { saveServiceProfile.invoke(any()) } answers {
-                savedProfile = firstArg()
-                Result.success(firstArg())
-            }
             val vm = ServiceSelectionViewModel(getServiceProfile, saveServiceProfile, getSelectableServices)
+
+            assertTrue(vm.uiState.value.catalogueLoadFailed)
 
             vm.submit()
 
-            assertEquals(
-                setOf("ac-deep-clean", "appliance-fridge-repair"),
-                savedProfile!!.skills.toSet(),
-            )
+            coVerify(exactly = 0) { saveServiceProfile.invoke(any()) }
         }
 
     @Test
