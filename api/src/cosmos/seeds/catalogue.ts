@@ -14,16 +14,16 @@ export const CATEGORIES: ServiceCategory[] = [
   { id: 'plumbing', name: 'Plumbing', nameHi: 'प्लंबिंग', heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/categories%2Fplumbing.jpg', sortOrder: 3, isActive: true, updatedBy: SYSTEM, createdAt: NOW, updatedAt: NOW },
   { id: 'electrical', name: 'Electrical', nameHi: 'इलेक्ट्रिकल', heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/categories%2Felectrical.jpg', sortOrder: 4, isActive: true, updatedBy: SYSTEM, createdAt: NOW, updatedAt: NOW },
   { id: 'water-purifier', name: 'RO / Water Purifier', nameHi: 'आरओ / वाटर प्यूरीफायर', heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/categories%2Fwater-purifier.jpg', sortOrder: 5, isActive: true, updatedBy: SYSTEM, createdAt: NOW, updatedAt: NOW },
-  // 2026-09-12: isActive:false — tests/scripts/seed-technicians.test.ts enforces a
-  // >=2-online-technician launch gate per active category/service, and no technician
-  // can hold an appliance-repair skill until technician-app ships ServiceCatalogue.kt
-  // self-select.
+  // 2026-09-15 (ADR-0030): activated by owner directive. The previous
+  // isActive:false gate ("no technician can hold an appliance-repair skill until
+  // technician-app ships ServiceCatalogue.kt self-select") is discharged by
+  // Story B, which replaces the hardcoded picker with a live /v1/categories fetch.
   // 2026-09-12 (E22-S02): heroImageUrl corrected from the dead `homeservices-mvp`
   // bucket (never existed — see docs/superpowers/plans/2026-09-12-e22-s02-catalogue-categories.md)
   // to the real `homeservices-prod-001.firebasestorage.app` bucket, with the
   // required `?alt=media` suffix Firebase Storage needs to serve raw image bytes
   // instead of JSON object metadata.
-  { id: 'appliance-repair', name: 'Appliance Repair', nameHi: 'उपकरण मरम्मत', heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-prod-001.firebasestorage.app/o/categories%2Fappliance-repair.jpg?alt=media', sortOrder: 6, isActive: false, updatedBy: SYSTEM, createdAt: NOW, updatedAt: NOW },
+  { id: 'appliance-repair', name: 'Appliance Repair', nameHi: 'उपकरण मरम्मत', heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-prod-001.firebasestorage.app/o/categories%2Fappliance-repair.jpg?alt=media', sortOrder: 6, isActive: true, updatedBy: SYSTEM, createdAt: NOW, updatedAt: NOW },
 ];
 
 export const SERVICES: Service[] = [
@@ -334,7 +334,7 @@ export const SERVICES: Service[] = [
     faq: [{ question: 'Is gas top-up included?', answer: 'No — gas top-up is a separate add-on if the compressor tests low on pressure.' }],
     addOns: [{ id: 'gas-topup', name: 'Refrigerant gas top-up', price: 60000, triggerCondition: 'if compressor pressure test is below spec' }],
     photoStages: [{ id: 'fridge-before', label: 'Fridge before repair', required: true }, { id: 'fridge-after', label: 'After repair', required: true }],
-    isActive: false,
+    isActive: true,
     updatedBy: SYSTEM,
     createdAt: NOW,
     updatedAt: NOW,
@@ -358,7 +358,7 @@ export const SERVICES: Service[] = [
     faq: [],
     addOns: [{ id: 'pad-replacement', name: 'Cooling pad replacement', price: 40000, triggerCondition: 'if pads are worn beyond cleaning' }],
     photoStages: [{ id: 'cooler-before', label: 'Cooler before service', required: true }, { id: 'cooler-after', label: 'After service', required: true }],
-    isActive: false,
+    isActive: true,
     updatedBy: SYSTEM,
     createdAt: NOW,
     updatedAt: NOW,
@@ -378,7 +378,7 @@ export const SERVICES: Service[] = [
     faq: [],
     addOns: [{ id: 'spare-part', name: 'Replacement part (belt/bearing/etc.)', price: 50000, triggerCondition: 'if a worn part needs replacing' }],
     photoStages: [{ id: 'wm-before', label: 'Machine before repair', required: true }, { id: 'wm-after', label: 'After repair', required: true }],
-    isActive: false,
+    isActive: true,
     updatedBy: SYSTEM,
     createdAt: NOW,
     updatedAt: NOW,
@@ -400,7 +400,7 @@ export const SERVICES: Service[] = [
     faq: [{ question: 'Is the camera itself included?', answer: 'No — bring your own. We install whatever camera/DVR you provide.' }],
     addOns: [{ id: 'extra-camera', name: 'Additional camera on same visit', price: 59900, triggerCondition: 'per extra camera installed in the same visit' }],
     photoStages: [{ id: 'camera-before', label: 'Mounting point before installation', required: true }, { id: 'camera-after', label: 'Installed + live feed test', required: true }],
-    isActive: false,
+    isActive: true,
     updatedBy: SYSTEM,
     createdAt: NOW,
     updatedAt: NOW,
@@ -420,7 +420,7 @@ export const SERVICES: Service[] = [
     faq: [{ question: 'Is a new battery included?', answer: 'No — a replacement battery is a separate add-on if the existing one fails the load test.' }],
     addOns: [{ id: 'battery-replacement', name: 'Battery replacement', price: 350000, triggerCondition: 'if the existing battery fails the load test' }],
     photoStages: [{ id: 'inverter-before', label: 'Inverter/battery before service', required: true }, { id: 'inverter-after', label: 'After service', required: true }],
-    isActive: false,
+    isActive: true,
     updatedBy: SYSTEM,
     createdAt: NOW,
     updatedAt: NOW,

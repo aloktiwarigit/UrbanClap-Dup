@@ -49,7 +49,8 @@ export const TECHNICIANS: TechnicianProfile[] = [
     id: 'tech-ayd-003',
     technicianId: 'tech-ayd-003',
     location: { type: 'Point', coordinates: [82.1815, 26.8019] }, // Faizabad Cantt
-    skills: ['electrical-switchboard-fix', 'electrical-fan-install', 'electrical-wiring', 'ac-deep-clean', 'ac-deep-clean-window'], // catalogue: electrical + ac-repair
+    // ADR-0030: single-technician coverage for the services activated 2026-09-15.
+    skills: ['electrical-switchboard-fix', 'electrical-fan-install', 'electrical-wiring', 'ac-deep-clean', 'ac-deep-clean-window', 'appliance-fridge-repair', 'appliance-cooler-service', 'appliance-washing-machine-repair', 'electrical-camera-installation', 'appliance-inverter-service'], // catalogue: electrical + ac-repair + appliance-repair
     availabilityWindows: [
       { dayOfWeek: 0, startHour: 10, endHour: 17 },
       { dayOfWeek: 2, startHour: 8, endHour: 18 },
