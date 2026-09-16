@@ -245,6 +245,35 @@ public class ServiceSelectionViewModelTest {
         }
 
     @Test
+    public fun `refuses to save when every saved skill is deactivated`(): Unit =
+        runTest {
+            // Catalogue loads fine, but the technician's saved skills are ALL absent from
+            // it (every one deactivated server-side): selectedSkillIds ends up empty and
+            // unlistedSkillIds non-empty. Only selectedSkillIds reaches the payload, so
+            // submitting here would send an empty skills array — the server rejects that
+            // outright (zod .nonempty()). validate() must block this with an actionable
+            // message rather than let it reach a generic save failure.
+            coEvery { getSelectableServices.invoke() } returns
+                Result.success(listOf(SelectableService("ac-deep-clean", "AC Deep Clean", "AC Repair")))
+            coEvery { getServiceProfile.invoke() } returns
+                Result.success(
+                    ServiceProfile(
+                        skills = listOf("ac-deep-clean-window"),
+                        location = ServiceLocation(lat = 26.7922, lng = 82.1998),
+                    ),
+                )
+            val vm = ServiceSelectionViewModel(getServiceProfile, saveServiceProfile, getSelectableServices)
+
+            assertEquals(emptySet<String>(), vm.uiState.value.selectedSkillIds)
+            assertEquals(setOf("ac-deep-clean-window"), vm.uiState.value.unlistedSkillIds)
+
+            vm.submit()
+
+            coVerify(exactly = 0) { saveServiceProfile.invoke(any()) }
+            assertEquals("Select at least one service.", vm.uiState.value.errorMessage)
+        }
+
+    @Test
     public fun `refuses to save when the profile fetch itself failed`(): Unit =
         runTest {
             // The catalogue loads fine, but the profile read fails — so any skills the

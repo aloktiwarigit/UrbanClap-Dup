@@ -223,10 +223,13 @@ internal class ServiceSelectionViewModel
             val lat = state.serviceLat
             val lng = state.serviceLng
             return when {
-                // unlistedSkillIds counts too: a catalogue fetch failure or a deactivated
-                // service must never force a technician to lose an already-saved skill
-                // just because nothing is currently toggleable.
-                state.selectedSkillIds.isEmpty() && state.unlistedSkillIds.isEmpty() -> "Select at least one service."
+                // unlistedSkillIds does NOT count here: only selectedSkillIds reaches the
+                // save payload (unlisted/deactivated skills are deliberately excluded), and
+                // the server rejects an empty skills array outright. A technician whose
+                // saved skills are all deactivated must pick a new, active one before they
+                // can save — existingCompleteProfileLoaded is what still treats them as
+                // already onboarded; this guard is about payload validity only.
+                state.selectedSkillIds.isEmpty() -> "Select at least one service."
                 lat == null || lng == null -> "Use current location to set your service area."
                 else -> validateLocation(lat, lng)
             }
