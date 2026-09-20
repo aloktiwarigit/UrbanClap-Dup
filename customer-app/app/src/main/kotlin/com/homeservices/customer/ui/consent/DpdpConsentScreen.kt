@@ -67,7 +67,7 @@ import kotlinx.coroutines.flow.collectLatest
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 private const val HERO_FRACTION = 0.40f
-private const val PRIVACY_POLICY_URL = "https://homeservices.app/privacy"
+private const val PRIVACY_POLICY_URL = "https://aloktiwarigit.github.io/homeheroo-privacy/customer/"
 
 // ── Layout & spacing ──────────────────────────────────────────────────────
 private const val HERO_ICON_SIZE_DP = 72
