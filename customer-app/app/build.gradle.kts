@@ -209,8 +209,8 @@ android {
         applicationId = "in.homeheroo.customer"
         minSdk = 26
         targetSdk = 36
-        versionCode = 13
-        versionName = "0.1.8"
+        versionCode = 15
+        versionName = "0.1.9"
 
         testInstrumentationRunner = "com.homeservices.customer.TestRunner"
 
