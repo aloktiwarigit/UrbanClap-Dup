@@ -17,6 +17,10 @@ module.exports = {
         'categories:seo': ['error', { minScore: 0.9 }],
       },
     },
-    upload: { target: 'temporary-public-storage' },
+    // NOT temporary-public-storage. That target uploads the full Lighthouse
+    // report - including screenshots and captured page content - to a public,
+    // unauthenticated Google bucket and prints the URL into the build log.
+    // On a public repo that makes the capture world-readable. Fixed 2026-08-27.
+    upload: { target: 'filesystem', outputDir: './.lighthouseci' },
   },
 };
