@@ -91,6 +91,16 @@ ehthumbs.db
 # === Git worktrees ===
 .worktrees/
 
+# === Local build/release output and agent scratch ===
+# artifacts/ holds release AABs and on-device screenshot/XML dumps (243 MB as of
+# 2026-09-19, 7 AABs alone). It was never ignored on main, so a `git add -A` would
+# commit hundreds of MB of binaries.
+artifacts/
+# Local prod-state snapshots taken before a risky deploy; rollback sources, never committed.
+.ops-snapshots/
+# Agent worktree scratch.
+.claire/
+
 # === BMAD / Superpowers intermediate ===
 .remember/logs/
 .remember/tmp/
