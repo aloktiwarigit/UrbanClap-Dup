@@ -6,8 +6,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
@@ -90,7 +90,7 @@ private fun ConfirmationBody(
     onTrackBooking: (bookingId: String) -> Unit,
 ) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(Modifier.height(28.dp))
@@ -143,7 +143,7 @@ private fun ConfirmationBody(
         HsPrimaryButton(
             text = stringResource(R.string.booking_confirmed_track),
             onClick = { onTrackBooking(bookingId) },
-            modifier = Modifier.fillMaxWidth().navigationBarsPadding().height(56.dp),
+            modifier = Modifier.fillMaxWidth().height(56.dp),
         )
         Spacer(Modifier.height(8.dp))
         HsSecondaryButton(

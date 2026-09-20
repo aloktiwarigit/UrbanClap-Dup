@@ -6,9 +6,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.addCallback
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.ui.Modifier
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -108,6 +107,7 @@ public class JobOfferFullScreenActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
 
         // SAFE-JOB-002: fail closed on a malformed payload. offerFromIntent returns null when any
         // extra is missing; previously setContent ran anyway, leaving Idle rendered as a dead
@@ -147,7 +147,7 @@ public class JobOfferFullScreenActivity : ComponentActivity() {
 
         setContent {
             TechnicianHomeservicesTheme {
-                JobOfferScreen(modifier = Modifier.navigationBarsPadding())
+                JobOfferScreen()
             }
         }
     }
