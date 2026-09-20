@@ -194,7 +194,7 @@ plugins {
 
 android {
     namespace = "com.homeservices.technician"
-    compileSdk = 36
+    compileSdk = 35
 
     if (releaseSigning != null) {
         signingConfigs {

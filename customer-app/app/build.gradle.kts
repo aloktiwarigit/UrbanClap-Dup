@@ -192,7 +192,7 @@ plugins {
 
 android {
     namespace = "com.homeservices.customer"
-    compileSdk = 36
+    compileSdk = 35
 
     if (releaseSigning != null) {
         signingConfigs {
@@ -330,7 +330,6 @@ android {
                 if (project.hasProperty("excludePaparazzi")) {
                     test.filter.excludeTestsMatching("*PaparazziTest*")
                     test.filter.excludeTestsMatching("*CatalogueHomeScreenTest*")
-                    test.filter.excludeTestsMatching("*ServiceDetailScreenTest*")
                 }
             }
         }
