@@ -3,6 +3,7 @@ package com.homeservices.technician
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.fragment.app.FragmentActivity
 import com.homeservices.designsystem.theme.TechnicianHomeservicesTheme
 import com.homeservices.technician.data.auth.SessionManager
@@ -35,6 +36,7 @@ public class MainActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         navigateFromExtra(intent.getStringExtra("navigate_to"), ratingReceivedEventBus)
         setContent {
             TechnicianHomeservicesTheme {
