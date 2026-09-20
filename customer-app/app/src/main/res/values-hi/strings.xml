@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">होमसर्विसेज ग्राहक</string>
+    <string name="app_name">HomeHeroo</string>
     <string name="catalogue_home_title">विश्वसनीय होम सर्विस बुक करें</string>
     <string name="catalogue_home_subtitle">कुशल तकनीशियन, साफ कीमतें, और बुकिंग से पूरा होने तक लाइव अपडेट।</string>
     <string name="catalogue_trust_chip">कुशल प्रोफेशनल</string>
@@ -525,7 +525,7 @@
     <string name="promo_discount_cta">कूपन लगाएं</string>
     <string name="promo_cta_with_arrow">%1$s →</string>
     <string name="trust_skill_match">स्किल मैच</string>
-    <string name="trust_rating">4.8★ रेटिंग</string>
+    <string name="trust_rating">ग्राहक रेटेड</string>
     <string name="trust_guarantee">30 दिन गारंटी</string>
     <string name="support_call_title">सपोर्ट को कॉल करें</string>
     <string name="support_call_subtitle">बुकिंग, भुगतान या सुरक्षा के लिए सीधे सहायता लें</string>

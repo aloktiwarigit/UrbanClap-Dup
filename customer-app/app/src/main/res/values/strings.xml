@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="app_name">homeservices customer</string>
+    <string name="app_name">HomeHeroo</string>
     <string name="catalogue_home_title">Book trusted home services</string>
     <string name="catalogue_home_subtitle">Skilled technicians, clear prices, and live updates from booking to completion.</string>
     <string name="catalogue_trust_chip">Skilled pros</string>
@@ -541,7 +541,7 @@
     <string name="promo_discount_cta">Apply coupon</string>
     <string name="promo_cta_with_arrow">%1$s →</string>
     <string name="trust_skill_match">Skill match</string>
-    <string name="trust_rating">4.8★ rating</string>
+    <string name="trust_rating">Customer rated</string>
     <string name="trust_guarantee">30-day guarantee</string>
     <string name="support_call_title">Call support</string>
     <string name="support_call_subtitle">Get direct help for bookings, payments, or safety</string>
